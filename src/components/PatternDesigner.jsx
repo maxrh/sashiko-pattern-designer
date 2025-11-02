@@ -61,13 +61,13 @@ function isValidPattern(data) {
 export default function PatternDesigner() {
   const [savedPatterns] = useState(() => patternsData.map(clonePattern));
   const [currentPattern, setCurrentPattern] = useState(() => {
-    const fallback = savedPatterns.find((pattern) => pattern.id === 'simple-cross') ?? savedPatterns[0];
+    const fallback = savedPatterns.find((pattern) => pattern.id === 'blank') ?? savedPatterns[0];
     return clonePattern(fallback);
   });
   const [stitchColors, setStitchColors] = useState(() => deriveColorMap(currentPattern));
   const [selectedStitchIds, setSelectedStitchIds] = useState(() => new Set());
   const [drawingState, setDrawingState] = useState({ mode: 'select', firstPoint: null });
-  const [canvasSize, setCanvasSize] = useState(800);
+  const [patternTiles, setPatternTiles] = useState(4);
   const [defaultThreadColor, setDefaultThreadColor] = useState('#ffffff');
   const [backgroundColor, setBackgroundColor] = useState('#0f172a');
   const [selectedStitchColor, setSelectedStitchColor] = useState('#fb7185');
@@ -76,12 +76,15 @@ export default function PatternDesigner() {
 
   const canvasRef = useRef(null);
 
-  const patternInfo = useMemo(() => {
-    const canvasGrid = Math.round(canvasSize / CELL_SIZE);
+  const canvasSize = useMemo(() => {
     const gridSize = Math.max(1, currentPattern.gridSize ?? 1);
-    const tiles = Math.ceil(canvasGrid / gridSize);
-    return `${tiles}x${tiles} pattern tiles (${gridSize}x${gridSize} grid each)`;
-  }, [canvasSize, currentPattern.gridSize]);
+    return patternTiles * gridSize * CELL_SIZE;
+  }, [patternTiles, currentPattern.gridSize]);
+
+  const patternInfo = useMemo(() => {
+    const gridSize = Math.max(1, currentPattern.gridSize ?? 1);
+    return `${patternTiles}×${patternTiles} pattern tiles (${gridSize}×${gridSize} grid each)`;
+  }, [patternTiles, currentPattern.gridSize]);
 
   const handleModeChange = useCallback((mode) => {
     setDrawingState({ mode, firstPoint: null });
@@ -98,12 +101,22 @@ export default function PatternDesigner() {
 
   const handleAddStitch = useCallback(({ start, end, stitchSize }) => {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    
+    // Determine default stitch size based on orientation if not provided
+    let defaultSize = 'medium';
+    if (!stitchSize) {
+      const gridDx = Math.abs(end.x - start.x);
+      const gridDy = Math.abs(end.y - start.y);
+      const isDiagonal = gridDx > 0 && gridDy > 0;
+      defaultSize = isDiagonal ? 'medium' : 'large';
+    }
+    
     const newStitch = {
       id: newId,
       start,
       end,
       color: null,
-      stitchSize: stitchSize || 'large',
+      stitchSize: stitchSize || defaultSize,
     };
     setCurrentPattern((prev) => ({
       ...prev,
@@ -125,6 +138,18 @@ export default function PatternDesigner() {
     });
     setSelectedStitchIds(new Set());
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
+  }, [selectedStitchIds]);
+
+  const handleChangeSelectedStitchSize = useCallback((newSize) => {
+    if (selectedStitchIds.size === 0) return;
+    setCurrentPattern((prev) => ({
+      ...prev,
+      stitches: prev.stitches.map((stitch) =>
+        selectedStitchIds.has(stitch.id)
+          ? { ...stitch, stitchSize: newSize }
+          : stitch
+      ),
+    }));
   }, [selectedStitchIds]);
 
   const handleNewPattern = useCallback(() => {
@@ -288,12 +313,13 @@ export default function PatternDesigner() {
                 selectedCount={selectedStitchIds.size}
               />
               <ControlsPanel
-                canvasSize={canvasSize}
-                onCanvasSizeChange={setCanvasSize}
+                patternTiles={patternTiles}
+                onPatternTilesChange={setPatternTiles}
                 drawingMode={drawingState.mode}
                 onModeChange={handleModeChange}
                 stitchSize={stitchSize}
                 onStitchSizeChange={setStitchSize}
+                onChangeSelectedStitchSize={handleChangeSelectedStitchSize}
                 onSelectAll={handleSelectAll}
                 onDeselectAll={handleDeselectAll}
                 onDeleteSelected={handleDeleteSelected}
