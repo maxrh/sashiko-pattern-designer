@@ -33,9 +33,41 @@ function getNearestGridPoint(clickX, clickY, cellSize) {
   return distance < SNAP_THRESHOLD ? { gridX, gridY } : null;
 }
 
+// Check if a line segment intersects or is contained within a rectangle
+// Extended by extraMargin on all sides to allow drawing beyond artboard edges
+function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY, artboardSize, extraMargin = 0) {
+  const minX = artboardX - extraMargin;
+  const maxX = artboardX + artboardSize + extraMargin;
+  const minY = artboardY - extraMargin;
+  const maxY = artboardY + artboardSize + extraMargin;
+  
+  // Check if either endpoint is inside the artboard
+  const startInside = startX >= minX && startX <= maxX && startY >= minY && startY <= maxY;
+  const endInside = endX >= minX && endX <= maxX && endY >= minY && endY <= maxY;
+  
+  if (startInside || endInside) return true;
+  
+  // Check if line intersects any of the four edges of the artboard
+  // This handles cases where line passes through artboard without endpoints inside
+  const lineMinX = Math.min(startX, endX);
+  const lineMaxX = Math.max(startX, endX);
+  const lineMinY = Math.min(startY, endY);
+  const lineMaxY = Math.max(startY, endY);
+  
+  // If line bounding box doesn't overlap artboard, no intersection
+  if (lineMaxX < minX || lineMinX > maxX || lineMaxY < minY || lineMinY > maxY) {
+    return false;
+  }
+  
+  // At this point, bounding boxes overlap, so line likely intersects
+  return true;
+}
+
 export const PatternCanvas = forwardRef(function PatternCanvas({
   canvasSize,
   cellSize,
+  artboardOffset = 0,
+  artboardSize,
   pattern,
   stitchColors,
   selectedStitchIds,
@@ -46,13 +78,15 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   defaultThreadColor,
   backgroundColor,
   stitchSize,
+  repeatPattern = true,
 }, ref) {
   const canvasRef = useRef(null);
   const patternGridSize = Math.max(1, pattern?.gridSize ?? 1);
   const canvasGridSize = useMemo(() => Math.round(canvasSize / cellSize), [canvasSize, cellSize]);
+  const artboardGridSize = useMemo(() => Math.round(artboardSize / cellSize), [artboardSize, cellSize]);
   const tilesPerSide = useMemo(
-    () => Math.ceil(canvasGridSize / patternGridSize),
-    [canvasGridSize, patternGridSize]
+    () => Math.ceil(artboardGridSize / patternGridSize),
+    [artboardGridSize, patternGridSize]
   );
 
   useImperativeHandle(ref, () => ({
@@ -76,22 +110,28 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
-    // Draw pattern cell boundaries (discrete outline)
+    // Draw artboard boundary
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
+
+    // Draw pattern cell boundaries (only within artboard)
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
     const patternCellPixelSize = patternGridSize * cellSize;
     for (let row = 0; row <= tilesPerSide; row += 1) {
       for (let col = 0; col <= tilesPerSide; col += 1) {
-        const x = col * patternCellPixelSize;
-        const y = row * patternCellPixelSize;
-        if (x <= canvasSize && y <= canvasSize) {
-          ctx.strokeRect(x, y, Math.min(patternCellPixelSize, canvasSize - x), Math.min(patternCellPixelSize, canvasSize - y));
+        const x = artboardOffset + (col * patternCellPixelSize);
+        const y = artboardOffset + (row * patternCellPixelSize);
+        if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
+          ctx.strokeRect(x, y, Math.min(patternCellPixelSize, artboardSize - col * patternCellPixelSize), Math.min(patternCellPixelSize, artboardSize - row * patternCellPixelSize));
         }
       }
     }
 
-    // Draw grid dots as 3x3px squares with center pixel as connection point
+    // Draw grid dots across entire canvas
     ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
     for (let x = 0; x <= canvasGridSize; x += 1) {
       for (let y = 0; y <= canvasGridSize; y += 1) {
@@ -109,130 +149,270 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.lineCap = 'butt'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
       const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultThreadColor;
-      for (let tileRow = 0; tileRow < tilesPerSide; tileRow += 1) {
-        for (let tileCol = 0; tileCol < tilesPerSide; tileCol += 1) {
-          const offsetX = tileCol * patternGridSize;
-          const offsetY = tileRow * patternGridSize;
-          const startX = (stitch.start.x + offsetX) * cellSize;
-          const startY = (stitch.start.y + offsetY) * cellSize;
-          const endX = (stitch.end.x + offsetX) * cellSize;
-          const endY = (stitch.end.y + offsetY) * cellSize;
+      
+      // Check if coordinates are absolute (new format) or wrapped (old format)
+      // New format: coordinates can exceed patternGridSize
+      // Old format: coordinates are 0 to patternGridSize-1
+      const isAbsoluteCoords = stitch.start.x >= patternGridSize || stitch.start.y >= patternGridSize ||
+                               stitch.end.x >= patternGridSize || stitch.end.y >= patternGridSize ||
+                               stitch.start.x < 0 || stitch.start.y < 0 ||
+                               stitch.end.x < 0 || stitch.end.y < 0;
+      
+      if (isAbsoluteCoords) {
+        // New format: use absolute coordinates
+        // If repeat is on, draw the line in each tile by offsetting by tile amounts
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToRender = shouldRepeat ? tilesPerSide : 1;
 
-          if (startX > canvasSize + cellSize || startY > canvasSize + cellSize) {
-            continue;
-          }
+        for (let tileRow = 0; tileRow < tilesToRender; tileRow++) {
+          for (let tileCol = 0; tileCol < tilesToRender; tileCol++) {
+            // Offset the absolute coordinates by the tile position
+            const tileOffsetX = tileCol * patternGridSize;
+            const tileOffsetY = tileRow * patternGridSize;
+            
+            // Use absolute coordinates directly, just offset by tile position
+            const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
+            const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
+            const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
+            const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
 
-          const isSelected = selectedStitchIds.has(stitch.id);
+            if (startX > canvasSize + cellSize || startY > canvasSize + cellSize) {
+              continue;
+            }
 
-          // Calculate the offset direction (unit vector from start to end)
-          const dx = endX - startX;
-          const dy = endY - startY;
-          const length = Math.hypot(dx, dy);
-          if (length === 0) continue;
+            const isSelected = selectedStitchIds.has(stitch.id);
 
-          const unitX = dx / length;
-          const unitY = dy / length;
+            // Calculate the offset direction (unit vector from start to end)
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.hypot(dx, dy);
+            if (length === 0) continue;
 
-          // Offset start and end by 2px along the line
-          const offsetStartX = startX + unitX * stitchOffset;
-          const offsetStartY = startY + unitY * stitchOffset;
-          const offsetEndX = endX - unitX * stitchOffset;
-          const offsetEndY = endY - unitY * stitchOffset;
+            const unitX = dx / length;
+            const unitY = dy / length;
 
-          // Calculate the drawable length (after removing offsets)
-          const drawableLength = length - (2 * stitchOffset);
+            // Offset start and end by 4px along the line
+            const offsetStartX = startX + unitX * stitchOffset;
+            const offsetStartY = startY + unitY * stitchOffset;
+            const offsetEndX = endX - unitX * stitchOffset;
+            const offsetEndY = endY - unitY * stitchOffset;
 
-          // Get stitch size info from stitch metadata (or use default 'medium')
-          const stitchSizeForLine = stitch.stitchSize || 'medium';
-          
-          // Determine target dash count based on stitch size and actual line length
-          // Use the actual length to determine how many stitches should fit
-          let targetDashCount;
-          const cellsInLine = drawableLength / 20; // How many 20px cells in this line
-          
-          // For xlarge, we use large calculation as base
-          const isXLarge = stitchSizeForLine === 'xlarge';
-          const sizeForCalc = isXLarge ? 'large' : stitchSizeForLine;
-          
-          switch (sizeForCalc) {
-            case 'medium':
-              // Medium: 2 dashes per 20px cell, scale to actual line length
-              targetDashCount = Math.max(2, Math.round(cellsInLine * 2));
-              break;
-            case 'large':
-            default:
-              // Large: 1 dash per 20px cell, scale to actual line length
-              // Use floor to avoid rounding up (e.g., 0.6 cells -> 0, then make it 2 minimum)
-              targetDashCount = Math.max(2, Math.floor(cellsInLine * 1));
-              // For lines close to 1 cell, ensure we get exactly 2 dashes
-              if (cellsInLine >= 0.8 && cellsInLine <= 1.2) {
-                targetDashCount = 2;
+            // Calculate the drawable length (after removing offsets)
+            const drawableLength = length - (2 * stitchOffset);
+
+            // Get stitch size info from stitch metadata (or use default 'medium')
+            const stitchSizeForLine = stitch.stitchSize || 'medium';
+            
+            // Determine target dash count based on stitch size and actual line length
+            // Use the ACTUAL line length (before offsets) to determine stitch count
+            let targetDashCount;
+            const actualCellsInLine = length / 20; // How many 20px cells in the actual line
+            const cellsInLine = drawableLength / 20; // Drawable length for calculations
+            
+            // For xlarge, we use large calculation as base
+            const isXLarge = stitchSizeForLine === 'xlarge';
+            const sizeForCalc = isXLarge ? 'large' : stitchSizeForLine;
+            
+            switch (sizeForCalc) {
+              case 'medium':
+                // Medium: 2 dashes per 20px cell, scale to actual line length
+                targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
+                break;
+              case 'large':
+              default:
+                // Large: 1 dash per 20px cell
+                // For exactly 1 cell (20px), we want 1 dash total (not 2)
+                targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
+                break;
+            }
+            
+            // Calculate dash and gap lengths based on drawable length
+            let dashLength, gapLength;
+            
+            if (targetDashCount === 1) {
+              // Single dash: use entire drawable length, no gaps
+              dashLength = drawableLength;
+              gapLength = 0;
+            } else if (isXLarge) {
+              // XLarge: ensure even count for pairing
+              if (targetDashCount % 2 !== 0) {
+                targetDashCount += 1;
               }
-              break;
-          }
-          
-          // Ensure even number of dashes for symmetry
-          if (targetDashCount % 2 !== 0) {
-            targetDashCount += 1;
-          }
-          
-          // For xlarge: combine every 2 dashes into 1 longer stitch
-          // Pattern becomes: [longDash, gap, longDash, gap] instead of [dash, gap, dash, gap, dash, gap, dash, gap]
-          let dashLength, gapLength, dashPattern;
-          
-          if (isXLarge) {
-            // XLarge: merge pairs of dashes
-            // Each "super dash" = 2 dashes + 1 gap between them
-            const superDashCount = targetDashCount / 2;
-            const gapCount = superDashCount - 1; // gaps between super dashes
+              // XLarge: merge pairs of dashes
+              // Each "super dash" = 2 dashes + 1 gap between them
+              const superDashCount = targetDashCount / 2;
+              const gapCount = superDashCount - 1; // gaps between super dashes
+              
+              // Calculate space
+              const totalGapSpace = gapCount * gapBetweenStitches;
+              const totalDashSpace = drawableLength - totalGapSpace;
+              
+              // Each super dash gets equal space
+              const superDashLength = totalDashSpace / superDashCount;
+              
+              // Set pattern: long dash, then gap
+              dashLength = superDashLength;
+              gapLength = gapBetweenStitches;
+            } else {
+              // Regular calculation (medium/large with multiple dashes)
+              const gapCount = targetDashCount - 1;
+              const totalGapSpace = gapCount * gapBetweenStitches;
+              const totalDashSpace = drawableLength - totalGapSpace;
+              
+              dashLength = totalDashSpace / targetDashCount;
+              gapLength = gapBetweenStitches;
+            }
             
-            // Calculate space
-            const totalGapSpace = gapCount * gapBetweenStitches;
-            const totalDashSpace = drawableLength - totalGapSpace;
-            
-            // Each super dash gets equal space
-            const superDashLength = totalDashSpace / superDashCount;
-            
-            // Set pattern: long dash, then gap
-            dashLength = superDashLength;
-            gapLength = gapBetweenStitches;
-          } else {
-            // Regular calculation
-            const gapCount = targetDashCount - 1;
-            const totalGapSpace = gapCount * gapBetweenStitches;
-            const totalDashSpace = drawableLength - totalGapSpace;
-            
-            dashLength = totalDashSpace / targetDashCount;
-            gapLength = gapBetweenStitches;
-          }
-          
-          // Only draw if dash length is positive (line is long enough)
-          if (dashLength <= 0) continue;
+            // Only draw if dash length is positive (line is long enough)
+            if (dashLength <= 0) continue;
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.setLineDash([dashLength, gapLength]);
-          ctx.strokeStyle = isSelected ? '#3b82f6' : (colorOverride ?? defaultThreadColor);
-          ctx.lineWidth = 3;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.moveTo(offsetStartX, offsetStartY);
-          ctx.lineTo(offsetEndX, offsetEndY);
-          ctx.stroke();
-          ctx.restore();
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([dashLength, gapLength]);
+            ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultThreadColor);
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(offsetStartX, offsetStartY);
+            ctx.lineTo(offsetEndX, offsetEndY);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      } else {
+        // Old format: use wrapped coordinates with tiling
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToRender = shouldRepeat ? tilesPerSide : 1;
+
+        for (let tileRow = 0; tileRow < tilesToRender; tileRow++) {
+          for (let tileCol = 0; tileCol < tilesToRender; tileCol++) {
+            const baseTileX = artboardOffset + (tileCol * patternGridSize * cellSize);
+            const baseTileY = artboardOffset + (tileRow * patternGridSize * cellSize);
+
+            const startX = baseTileX + (stitch.start.x * cellSize);
+            const startY = baseTileY + (stitch.start.y * cellSize);
+            const endX = baseTileX + (stitch.end.x * cellSize);
+            const endY = baseTileY + (stitch.end.y * cellSize);
+
+            if (startX > canvasSize + cellSize || startY > canvasSize + cellSize) {
+              continue;
+            }
+
+            const isSelected = selectedStitchIds.has(stitch.id);
+
+            // Calculate the offset direction (unit vector from start to end)
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.hypot(dx, dy);
+            if (length === 0) continue;
+
+            const unitX = dx / length;
+            const unitY = dy / length;
+
+            // Offset start and end by 4px along the line
+            const offsetStartX = startX + unitX * stitchOffset;
+            const offsetStartY = startY + unitY * stitchOffset;
+            const offsetEndX = endX - unitX * stitchOffset;
+            const offsetEndY = endY - unitY * stitchOffset;
+
+            // Calculate the drawable length (after removing offsets)
+            const drawableLength = length - (2 * stitchOffset);
+
+            // Get stitch size info from stitch metadata (or use default 'medium')
+            const stitchSizeForLine = stitch.stitchSize || 'medium';
+            
+            // Determine target dash count based on stitch size and actual line length
+            // Use the ACTUAL line length (before offsets) to determine stitch count
+            let targetDashCount;
+            const actualCellsInLine = length / 20; // How many 20px cells in the actual line
+            const cellsInLine = drawableLength / 20; // Drawable length for calculations
+            
+            // For xlarge, we use large calculation as base
+            const isXLarge = stitchSizeForLine === 'xlarge';
+            const sizeForCalc = isXLarge ? 'large' : stitchSizeForLine;
+            
+            switch (sizeForCalc) {
+              case 'medium':
+                // Medium: 2 dashes per 20px cell, scale to actual line length
+                targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
+                break;
+              case 'large':
+              default:
+                // Large: 1 dash per 20px cell
+                // For exactly 1 cell (20px), we want 1 dash total (not 2)
+                targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
+                break;
+            }
+            
+            // Calculate dash and gap lengths based on drawable length
+            let dashLength, gapLength;
+            
+            if (targetDashCount === 1) {
+              // Single dash: use entire drawable length, no gaps
+              dashLength = drawableLength;
+              gapLength = 0;
+            } else if (isXLarge) {
+              // XLarge: ensure even count for pairing
+              if (targetDashCount % 2 !== 0) {
+                targetDashCount += 1;
+              }
+              // XLarge: merge pairs of dashes
+              // Each "super dash" = 2 dashes + 1 gap between them
+              const superDashCount = targetDashCount / 2;
+              const gapCount = superDashCount - 1; // gaps between super dashes
+              
+              // Calculate space
+              const totalGapSpace = gapCount * gapBetweenStitches;
+              const totalDashSpace = drawableLength - totalGapSpace;
+              
+              // Each super dash gets equal space
+              const superDashLength = totalDashSpace / superDashCount;
+              
+              // Set pattern: long dash, then gap
+              dashLength = superDashLength;
+              gapLength = gapBetweenStitches;
+            } else {
+              // Regular calculation (medium/large with multiple dashes)
+              const gapCount = targetDashCount - 1;
+              const totalGapSpace = gapCount * gapBetweenStitches;
+              const totalDashSpace = drawableLength - totalGapSpace;
+              
+              dashLength = totalDashSpace / targetDashCount;
+              gapLength = gapBetweenStitches;
+            }
+            
+            // Only draw if dash length is positive (line is long enough)
+            if (dashLength <= 0) continue;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([dashLength, gapLength]);
+            ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultThreadColor);
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(offsetStartX, offsetStartY);
+            ctx.lineTo(offsetEndX, offsetEndY);
+            ctx.stroke();
+            ctx.restore();
+          }
         }
       }
     });
 
     if (drawingState.mode === 'draw' && drawingState.firstPoint) {
       ctx.save();
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = '#0000FF';
       ctx.beginPath();
-      ctx.arc(drawingState.firstPoint.x * cellSize, drawingState.firstPoint.y * cellSize, DOT_RADIUS * 2, 0, Math.PI * 2);
+      const firstPointX = drawingState.firstPoint.x * cellSize;
+      const firstPointY = drawingState.firstPoint.y * cellSize;
+      ctx.arc(firstPointX, firstPointY, 2, 0, Math.PI * 2); // 2px radius = 4px diameter
       ctx.fill();
       ctx.restore();
     }
   }, [
+    artboardOffset,
+    artboardSize,
     backgroundColor,
     canvasGridSize,
     canvasSize,
@@ -268,17 +448,38 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         return;
       }
 
-      const wrappedStart = {
-        x: wrapCoordinate(drawingState.firstPoint.x, patternGridSize),
-        y: wrapCoordinate(drawingState.firstPoint.y, patternGridSize),
+      // Check if the line intersects with the artboard (extended by 1 tile on all sides)
+      const startPixelX = drawingState.firstPoint.x * cellSize;
+      const startPixelY = drawingState.firstPoint.y * cellSize;
+      const endPixelX = point.gridX * cellSize;
+      const endPixelY = point.gridY * cellSize;
+      
+      const tileSize = patternGridSize * cellSize;
+      if (!lineIntersectsArtboard(startPixelX, startPixelY, endPixelX, endPixelY, artboardOffset, artboardOffset, artboardSize, tileSize)) {
+        // Line doesn't intersect drawable area, don't add it
+        onDrawingStateChange({ ...drawingState, firstPoint: null });
+        return;
+      }
+
+      // Convert canvas grid coordinates to artboard-relative coordinates
+      const artboardGridOffset = Math.round(artboardOffset / cellSize);
+      const startGridX = drawingState.firstPoint.x - artboardGridOffset;
+      const startGridY = drawingState.firstPoint.y - artboardGridOffset;
+      const endGridX = point.gridX - artboardGridOffset;
+      const endGridY = point.gridY - artboardGridOffset;
+
+      // Store absolute artboard coordinates (not wrapped)
+      const absoluteStart = {
+        x: startGridX,
+        y: startGridY,
       };
-      const wrappedEnd = {
-        x: wrapCoordinate(point.gridX, patternGridSize),
-        y: wrapCoordinate(point.gridY, patternGridSize),
+      const absoluteEnd = {
+        x: endGridX,
+        y: endGridY,
       };
       
-      // Include stitch size in the stitch data
-      onAddStitch({ start: wrappedStart, end: wrappedEnd, stitchSize });
+      // Include stitch size and repeat setting in the stitch data
+      onAddStitch({ start: absoluteStart, end: absoluteEnd, stitchSize, repeat: repeatPattern });
       onDrawingStateChange({ ...drawingState, firstPoint: null });
       return;
     }
@@ -288,23 +489,63 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     let closestDistance = SELECT_THRESHOLD;
 
     stitches.forEach((stitch) => {
-      for (let tileRow = 0; tileRow < tilesPerSide; tileRow += 1) {
-        for (let tileCol = 0; tileCol < tilesPerSide; tileCol += 1) {
-          const offsetX = tileCol * patternGridSize;
-          const offsetY = tileRow * patternGridSize;
-          const startX = (stitch.start.x + offsetX) * cellSize;
-          const startY = (stitch.start.y + offsetY) * cellSize;
-          const endX = (stitch.end.x + offsetX) * cellSize;
-          const endY = (stitch.end.y + offsetY) * cellSize;
+      // Check if coordinates are absolute (new format) or wrapped (old format)
+      const isAbsoluteCoords = stitch.start.x >= patternGridSize || stitch.start.y >= patternGridSize ||
+                               stitch.end.x >= patternGridSize || stitch.end.y >= patternGridSize ||
+                               stitch.start.x < 0 || stitch.start.y < 0 ||
+                               stitch.end.x < 0 || stitch.end.y < 0;
 
-          if (startX > canvasSize || startY > canvasSize) {
-            continue;
+      if (isAbsoluteCoords) {
+        // New format: use absolute coordinates
+        // Check all tile positions if repeat is on
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
+
+        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
+            const tileOffsetX = tileCol * patternGridSize;
+            const tileOffsetY = tileRow * patternGridSize;
+            
+            const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
+            const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
+            const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
+            const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
+
+            if (startX > canvasSize || startY > canvasSize) {
+              continue;
+            }
+
+            const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closest = stitch.id;
+            }
           }
+        }
+      } else {
+        // Old format: use wrapped coordinates with tiling
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
 
-          const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closest = stitch.id;
+        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
+            const offsetX = tileCol * patternGridSize;
+            const offsetY = tileRow * patternGridSize;
+            // Add artboardOffset to stitch coordinates
+            const startX = artboardOffset + (stitch.start.x + offsetX) * cellSize;
+            const startY = artboardOffset + (stitch.start.y + offsetY) * cellSize;
+            const endX = artboardOffset + (stitch.end.x + offsetX) * cellSize;
+            const endY = artboardOffset + (stitch.end.y + offsetY) * cellSize;
+
+            if (startX > canvasSize || startY > canvasSize) {
+              continue;
+            }
+
+            const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closest = stitch.id;
+            }
           }
         }
       }
@@ -328,12 +569,18 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
   };
 
+  const getCursorClass = () => {
+    if (drawingState.mode === 'pan') return 'cursor-grab';
+    if (drawingState.mode === 'draw') return 'cursor-crosshair';
+    return 'cursor-default';
+  };
+
   return (
     <canvas
       ref={canvasRef}
       width={canvasSize}
       height={canvasSize}
-      className={`mx-auto rounded-xl bg-slate-950 ${drawingState.mode === 'draw' ? 'cursor-crosshair' : 'cursor-default'}`}
+      className={`mx-auto bg-slate-950 ${getCursorClass()}`}
       onClick={handleCanvasClick}
     />
   );

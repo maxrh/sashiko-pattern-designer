@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import patternsData from '../data/patterns.json';
-import { PatternCanvas } from './PatternCanvas.jsx';
+import { CanvasViewport } from './CanvasViewport.jsx';
 import { CanvasSettings } from './CanvasSettings.jsx';
 import { Toolbar } from './Toolbar.jsx';
 import { ExportPanel } from './ExportPanel.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
 import { ContextualSidebar } from './ContextualSidebar.jsx';
 import { Badge } from './ui/badge.jsx';
-import { Separator } from './ui/separator.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs.jsx';
 
 const CELL_SIZE = 20;
@@ -75,6 +74,7 @@ export default function PatternDesigner() {
   const [selectedStitchColor, setSelectedStitchColor] = useState('#fb7185');
   const [sidebarTab, setSidebarTab] = useState('controls');
   const [stitchSize, setStitchSize] = useState('large');
+  const [repeatPattern, setRepeatPattern] = useState(true);
 
   const canvasRef = useRef(null);
 
@@ -101,7 +101,7 @@ export default function PatternDesigner() {
     setSelectedStitchIds(new Set());
   }, []);
 
-  const handleAddStitch = useCallback(({ start, end, stitchSize }) => {
+  const handleAddStitch = useCallback(({ start, end, stitchSize, repeat }) => {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
     
     // Determine default stitch size based on orientation if not provided
@@ -119,6 +119,7 @@ export default function PatternDesigner() {
       end,
       color: null,
       stitchSize: stitchSize || defaultSize,
+      repeat: repeat !== undefined ? repeat : true,
     };
     setCurrentPattern((prev) => ({
       ...prev,
@@ -278,14 +279,14 @@ export default function PatternDesigner() {
             <p className="text-sm text-slate-400">Connect stitches on the grid, tile patterns, and craft your own sashiko designs.</p>
           </div>
           <Badge variant="outline" className="self-start">
-            {drawingState.mode === 'draw' ? 'Draw Mode ✏️' : 'Select Mode'}
+            {drawingState.mode === 'draw' ? 'Draw Mode ✏️' : drawingState.mode === 'pan' ? 'Pan Mode ✋' : 'Select Mode'}
           </Badge>
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
-        {/* Left Sidebar */}
-        <aside className="flex w-full flex-col lg:w-80 xl:w-96">
+      <div className="relative flex flex-1">
+        {/* Left Sidebar - Floating */}
+        <aside className="absolute left-6 top-6 z-10 flex w-80 flex-col">
           <Tabs
             value={sidebarTab}
             onValueChange={setSidebarTab}
@@ -311,7 +312,7 @@ export default function PatternDesigner() {
                 onDefaultThreadColorChange={setDefaultThreadColor}
                 patternName={currentPattern.name}
                 onPatternNameChange={handlePatternNameChange}
-                canvasInfo={`${canvasSize}px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches`}
+                canvasInfo={`2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches`}
               />
               <ExportPanel
                 onNewPattern={handleNewPattern}
@@ -334,42 +335,41 @@ export default function PatternDesigner() {
           </Tabs>
         </aside>
 
-        <Separator orientation="vertical" className="hidden lg:block" />
-
-        {/* Main Canvas Area */}
-        <main className="flex flex-1 flex-col gap-4">
-          <Toolbar
-            drawingMode={drawingState.mode}
-            onModeChange={handleModeChange}
-            stitchSize={stitchSize}
-            onStitchSizeChange={setStitchSize}
-            onSelectAll={handleSelectAll}
-            onDeselectAll={handleDeselectAll}
-          />
-
-          <div className="overflow-auto">
-            <PatternCanvas
-              ref={canvasRef}
-              canvasSize={canvasSize}
-              cellSize={CELL_SIZE}
-              pattern={currentPattern}
-              stitchColors={stitchColors}
-              selectedStitchIds={selectedStitchIds}
-              onSelectStitchIds={setSelectedStitchIds}
-              onAddStitch={handleAddStitch}
-              drawingState={drawingState}
-              onDrawingStateChange={setDrawingState}
-              defaultThreadColor={defaultThreadColor}
-              backgroundColor={backgroundColor}
+        {/* Main Canvas Area - Full screen */}
+        <main className="absolute inset-0 flex flex-col">
+          {/* Toolbar - Centered at top */}
+          <div className="absolute left-1/2 top-6 z-10 -translate-x-1/2">
+            <Toolbar
+              drawingMode={drawingState.mode}
+              onModeChange={handleModeChange}
               stitchSize={stitchSize}
+              onStitchSizeChange={setStitchSize}
+              repeatPattern={repeatPattern}
+              onRepeatPatternChange={setRepeatPattern}
+              onSelectAll={handleSelectAll}
+              onDeselectAll={handleDeselectAll}
             />
           </div>
+
+          <CanvasViewport
+            ref={canvasRef}
+            patternTiles={patternTiles}
+            pattern={currentPattern}
+            stitchColors={stitchColors}
+            selectedStitchIds={selectedStitchIds}
+            onSelectStitchIds={setSelectedStitchIds}
+            onAddStitch={handleAddStitch}
+            drawingState={drawingState}
+            onDrawingStateChange={setDrawingState}
+            defaultThreadColor={defaultThreadColor}
+            backgroundColor={backgroundColor}
+            stitchSize={stitchSize}
+            repeatPattern={repeatPattern}
+          />
         </main>
 
-        <Separator orientation="vertical" className="hidden lg:block" />
-
-        {/* Right Sidebar - Contextual Settings */}
-        <aside className="flex w-full flex-col lg:w-80">
+        {/* Right Sidebar - Floating */}
+        <aside className="absolute right-6 top-6 z-10 flex w-80 flex-col">
           <ContextualSidebar
             selectedCount={selectedStitchIds.size}
             selectedStitchColor={selectedStitchColor}

@@ -6,6 +6,8 @@ export function Toolbar({
   onModeChange,
   stitchSize,
   onStitchSizeChange,
+  repeatPattern,
+  onRepeatPatternChange,
   onSelectAll,
   onDeselectAll,
 }) {
@@ -64,31 +66,74 @@ export function Toolbar({
             />
           </svg>
         </button>
+
+        <button
+          type="button"
+          onClick={() => onModeChange('pan')}
+          className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
+            drawingMode === 'pan'
+              ? 'border-blue-500 bg-blue-500/20 text-blue-400'
+              : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+          }`}
+          title="Pan Mode (Spacebar)"
+        >
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+            />
+          </svg>
+        </button>
       </div>
 
       <div className="h-6 w-px bg-slate-700" />
 
-      {/* Stitch Length */}
+      {/* Stitch Size */}
+      <div className="flex items-center gap-2">
+        <Label htmlFor="toolbar-stitch-size" className="text-xs text-slate-400 whitespace-nowrap">
+          Stitch Size
+        </Label>
+        <Select
+          id="toolbar-stitch-size"
+          value={stitchSize}
+          onChange={(event) => onStitchSizeChange(event.target.value)}
+          className="w-32"
+        >
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+          <option value="xlarge">XLarge</option>
+        </Select>
+      </div>
+
+      <div className="h-6 w-px bg-slate-700" />
+
+      {/* Repeat Pattern Toggle */}
       {drawingMode === 'draw' && (
         <>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="toolbar-stitch-size" className="text-xs text-slate-400 whitespace-nowrap">
-              Stitch Length
-            </Label>
-            <Select
-              id="toolbar-stitch-size"
-              value={stitchSize}
-              onChange={(event) => onStitchSizeChange(event.target.value)}
-              className="w-32"
-            >
-              <option value="medium">Medium</option>
-              <option value="large">Large</option>
-              <option value="xlarge">XLarge</option>
-            </Select>
-          </div>
+          <button
+            type="button"
+            onClick={() => onRepeatPatternChange(!repeatPattern)}
+            className={`rounded border px-3 py-1.5 text-xs font-medium transition-colors ${
+              repeatPattern
+                ? 'border-blue-500 bg-blue-500/20 text-blue-400'
+                : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300'
+            }`}
+            title="Repeat pattern in all tiles"
+          >
+            Repeat: {repeatPattern ? 'On' : 'Off'}
+          </button>
           <div className="h-6 w-px bg-slate-700" />
         </>
       )}
+
 
       {/* Selection Actions */}
       <div className="flex items-center gap-2">
