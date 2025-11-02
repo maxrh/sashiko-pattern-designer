@@ -92,7 +92,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
 
     // Draw grid dots as 3x3px squares with center pixel as connection point
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
     for (let x = 0; x <= canvasGridSize; x += 1) {
       for (let y = 0; y <= canvasGridSize; y += 1) {
         const centerX = x * cellSize;
@@ -142,48 +142,55 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           // Calculate the drawable length (after removing offsets)
           const drawableLength = length - (2 * stitchOffset);
 
-          // Determine if this is a diagonal stitch by checking grid coordinates
-          const gridDx = Math.abs(stitch.end.x - stitch.start.x);
-          const gridDy = Math.abs(stitch.end.y - stitch.start.y);
-          const isDiagonal = gridDx > 0 && gridDy > 0 && gridDx === gridDy;
-
           // Get stitch size info from stitch metadata (or use default 'medium')
           const stitchSizeForLine = stitch.stitchSize || 'medium';
           
-          // Base cell size
-          const baseCellSize = isDiagonal ? 28.2843 : 20;
-          
-          // Calculate dash and gap based on stitch size
-          let dashLength, gapLength;
+          // Determine target dash count based on stitch size and actual line length
+          // Use the actual length to determine how many stitches should fit
+          let targetDashCount;
+          const cellsInLine = drawableLength / 20; // How many 20px cells in this line
           
           switch (stitchSizeForLine) {
             case 'small':
-              // Small (1/3 cell): 2 stitches per cell: 4 dashes total across one cell
-              // Each segment = (cell - offsets) / 4, then subtract half gap
-              const smallSegment = (baseCellSize - (2 * stitchOffset)) / 4;
-              dashLength = smallSegment - (gapBetweenStitches / 2);
-              gapLength = gapBetweenStitches;
+              // Small: 4 dashes per 20px cell, scale to actual line length
+              targetDashCount = Math.max(2, Math.round(cellsInLine * 4));
               break;
-              
             case 'medium':
-              // Medium (1/2 cell): 1 stitch per cell: 2 dashes across one cell
-              if (isDiagonal) {
-                dashLength = (28.2843 - (2 * stitchOffset) - gapBetweenStitches) / 2;
-              } else {
-                dashLength = (20 - (2 * stitchOffset) - gapBetweenStitches) / 2; // (20 - 8 - 8) / 2 = 2
-              }
-              gapLength = gapBetweenStitches;
+              // Medium: 2 dashes per 20px cell, scale to actual line length
+              targetDashCount = Math.max(2, Math.round(cellsInLine * 2));
               break;
-              
             case 'large':
             default:
-              // Large (1 cell): 1 stitch per 2 cells: 2 dashes with gap spanning 2 cells
-              // Pattern: 2px offset + long dash + 4px gap + long dash + 2px offset = 2 cells
-              const totalTwoCells = baseCellSize * 2 - (2 * stitchOffset);
-              dashLength = (totalTwoCells - gapBetweenStitches) / 2;
-              gapLength = gapBetweenStitches;
+              // Large: 1 dash per 20px cell, scale to actual line length
+              // Use floor to avoid rounding up (e.g., 0.6 cells -> 0, then make it 2 minimum)
+              targetDashCount = Math.max(2, Math.floor(cellsInLine * 1));
+              // For lines close to 1 cell, ensure we get exactly 2 dashes
+              if (cellsInLine >= 0.8 && cellsInLine <= 1.2) {
+                targetDashCount = 2;
+              }
               break;
           }
+          
+          // Ensure even number of dashes for symmetry
+          if (targetDashCount % 2 !== 0) {
+            targetDashCount += 1;
+          }
+          
+          // Calculate the number of gaps (one less than dashes for a line pattern)
+          const gapCount = targetDashCount - 1;
+          
+          // Calculate total gap space
+          const totalGapSpace = gapCount * gapBetweenStitches;
+          
+          // Remaining space for dashes
+          const totalDashSpace = drawableLength - totalGapSpace;
+          
+          // Calculate dash length (dynamically adjusted to fit perfectly)
+          const dashLength = totalDashSpace / targetDashCount;
+          const gapLength = gapBetweenStitches;
+          
+          // Only draw if dash length is positive (line is long enough)
+          if (dashLength <= 0) continue;
 
           ctx.save();
           ctx.beginPath();
@@ -309,7 +316,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ref={canvasRef}
       width={canvasSize}
       height={canvasSize}
-      className="mx-auto rounded-xl border border-slate-800 bg-slate-950 shadow-lg"
+      className="mx-auto rounded-xl  bg-slate-950 cursor-crosshair"
       onClick={handleCanvasClick}
     />
   );
