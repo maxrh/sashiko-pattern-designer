@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import patternsData from '../data/patterns.json';
 import { PatternCanvas } from './PatternCanvas.jsx';
-import { ColorControls } from './ColorControls.jsx';
-import { ControlsPanel } from './ControlsPanel.jsx';
+import { CanvasSettings } from './CanvasSettings.jsx';
+import { Toolbar } from './Toolbar.jsx';
+import { ExportPanel } from './ExportPanel.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
+import { ContextualSidebar } from './ContextualSidebar.jsx';
 import { Badge } from './ui/badge.jsx';
 import { Separator } from './ui/separator.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs.jsx';
@@ -282,6 +284,7 @@ export default function PatternDesigner() {
       </header>
 
       <div className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
+        {/* Left Sidebar */}
         <aside className="flex w-full flex-col lg:w-80 xl:w-96">
           <Tabs
             value={sidebarTab}
@@ -299,35 +302,19 @@ export default function PatternDesigner() {
             </TabsList>
 
             <TabsContent value="controls" className="space-y-6">
-              <ColorControls
-                defaultThreadColor={defaultThreadColor}
-                onDefaultThreadColorChange={setDefaultThreadColor}
-                backgroundColor={backgroundColor}
-                onBackgroundColorChange={setBackgroundColor}
-                selectedStitchColor={selectedStitchColor}
-                onSelectedStitchColorChange={setSelectedStitchColor}
-                onApplySelectedColor={handleApplySelectedColor}
-                onClearColors={handleClearColors}
-                colorPresets={COLOR_PRESETS}
-                hasSelection={selectedStitchIds.size > 0}
-                selectedCount={selectedStitchIds.size}
-              />
-              <ControlsPanel
+              <CanvasSettings
                 patternTiles={patternTiles}
                 onPatternTilesChange={setPatternTiles}
-                drawingMode={drawingState.mode}
-                onModeChange={handleModeChange}
-                stitchSize={stitchSize}
-                onStitchSizeChange={setStitchSize}
-                onChangeSelectedStitchSize={handleChangeSelectedStitchSize}
-                onSelectAll={handleSelectAll}
-                onDeselectAll={handleDeselectAll}
-                onDeleteSelected={handleDeleteSelected}
-                patternInfo={patternInfo}
-                onNewPattern={handleNewPattern}
+                backgroundColor={backgroundColor}
+                onBackgroundColorChange={setBackgroundColor}
+                defaultThreadColor={defaultThreadColor}
+                onDefaultThreadColorChange={setDefaultThreadColor}
                 patternName={currentPattern.name}
                 onPatternNameChange={handlePatternNameChange}
-                selectedCount={selectedStitchIds.size}
+                canvasInfo={`${canvasSize}px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches`}
+              />
+              <ExportPanel
+                onNewPattern={handleNewPattern}
                 onExportPattern={handleExportPattern}
                 onImportPattern={handleImportPattern}
                 onExportImage={handleExportImage}
@@ -349,16 +336,16 @@ export default function PatternDesigner() {
 
         <Separator orientation="vertical" className="hidden lg:block" />
 
+        {/* Main Canvas Area */}
         <main className="flex flex-1 flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Canvas</h2>
-              <p className="text-sm text-slate-400">Grid size {canvasSize}px · Cell {CELL_SIZE}px · {currentPattern.stitches.length} stitches</p>
-            </div>
-            <Badge variant="outline">
-              {drawingState.mode === 'draw' ? 'Draw Mode ✏️' : 'Select Mode'}
-            </Badge>
-          </div>
+          <Toolbar
+            drawingMode={drawingState.mode}
+            onModeChange={handleModeChange}
+            stitchSize={stitchSize}
+            onStitchSizeChange={setStitchSize}
+            onSelectAll={handleSelectAll}
+            onDeselectAll={handleDeselectAll}
+          />
 
           <div className="overflow-auto">
             <PatternCanvas
@@ -378,6 +365,22 @@ export default function PatternDesigner() {
             />
           </div>
         </main>
+
+        <Separator orientation="vertical" className="hidden lg:block" />
+
+        {/* Right Sidebar - Contextual Settings */}
+        <aside className="flex w-full flex-col lg:w-80">
+          <ContextualSidebar
+            selectedCount={selectedStitchIds.size}
+            selectedStitchColor={selectedStitchColor}
+            onSelectedStitchColorChange={setSelectedStitchColor}
+            onApplySelectedColor={handleApplySelectedColor}
+            onClearColors={handleClearColors}
+            onChangeSelectedStitchSize={handleChangeSelectedStitchSize}
+            onDeleteSelected={handleDeleteSelected}
+            colorPresets={COLOR_PRESETS}
+          />
+        </aside>
       </div>
     </div>
   );

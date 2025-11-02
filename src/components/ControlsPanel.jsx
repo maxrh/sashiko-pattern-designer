@@ -8,24 +8,17 @@ import { Select } from './ui/select.jsx';
 import { Separator } from './ui/separator.jsx';
 import { Badge } from './ui/badge.jsx';
 
-const TILE_OPTIONS = [2, 3, 4, 5, 6, 8, 10];
-
 export function ControlsPanel({
-  patternTiles,
-  onPatternTilesChange,
   drawingMode,
   onModeChange,
   stitchSize,
   onStitchSizeChange,
-  onChangeSelectedStitchSize,
   onSelectAll,
   onDeselectAll,
-  onDeleteSelected,
   patternInfo,
   onNewPattern,
   patternName,
   onPatternNameChange,
-  selectedCount,
   onExportPattern,
   onImportPattern,
   onExportImage,
@@ -58,19 +51,6 @@ export function ControlsPanel({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="pattern-tiles">Pattern Tiles</Label>
-          <Select
-            id="pattern-tiles"
-            value={String(patternTiles)}
-            onChange={(event) => onPatternTilesChange(Number(event.target.value))}
-          >
-            {TILE_OPTIONS.map((tiles) => (
-              <option key={tiles} value={tiles}>{tiles}×{tiles}</option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="space-y-2">
           <Label>Interaction Mode</Label>
           <RadioGroup value={drawingMode} onValueChange={onModeChange}>
             <RadioGroupItem value="select">Select Mode</RadioGroupItem>
@@ -80,35 +60,15 @@ export function ControlsPanel({
 
         {drawingMode === 'draw' && (
           <div className="space-y-2">
-            <Label htmlFor="stitch-size">Stitch Length (New)</Label>
+            <Label htmlFor="stitch-size">New Stitch Length</Label>
             <Select
               id="stitch-size"
               value={stitchSize}
               onChange={(event) => onStitchSizeChange(event.target.value)}
             >
-              <option value="small">Small (1/3 cell)</option>
               <option value="medium">Medium (1/2 cell)</option>
               <option value="large">Large (1 cell)</option>
-            </Select>
-          </div>
-        )}
-
-        {drawingMode === 'select' && selectedCount > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="selected-stitch-size">Stitch Length (Selected)</Label>
-            <Select
-              id="selected-stitch-size"
-              defaultValue=""
-              onChange={(event) => {
-                if (event.target.value) {
-                  onChangeSelectedStitchSize(event.target.value);
-                }
-              }}
-            >
-              <option value="">Change size...</option>
-              <option value="small">Small (1/3 cell)</option>
-              <option value="medium">Medium (1/2 cell)</option>
-              <option value="large">Large (1 cell)</option>
+              <option value="xlarge">XLarge (2 cells)</option>
             </Select>
           </div>
         )}
@@ -119,14 +79,6 @@ export function ControlsPanel({
           </Button>
           <Button type="button" variant="secondary" onClick={onDeselectAll}>
             Deselect All
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={onDeleteSelected}
-            disabled={selectedCount === 0}
-          >
-            Delete Selected ({selectedCount})
           </Button>
         </div>
 

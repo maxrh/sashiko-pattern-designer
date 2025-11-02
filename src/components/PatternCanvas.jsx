@@ -150,11 +150,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           let targetDashCount;
           const cellsInLine = drawableLength / 20; // How many 20px cells in this line
           
-          switch (stitchSizeForLine) {
-            case 'small':
-              // Small: 4 dashes per 20px cell, scale to actual line length
-              targetDashCount = Math.max(2, Math.round(cellsInLine * 4));
-              break;
+          // For xlarge, we use large calculation as base
+          const isXLarge = stitchSizeForLine === 'xlarge';
+          const sizeForCalc = isXLarge ? 'large' : stitchSizeForLine;
+          
+          switch (sizeForCalc) {
             case 'medium':
               // Medium: 2 dashes per 20px cell, scale to actual line length
               targetDashCount = Math.max(2, Math.round(cellsInLine * 2));
@@ -176,18 +176,35 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             targetDashCount += 1;
           }
           
-          // Calculate the number of gaps (one less than dashes for a line pattern)
-          const gapCount = targetDashCount - 1;
+          // For xlarge: combine every 2 dashes into 1 longer stitch
+          // Pattern becomes: [longDash, gap, longDash, gap] instead of [dash, gap, dash, gap, dash, gap, dash, gap]
+          let dashLength, gapLength, dashPattern;
           
-          // Calculate total gap space
-          const totalGapSpace = gapCount * gapBetweenStitches;
-          
-          // Remaining space for dashes
-          const totalDashSpace = drawableLength - totalGapSpace;
-          
-          // Calculate dash length (dynamically adjusted to fit perfectly)
-          const dashLength = totalDashSpace / targetDashCount;
-          const gapLength = gapBetweenStitches;
+          if (isXLarge) {
+            // XLarge: merge pairs of dashes
+            // Each "super dash" = 2 dashes + 1 gap between them
+            const superDashCount = targetDashCount / 2;
+            const gapCount = superDashCount - 1; // gaps between super dashes
+            
+            // Calculate space
+            const totalGapSpace = gapCount * gapBetweenStitches;
+            const totalDashSpace = drawableLength - totalGapSpace;
+            
+            // Each super dash gets equal space
+            const superDashLength = totalDashSpace / superDashCount;
+            
+            // Set pattern: long dash, then gap
+            dashLength = superDashLength;
+            gapLength = gapBetweenStitches;
+          } else {
+            // Regular calculation
+            const gapCount = targetDashCount - 1;
+            const totalGapSpace = gapCount * gapBetweenStitches;
+            const totalDashSpace = drawableLength - totalGapSpace;
+            
+            dashLength = totalDashSpace / targetDashCount;
+            gapLength = gapBetweenStitches;
+          }
           
           // Only draw if dash length is positive (line is long enough)
           if (dashLength <= 0) continue;
@@ -316,7 +333,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ref={canvasRef}
       width={canvasSize}
       height={canvasSize}
-      className="mx-auto rounded-xl  bg-slate-950 cursor-crosshair"
+      className={`mx-auto rounded-xl bg-slate-950 ${drawingState.mode === 'draw' ? 'cursor-crosshair' : 'cursor-default'}`}
       onClick={handleCanvasClick}
     />
   );
