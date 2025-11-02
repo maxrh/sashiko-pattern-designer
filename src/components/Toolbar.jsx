@@ -1,13 +1,6 @@
-import { Select } from './ui/select.jsx';
-import { Label } from './ui/label.jsx';
-
 export function Toolbar({
   drawingMode,
   onModeChange,
-  stitchSize,
-  onStitchSizeChange,
-  repeatPattern,
-  onRepeatPatternChange,
   onSelectAll,
   onDeselectAll,
 }) {
@@ -95,45 +88,6 @@ export function Toolbar({
       </div>
 
       <div className="h-6 w-px bg-slate-700" />
-
-      {/* Stitch Size */}
-      <div className="flex items-center gap-2">
-        <Label htmlFor="toolbar-stitch-size" className="text-xs text-slate-400 whitespace-nowrap">
-          Stitch Size
-        </Label>
-        <Select
-          id="toolbar-stitch-size"
-          value={stitchSize}
-          onChange={(event) => onStitchSizeChange(event.target.value)}
-          className="w-32"
-        >
-          <option value="medium">Medium</option>
-          <option value="large">Large</option>
-          <option value="xlarge">XLarge</option>
-        </Select>
-      </div>
-
-      <div className="h-6 w-px bg-slate-700" />
-
-      {/* Repeat Pattern Toggle */}
-      {drawingMode === 'draw' && (
-        <>
-          <button
-            type="button"
-            onClick={() => onRepeatPatternChange(!repeatPattern)}
-            className={`rounded border px-3 py-1.5 text-xs font-medium transition-colors ${
-              repeatPattern
-                ? 'border-blue-500 bg-blue-500/20 text-blue-400'
-                : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300'
-            }`}
-            title="Repeat pattern in all tiles"
-          >
-            Repeat: {repeatPattern ? 'On' : 'Off'}
-          </button>
-          <div className="h-6 w-px bg-slate-700" />
-        </>
-      )}
-
 
       {/* Selection Actions */}
       <div className="flex items-center gap-2">
