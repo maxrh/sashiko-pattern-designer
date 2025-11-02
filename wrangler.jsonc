@@ -1,0 +1,7 @@
+{
+  "name": "sashiko-app",
+  "compatibility_date": "2025-11-02",
+  "assets": {
+    "directory": "./dist"
+  }
+}
