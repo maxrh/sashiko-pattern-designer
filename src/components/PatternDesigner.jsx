@@ -6,6 +6,7 @@ import { ControlsPanel } from './ControlsPanel.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
 import { Badge } from './ui/badge.jsx';
 import { Separator } from './ui/separator.jsx';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs.jsx';
 
 const CELL_SIZE = 20;
 const COLOR_PRESETS = [
@@ -70,6 +71,7 @@ export default function PatternDesigner() {
   const [defaultThreadColor, setDefaultThreadColor] = useState('#ffffff');
   const [backgroundColor, setBackgroundColor] = useState('#0f172a');
   const [selectedStitchColor, setSelectedStitchColor] = useState('#fb7185');
+  const [sidebarTab, setSidebarTab] = useState('controls');
 
   const canvasRef = useRef(null);
 
@@ -253,42 +255,66 @@ export default function PatternDesigner() {
       </header>
 
       <div className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
-        <aside className="flex w-full flex-col gap-6 lg:w-80 xl:w-96">
-          <PatternSelector
-            patterns={savedPatterns}
-            activePatternId={currentPattern.id}
-            onSelectPattern={handleSelectPattern}
-          />
-          <ColorControls
-            defaultThreadColor={defaultThreadColor}
-            onDefaultThreadColorChange={setDefaultThreadColor}
-            backgroundColor={backgroundColor}
-            onBackgroundColorChange={setBackgroundColor}
-            selectedStitchColor={selectedStitchColor}
-            onSelectedStitchColorChange={setSelectedStitchColor}
-            onApplySelectedColor={handleApplySelectedColor}
-            onClearColors={handleClearColors}
-            colorPresets={COLOR_PRESETS}
-            hasSelection={selectedStitchIds.size > 0}
-            selectedCount={selectedStitchIds.size}
-          />
-          <ControlsPanel
-            canvasSize={canvasSize}
-            onCanvasSizeChange={setCanvasSize}
-            drawingMode={drawingState.mode}
-            onModeChange={handleModeChange}
-            onSelectAll={handleSelectAll}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            patternInfo={patternInfo}
-            onNewPattern={handleNewPattern}
-            patternName={currentPattern.name}
-            onPatternNameChange={handlePatternNameChange}
-            selectedCount={selectedStitchIds.size}
-            onExportPattern={handleExportPattern}
-            onImportPattern={handleImportPattern}
-            onExportImage={handleExportImage}
-          />
+        <aside className="flex w-full flex-col lg:w-80 xl:w-96">
+          <Tabs
+            value={sidebarTab}
+            onValueChange={setSidebarTab}
+            defaultValue="controls"
+            className="flex-1"
+          >
+            <TabsList className="w-full justify-between">
+              <TabsTrigger value="controls" className="flex-1 text-center">
+                Controls
+              </TabsTrigger>
+              <TabsTrigger value="patterns" className="flex-1 text-center">
+                Saved Patterns
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="controls" className="space-y-6">
+              <ColorControls
+                defaultThreadColor={defaultThreadColor}
+                onDefaultThreadColorChange={setDefaultThreadColor}
+                backgroundColor={backgroundColor}
+                onBackgroundColorChange={setBackgroundColor}
+                selectedStitchColor={selectedStitchColor}
+                onSelectedStitchColorChange={setSelectedStitchColor}
+                onApplySelectedColor={handleApplySelectedColor}
+                onClearColors={handleClearColors}
+                colorPresets={COLOR_PRESETS}
+                hasSelection={selectedStitchIds.size > 0}
+                selectedCount={selectedStitchIds.size}
+              />
+              <ControlsPanel
+                canvasSize={canvasSize}
+                onCanvasSizeChange={setCanvasSize}
+                drawingMode={drawingState.mode}
+                onModeChange={handleModeChange}
+                onSelectAll={handleSelectAll}
+                onDeselectAll={handleDeselectAll}
+                onDeleteSelected={handleDeleteSelected}
+                patternInfo={patternInfo}
+                onNewPattern={handleNewPattern}
+                patternName={currentPattern.name}
+                onPatternNameChange={handlePatternNameChange}
+                selectedCount={selectedStitchIds.size}
+                onExportPattern={handleExportPattern}
+                onImportPattern={handleImportPattern}
+                onExportImage={handleExportImage}
+              />
+            </TabsContent>
+
+            <TabsContent value="patterns" className="space-y-4">
+              <PatternSelector
+                patterns={savedPatterns}
+                activePatternId={currentPattern.id}
+                onSelectPattern={(pattern) => {
+                  handleSelectPattern(pattern);
+                  setSidebarTab('controls');
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </aside>
 
         <Separator orientation="vertical" className="hidden lg:block" />

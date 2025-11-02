@@ -75,18 +75,22 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
+    // Draw grid dots as 3x3px squares with center pixel as connection point
     ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
     for (let x = 0; x <= canvasGridSize; x += 1) {
       for (let y = 0; y <= canvasGridSize; y += 1) {
-        ctx.beginPath();
-        ctx.arc(x * cellSize, y * cellSize, DOT_RADIUS, 0, Math.PI * 2);
-        ctx.fill();
+        const centerX = x * cellSize;
+        const centerY = y * cellSize;
+        ctx.fillRect(centerX - 1, centerY - 1, 3, 3);
       }
     }
 
     const stitches = pattern?.stitches ?? [];
 
-    ctx.lineCap = 'round';
+    const stitchOffset = 2; // Start stitches 2px from grid point
+    const gapBetweenStitches = 4; // 4px gap between adjacent stitches
+
+    ctx.lineCap = 'butt'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
       const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultThreadColor;
       for (let tileRow = 0; tileRow < tilesPerSide; tileRow += 1) {
@@ -104,17 +108,55 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
           const isSelected = selectedStitchIds.has(stitch.id);
 
+          // Calculate the offset direction (unit vector from start to end)
+          const dx = endX - startX;
+          const dy = endY - startY;
+          const length = Math.hypot(dx, dy);
+          if (length === 0) continue;
+
+          const unitX = dx / length;
+          const unitY = dy / length;
+
+          // Offset start and end by 2px along the line
+          const offsetStartX = startX + unitX * stitchOffset;
+          const offsetStartY = startY + unitY * stitchOffset;
+          const offsetEndX = endX - unitX * stitchOffset;
+          const offsetEndY = endY - unitY * stitchOffset;
+
+          // Calculate the drawable length (after removing offsets)
+          const drawableLength = length - (2 * stitchOffset);
+
+          // Determine if this is a diagonal stitch by checking grid coordinates
+          const gridDx = Math.abs(stitch.end.x - stitch.start.x);
+          const gridDy = Math.abs(stitch.end.y - stitch.start.y);
+          const isDiagonal = gridDx > 0 && gridDy > 0 && gridDx === gridDy;
+
+          // Calculate dash length based on stitch orientation
+          // Horizontal/Vertical (20px cell): 2px offset + 6px dash + 4px gap + 6px dash + 2px offset = 20px
+          // Diagonal (28.2843px): 2px offset + 10.142px dash + 4px gap + 10.142px dash + 2px offset ≈ 28.28px
+          let dashLength, gapLength;
+          
+          if (isDiagonal) {
+            // For diagonal across single cell: (28.2843 - 4px offsets - 4px gap) / 2 = 10.142px
+            dashLength = (28.2843 - (2 * stitchOffset) - gapBetweenStitches) / 2;
+            gapLength = gapBetweenStitches;
+          } else {
+            // Horizontal or vertical: (20 - 4px offsets - 4px gap) / 2 = 6px
+            dashLength = 6;
+            gapLength = gapBetweenStitches;
+          }
+
           ctx.save();
           ctx.beginPath();
-          ctx.setLineDash([8, 6]);
+          ctx.setLineDash([dashLength, gapLength]);
           ctx.strokeStyle = colorOverride ?? defaultThreadColor;
           ctx.lineWidth = isSelected ? 4 : 2;
           if (isSelected) {
             ctx.shadowColor = colorOverride ?? defaultThreadColor;
             ctx.shadowBlur = 12;
           }
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(endX, endY);
+          ctx.moveTo(offsetStartX, offsetStartY);
+          ctx.lineTo(offsetEndX, offsetEndY);
           ctx.stroke();
           ctx.restore();
         }
