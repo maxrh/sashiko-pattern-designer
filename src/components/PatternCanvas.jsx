@@ -162,19 +162,21 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         // New format: use absolute coordinates
         // If repeat is on, draw the line in each tile by offsetting by tile amounts
         const shouldRepeat = stitch.repeat !== false;
-        const tilesToRender = shouldRepeat ? tilesPerSide : 1;
 
-        for (let tileRow = 0; tileRow < tilesToRender; tileRow++) {
-          for (let tileCol = 0; tileCol < tilesToRender; tileCol++) {
-            // Offset the absolute coordinates by the tile position
-            const tileOffsetX = tileCol * patternGridSize;
-            const tileOffsetY = tileRow * patternGridSize;
-            
-            // Use absolute coordinates directly, just offset by tile position
-            const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
-            const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
-            const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
-            const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
+        if (shouldRepeat) {
+          // Repeat the line across all tiles
+          // We need to try all possible tile offsets to cover all visible tiles
+          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow++) {
+            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol++) {
+              // Offset by tile amounts (including negative to cover tiles to the left/above)
+              const tileOffsetX = tileCol * patternGridSize;
+              const tileOffsetY = tileRow * patternGridSize;
+              
+              // Use absolute coordinates directly, just offset by tile position
+              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
+              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
+              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
+              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
 
             if (startX > canvasSize + cellSize || startY > canvasSize + cellSize) {
               continue;
@@ -277,7 +279,97 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             ctx.lineTo(offsetEndX, offsetEndY);
             ctx.stroke();
             ctx.restore();
+            }
           }
+        } else {
+          // Don't repeat - just draw once at absolute position
+          const startX = artboardOffset + (stitch.start.x * cellSize);
+          const startY = artboardOffset + (stitch.start.y * cellSize);
+          const endX = artboardOffset + (stitch.end.x * cellSize);
+          const endY = artboardOffset + (stitch.end.y * cellSize);
+
+          if (startX > canvasSize + cellSize || startY > canvasSize + cellSize) {
+            return;
+          }
+
+          const isSelected = selectedStitchIds.has(stitch.id);
+
+          // Calculate the offset direction (unit vector from start to end)
+          const dx = endX - startX;
+          const dy = endY - startY;
+          const length = Math.hypot(dx, dy);
+          if (length === 0) return;
+
+          const unitX = dx / length;
+          const unitY = dy / length;
+
+          // Offset start and end by 4px along the line
+          const offsetStartX = startX + unitX * stitchOffset;
+          const offsetStartY = startY + unitY * stitchOffset;
+          const offsetEndX = endX - unitX * stitchOffset;
+          const offsetEndY = endY - unitY * stitchOffset;
+
+          // Calculate the drawable length (after removing offsets)
+          const drawableLength = length - (2 * stitchOffset);
+
+          // Get stitch size info from stitch metadata (or use default 'medium')
+          const stitchSizeForLine = stitch.stitchSize || 'medium';
+          
+          // Determine target dash count based on stitch size and actual line length
+          let targetDashCount;
+          const actualCellsInLine = length / 20;
+          
+          const isXLarge = stitchSizeForLine === 'xlarge';
+          const sizeForCalc = isXLarge ? 'large' : stitchSizeForLine;
+          
+          switch (sizeForCalc) {
+            case 'medium':
+              targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
+              break;
+            case 'large':
+            default:
+              targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
+              break;
+          }
+          
+          // Calculate dash and gap lengths
+          let dashLength, gapLength;
+          
+          if (targetDashCount === 1) {
+            dashLength = drawableLength;
+            gapLength = 0;
+          } else if (isXLarge) {
+            if (targetDashCount % 2 !== 0) {
+              targetDashCount += 1;
+            }
+            const superDashCount = targetDashCount / 2;
+            const gapCount = superDashCount - 1;
+            const totalGapSpace = gapCount * gapBetweenStitches;
+            const totalDashSpace = drawableLength - totalGapSpace;
+            const superDashLength = totalDashSpace / superDashCount;
+            dashLength = superDashLength;
+            gapLength = gapBetweenStitches;
+          } else {
+            const gapCount = targetDashCount - 1;
+            const totalGapSpace = gapCount * gapBetweenStitches;
+            const totalDashSpace = drawableLength - totalGapSpace;
+            dashLength = totalDashSpace / targetDashCount;
+            gapLength = gapBetweenStitches;
+          }
+          
+          if (dashLength <= 0) return;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([dashLength, gapLength]);
+          ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultThreadColor);
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.moveTo(offsetStartX, offsetStartY);
+          ctx.lineTo(offsetEndX, offsetEndY);
+          ctx.stroke();
+          ctx.restore();
         }
       } else {
         // Old format: use wrapped coordinates with tiling
