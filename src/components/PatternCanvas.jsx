@@ -76,20 +76,35 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
+    // Draw pattern cell boundaries (discrete outline)
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    const patternCellPixelSize = patternGridSize * cellSize;
+    for (let row = 0; row <= tilesPerSide; row += 1) {
+      for (let col = 0; col <= tilesPerSide; col += 1) {
+        const x = col * patternCellPixelSize;
+        const y = row * patternCellPixelSize;
+        if (x <= canvasSize && y <= canvasSize) {
+          ctx.strokeRect(x, y, Math.min(patternCellPixelSize, canvasSize - x), Math.min(patternCellPixelSize, canvasSize - y));
+        }
+      }
+    }
+
     // Draw grid dots as 3x3px squares with center pixel as connection point
     ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
     for (let x = 0; x <= canvasGridSize; x += 1) {
       for (let y = 0; y <= canvasGridSize; y += 1) {
         const centerX = x * cellSize;
         const centerY = y * cellSize;
-        ctx.fillRect(centerX - 1, centerY - 1, 3, 3);
+        ctx.fillRect(centerX - 1.5, centerY - 1.5, 3, 3);
       }
     }
 
     const stitches = pattern?.stitches ?? [];
 
-    const stitchOffset = 2; // Start stitches 2px from grid point
-    const gapBetweenStitches = 4; // 4px gap between adjacent stitches
+    const stitchOffset = 4; // Start stitches 4px from grid point
+    const gapBetweenStitches = 8; // 8px gap between adjacent stitches
 
     ctx.lineCap = 'butt'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
@@ -132,59 +147,51 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           const gridDy = Math.abs(stitch.end.y - stitch.start.y);
           const isDiagonal = gridDx > 0 && gridDy > 0 && gridDx === gridDy;
 
-          // Get stitch size info from stitch metadata (or use default 'large')
-          const stitchSizeForLine = stitch.stitchSize || 'large';
+          // Get stitch size info from stitch metadata (or use default 'medium')
+          const stitchSizeForLine = stitch.stitchSize || 'medium';
           
-          // Calculate number of stitches per grid cell based on size
-          let stitchesPerCell;
-          switch (stitchSizeForLine) {
-            case 'small':
-              stitchesPerCell = 3; // 3 stitches per cell
-              break;
-            case 'medium':
-              stitchesPerCell = 2; // 2 stitches per cell (but actually renders as 2 dashes)
-              break;
-            case 'xlarge':
-              stitchesPerCell = 0.5; // 1 stitch per 2 cells
-              break;
-            case 'large':
-            default:
-              stitchesPerCell = 1; // 1 stitch per cell (renders as 2 dashes)
-              break;
-          }
-
           // Base cell size
           const baseCellSize = isDiagonal ? 28.2843 : 20;
           
-          // Calculate dash and gap based on stitches per cell
+          // Calculate dash and gap based on stitch size
           let dashLength, gapLength;
           
-          if (stitchesPerCell >= 1) {
-            // Multiple stitches per cell: divide the cell appropriately
-            // For 2 stitches per cell: each gets half the cell minus offsets
-            // For 3 stitches per cell: each gets one third minus offsets
-            const segmentLength = (baseCellSize - (2 * stitchOffset)) / (stitchesPerCell * 2);
-            dashLength = segmentLength - (gapBetweenStitches / 2);
-            gapLength = gapBetweenStitches;
-          } else {
-            // Less than 1 stitch per cell (xlarge): one stitch spans multiple cells
-            // Should have continuous dashes with no gap in the middle
-            const cellsPerStitch = 1 / stitchesPerCell; // 2 for xlarge
-            const totalLength = baseCellSize * cellsPerStitch - (2 * stitchOffset);
-            // Use the full length as one dash, minimal gap
-            dashLength = totalLength;
-            gapLength = 0;
+          switch (stitchSizeForLine) {
+            case 'small':
+              // Small (1/3 cell): 2 stitches per cell: 4 dashes total across one cell
+              // Each segment = (cell - offsets) / 4, then subtract half gap
+              const smallSegment = (baseCellSize - (2 * stitchOffset)) / 4;
+              dashLength = smallSegment - (gapBetweenStitches / 2);
+              gapLength = gapBetweenStitches;
+              break;
+              
+            case 'medium':
+              // Medium (1/2 cell): 1 stitch per cell: 2 dashes across one cell
+              if (isDiagonal) {
+                dashLength = (28.2843 - (2 * stitchOffset) - gapBetweenStitches) / 2;
+              } else {
+                dashLength = (20 - (2 * stitchOffset) - gapBetweenStitches) / 2; // (20 - 8 - 8) / 2 = 2
+              }
+              gapLength = gapBetweenStitches;
+              break;
+              
+            case 'large':
+            default:
+              // Large (1 cell): 1 stitch per 2 cells: 2 dashes with gap spanning 2 cells
+              // Pattern: 2px offset + long dash + 4px gap + long dash + 2px offset = 2 cells
+              const totalTwoCells = baseCellSize * 2 - (2 * stitchOffset);
+              dashLength = (totalTwoCells - gapBetweenStitches) / 2;
+              gapLength = gapBetweenStitches;
+              break;
           }
 
           ctx.save();
           ctx.beginPath();
           ctx.setLineDash([dashLength, gapLength]);
-          ctx.strokeStyle = colorOverride ?? defaultThreadColor;
-          ctx.lineWidth = isSelected ? 4 : 2;
-          if (isSelected) {
-            ctx.shadowColor = colorOverride ?? defaultThreadColor;
-            ctx.shadowBlur = 12;
-          }
+          ctx.strokeStyle = isSelected ? '#3b82f6' : (colorOverride ?? defaultThreadColor);
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
           ctx.moveTo(offsetStartX, offsetStartY);
           ctx.lineTo(offsetEndX, offsetEndY);
           ctx.stroke();

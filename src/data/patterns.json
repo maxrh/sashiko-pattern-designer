@@ -1,18 +1,25 @@
 [
   {
+    "id": "blank",
+    "name": "Blank Canvas",
+    "description": "Start with a clean canvas",
+    "gridSize": 10,
+    "stitches": []
+  },
+  {
     "id": "asanoha",
     "name": "Asanoha",
     "description": "Hemp leaf pattern",
     "gridSize": 10,
     "stitches": [
-      { "id": "asanoha-1", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "color": null },
-      { "id": "asanoha-2", "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "color": null },
-      { "id": "asanoha-3", "start": { "x": 10, "y": 5 }, "end": { "x": 5, "y": 10 }, "color": null },
-      { "id": "asanoha-4", "start": { "x": 5, "y": 10 }, "end": { "x": 0, "y": 5 }, "color": null },
-      { "id": "asanoha-5", "start": { "x": 0, "y": 0 }, "end": { "x": 5, "y": 5 }, "color": null },
-      { "id": "asanoha-6", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 0 }, "color": null },
-      { "id": "asanoha-7", "start": { "x": 10, "y": 10 }, "end": { "x": 5, "y": 5 }, "color": null },
-      { "id": "asanoha-8", "start": { "x": 5, "y": 5 }, "end": { "x": 0, "y": 10 }, "color": null }
+      { "id": "asanoha-1", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-2", "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-3", "start": { "x": 10, "y": 5 }, "end": { "x": 5, "y": 10 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-4", "start": { "x": 5, "y": 10 }, "end": { "x": 0, "y": 5 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-5", "start": { "x": 0, "y": 0 }, "end": { "x": 5, "y": 5 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-6", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 0 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-7", "start": { "x": 10, "y": 10 }, "end": { "x": 5, "y": 5 }, "color": null, "stitchSize": "medium" },
+      { "id": "asanoha-8", "start": { "x": 5, "y": 5 }, "end": { "x": 0, "y": 10 }, "color": null, "stitchSize": "medium" }
     ]
   },
   {
@@ -21,10 +28,10 @@
     "description": "Cross stitches on a 8x8 grid",
     "gridSize": 8,
     "stitches": [
-      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": null },
-      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": null },
-      { "id": "cross-3", "start": { "x": 4, "y": 0 }, "end": { "x": 4, "y": 8 }, "color": null },
-      { "id": "cross-4", "start": { "x": 0, "y": 4 }, "end": { "x": 8, "y": 4 }, "color": null }
+      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": null, "stitchSize": "medium" },
+      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": null, "stitchSize": "medium" },
+      { "id": "cross-3", "start": { "x": 4, "y": 0 }, "end": { "x": 4, "y": 8 }, "color": null, "stitchSize": "large" },
+      { "id": "cross-4", "start": { "x": 0, "y": 4 }, "end": { "x": 8, "y": 4 }, "color": null, "stitchSize": "large" }
     ]
   },
   {
@@ -33,9 +40,9 @@
     "description": "Offset diagonal stitches",
     "gridSize": 6,
     "stitches": [
-      { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": null },
-      { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": null },
-      { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": null }
+      { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": null, "stitchSize": "medium" },
+      { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": null, "stitchSize": "medium" },
+      { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": null, "stitchSize": "medium" }
     ]
   }
 ]

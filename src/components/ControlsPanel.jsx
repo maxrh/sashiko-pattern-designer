@@ -8,15 +8,16 @@ import { Select } from './ui/select.jsx';
 import { Separator } from './ui/separator.jsx';
 import { Badge } from './ui/badge.jsx';
 
-const CANVAS_OPTIONS = [400, 600, 800, 1000];
+const TILE_OPTIONS = [2, 3, 4, 5, 6, 8, 10];
 
 export function ControlsPanel({
-  canvasSize,
-  onCanvasSizeChange,
+  patternTiles,
+  onPatternTilesChange,
   drawingMode,
   onModeChange,
   stitchSize,
   onStitchSizeChange,
+  onChangeSelectedStitchSize,
   onSelectAll,
   onDeselectAll,
   onDeleteSelected,
@@ -57,14 +58,14 @@ export function ControlsPanel({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="canvas-size">Canvas Size</Label>
+          <Label htmlFor="pattern-tiles">Pattern Tiles</Label>
           <Select
-            id="canvas-size"
-            value={String(canvasSize)}
-            onChange={(event) => onCanvasSizeChange(Number(event.target.value))}
+            id="pattern-tiles"
+            value={String(patternTiles)}
+            onChange={(event) => onPatternTilesChange(Number(event.target.value))}
           >
-            {CANVAS_OPTIONS.map((size) => (
-              <option key={size} value={size}>{size}px</option>
+            {TILE_OPTIONS.map((tiles) => (
+              <option key={tiles} value={tiles}>{tiles}×{tiles}</option>
             ))}
           </Select>
         </div>
@@ -79,7 +80,7 @@ export function ControlsPanel({
 
         {drawingMode === 'draw' && (
           <div className="space-y-2">
-            <Label htmlFor="stitch-size">Stitch Length</Label>
+            <Label htmlFor="stitch-size">Stitch Length (New)</Label>
             <Select
               id="stitch-size"
               value={stitchSize}
@@ -88,7 +89,26 @@ export function ControlsPanel({
               <option value="small">Small (1/3 cell)</option>
               <option value="medium">Medium (1/2 cell)</option>
               <option value="large">Large (1 cell)</option>
-              <option value="xlarge">X-Large (2 cells)</option>
+            </Select>
+          </div>
+        )}
+
+        {drawingMode === 'select' && selectedCount > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="selected-stitch-size">Stitch Length (Selected)</Label>
+            <Select
+              id="selected-stitch-size"
+              defaultValue=""
+              onChange={(event) => {
+                if (event.target.value) {
+                  onChangeSelectedStitchSize(event.target.value);
+                }
+              }}
+            >
+              <option value="">Change size...</option>
+              <option value="small">Small (1/3 cell)</option>
+              <option value="medium">Medium (1/2 cell)</option>
+              <option value="large">Large (1 cell)</option>
             </Select>
           </div>
         )}
