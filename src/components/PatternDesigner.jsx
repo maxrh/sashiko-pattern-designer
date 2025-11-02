@@ -78,9 +78,9 @@ export default function PatternDesigner() {
 
   const canvasRef = useRef(null);
 
-  // Update sidebar options when mode or selection changes
+  // Update sidebar options when selection changes
   useEffect(() => {
-    if (drawingState.mode === 'select' && selectedStitchIds.size > 0) {
+    if (selectedStitchIds.size > 0) {
       const selectedStitches = currentPattern.stitches.filter(stitch => 
         selectedStitchIds.has(stitch.id)
       );
@@ -105,11 +105,11 @@ export default function PatternDesigner() {
       if (uniqueColors.length === 1 && uniqueColors[0]) {
         setSelectedStitchColor(uniqueColors[0]);
       }
-    } else if (drawingState.mode === 'draw') {
-      // In draw mode, show the default thread color
+    } else {
+      // When nothing selected, show the default draw tool settings
       setSelectedStitchColor(defaultThreadColor);
     }
-  }, [selectedStitchIds, currentPattern.stitches, drawingState.mode, stitchColors, defaultThreadColor]);
+  }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultThreadColor]);
 
   const canvasSize = useMemo(() => {
     const gridSize = Math.max(1, currentPattern.gridSize ?? 1);
@@ -158,8 +158,18 @@ export default function PatternDesigner() {
       ...prev,
       stitches: [...prev.stitches, newStitch],
     }));
+    
+    // Apply the default thread color to the new stitch if it's not white
+    if (defaultThreadColor !== '#ffffff') {
+      setStitchColors((prev) => {
+        const next = new Map(prev);
+        next.set(newId, defaultThreadColor);
+        return next;
+      });
+    }
+    
     setSelectedStitchIds(new Set([newId]));
-  }, []);
+  }, [defaultThreadColor]);
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedStitchIds.size === 0) return;
@@ -177,11 +187,8 @@ export default function PatternDesigner() {
   }, [selectedStitchIds]);
 
   const handleChangeSelectedStitchSize = useCallback((newSize) => {
-    if (drawingState.mode === 'draw') {
-      // In draw mode, update the stitch size for new stitches
-      setStitchSize(newSize);
-    } else if (selectedStitchIds.size > 0) {
-      // In select mode, update selected stitches
+    if (selectedStitchIds.size > 0) {
+      // Update selected stitches
       setCurrentPattern((prev) => ({
         ...prev,
         stitches: prev.stitches.map((stitch) =>
@@ -190,15 +197,15 @@ export default function PatternDesigner() {
             : stitch
         ),
       }));
+    } else {
+      // Update default for draw tool
+      setStitchSize(newSize);
     }
-  }, [selectedStitchIds, drawingState.mode]);
+  }, [selectedStitchIds]);
 
   const handleChangeRepeatPattern = useCallback((newRepeat) => {
-    if (drawingState.mode === 'draw') {
-      // In draw mode, update the repeat setting for new stitches
-      setRepeatPattern(newRepeat);
-    } else if (selectedStitchIds.size > 0) {
-      // In select mode, update selected stitches
+    if (selectedStitchIds.size > 0) {
+      // Update selected stitches
       setCurrentPattern((prev) => ({
         ...prev,
         stitches: prev.stitches.map((stitch) =>
@@ -207,8 +214,11 @@ export default function PatternDesigner() {
             : stitch
         ),
       }));
+    } else {
+      // Update default for draw tool
+      setRepeatPattern(newRepeat);
     }
-  }, [selectedStitchIds, drawingState.mode]);
+  }, [selectedStitchIds]);
 
   const handleNewPattern = useCallback(() => {
     const gridSize = currentPattern.gridSize || 10;
@@ -238,22 +248,25 @@ export default function PatternDesigner() {
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
   }, []);
 
-  const handleApplySelectedColor = useCallback(() => {
-    const color = selectedStitchColor;
+  const handleColorChange = useCallback((color) => {
     if (!color) return;
     
-    if (drawingState.mode === 'draw') {
-      // In draw mode, set as default thread color for the canvas
-      setDefaultThreadColor(color);
-    } else if (selectedStitchIds.size > 0) {
-      // In select mode, apply to selected stitches
+    // Update the color state
+    setSelectedStitchColor(color);
+    
+    // Auto-apply the color
+    if (selectedStitchIds.size > 0) {
+      // Apply to selected stitches
       setStitchColors((prev) => {
         const next = new Map(prev);
         selectedStitchIds.forEach((id) => next.set(id, color));
         return next;
       });
+    } else {
+      // Set as default thread color for draw tool
+      setDefaultThreadColor(color);
     }
-  }, [selectedStitchColor, selectedStitchIds, drawingState.mode]);
+  }, [selectedStitchIds]);
 
   const handleClearColors = useCallback(() => {
     setStitchColors(new Map());
@@ -430,15 +443,13 @@ export default function PatternDesigner() {
         {/* Right Sidebar - Floating */}
         <aside className="absolute right-6 top-6 z-10 flex w-80 flex-col">
           <ContextualSidebar
-            mode={drawingState.mode}
             selectedCount={selectedStitchIds.size}
             stitchSize={stitchSize}
             onStitchSizeChange={handleChangeSelectedStitchSize}
             repeatPattern={repeatPattern}
             onRepeatPatternChange={handleChangeRepeatPattern}
             selectedStitchColor={selectedStitchColor}
-            onSelectedStitchColorChange={setSelectedStitchColor}
-            onApplySelectedColor={handleApplySelectedColor}
+            onSelectedStitchColorChange={handleColorChange}
             onClearColors={handleClearColors}
             onDeleteSelected={handleDeleteSelected}
             colorPresets={COLOR_PRESETS}

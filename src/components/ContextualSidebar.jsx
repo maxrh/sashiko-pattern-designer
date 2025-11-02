@@ -5,7 +5,6 @@ import { Button } from './ui/button.jsx';
 import { Badge } from './ui/badge.jsx';
 
 export function ContextualSidebar({
-  mode,
   selectedCount,
   stitchSize,
   onStitchSizeChange,
@@ -13,51 +12,20 @@ export function ContextualSidebar({
   onRepeatPatternChange,
   selectedStitchColor,
   onSelectedStitchColorChange,
-  onApplySelectedColor,
   onClearColors,
   onDeleteSelected,
   colorPresets,
 }) {
-  const isSelectMode = mode === 'select';
-  const isDrawMode = mode === 'draw';
   const hasSelection = selectedCount > 0;
-  const showOptions = isDrawMode || hasSelection;
-
-  // Show different title based on mode and selection
-  let title = 'Stitch Options';
-  if (isSelectMode && hasSelection) {
-    title = 'Selected Stitches';
-  } else if (isDrawMode) {
-    title = 'Draw Options';
-  } else if (isSelectMode) {
-    title = 'Selection';
-  }
-
-  if (!showOptions) {
-    return (
-      <Card className="bg-slate-900/70">
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <p className="text-slate-400">No stitches selected</p>
-          <p className="text-xs text-slate-500">
-            Click on stitches in select mode to modify their properties
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-slate-900/70">
       <CardHeader className="space-y-2">
-        <CardTitle>{title}</CardTitle>
-        {isSelectMode && hasSelection && (
+        <CardTitle>Stitch Options</CardTitle>
+        {hasSelection ? (
           <Badge>{selectedCount} stitch{selectedCount !== 1 ? 'es' : ''} selected</Badge>
-        )}
-        {isDrawMode && (
-          <p className="text-xs text-slate-400">Settings for new stitches</p>
+        ) : (
+          <p className="text-xs text-slate-400">Default settings for draw tool</p>
         )}
       </CardHeader>
       <CardContent className="space-y-5 text-sm">
@@ -104,22 +72,13 @@ export function ContextualSidebar({
         {/* Color Options - Same for both modes */}
         <div className="space-y-2">
           <Label htmlFor="stitch-color">Stitch Color</Label>
-          <div className="flex gap-2">
-            <input
-              type="color"
-              id="stitch-color"
-              value={selectedStitchColor}
-              onChange={(e) => onSelectedStitchColorChange(e.target.value)}
-              className="h-10 w-16 cursor-pointer rounded border border-slate-700 bg-slate-800"
-            />
-            <Button
-              type="button"
-              onClick={onApplySelectedColor}
-              className="flex-1"
-            >
-              {isDrawMode ? 'Set Default' : 'Apply Color'}
-            </Button>
-          </div>
+          <input
+            type="color"
+            id="stitch-color"
+            value={selectedStitchColor}
+            onChange={(e) => onSelectedStitchColorChange(e.target.value)}
+            className="h-10 w-full cursor-pointer rounded border border-slate-700 bg-slate-800"
+          />
           
           <div className="mt-2 flex flex-wrap gap-2">
             {colorPresets.map((preset) => (
@@ -146,8 +105,8 @@ export function ContextualSidebar({
           </Button>
         </div>
 
-        {/* Delete Button - Only in select mode with selection */}
-        {isSelectMode && hasSelection && (
+        {/* Delete Button - Only when selection exists */}
+        {hasSelection && (
           <div className="border-t border-slate-700 pt-4">
             <Button
               type="button"
