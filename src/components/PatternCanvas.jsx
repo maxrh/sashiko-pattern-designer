@@ -45,6 +45,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   onDrawingStateChange,
   defaultThreadColor,
   backgroundColor,
+  stitchSize,
 }, ref) {
   const canvasRef = useRef(null);
   const patternGridSize = Math.max(1, pattern?.gridSize ?? 1);
@@ -131,19 +132,48 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           const gridDy = Math.abs(stitch.end.y - stitch.start.y);
           const isDiagonal = gridDx > 0 && gridDy > 0 && gridDx === gridDy;
 
-          // Calculate dash length based on stitch orientation
-          // Horizontal/Vertical (20px cell): 2px offset + 6px dash + 4px gap + 6px dash + 2px offset = 20px
-          // Diagonal (28.2843px): 2px offset + 10.142px dash + 4px gap + 10.142px dash + 2px offset ≈ 28.28px
+          // Get stitch size info from stitch metadata (or use default 'large')
+          const stitchSizeForLine = stitch.stitchSize || 'large';
+          
+          // Calculate number of stitches per grid cell based on size
+          let stitchesPerCell;
+          switch (stitchSizeForLine) {
+            case 'small':
+              stitchesPerCell = 3; // 3 stitches per cell
+              break;
+            case 'medium':
+              stitchesPerCell = 2; // 2 stitches per cell (but actually renders as 2 dashes)
+              break;
+            case 'xlarge':
+              stitchesPerCell = 0.5; // 1 stitch per 2 cells
+              break;
+            case 'large':
+            default:
+              stitchesPerCell = 1; // 1 stitch per cell (renders as 2 dashes)
+              break;
+          }
+
+          // Base cell size
+          const baseCellSize = isDiagonal ? 28.2843 : 20;
+          
+          // Calculate dash and gap based on stitches per cell
           let dashLength, gapLength;
           
-          if (isDiagonal) {
-            // For diagonal across single cell: (28.2843 - 4px offsets - 4px gap) / 2 = 10.142px
-            dashLength = (28.2843 - (2 * stitchOffset) - gapBetweenStitches) / 2;
+          if (stitchesPerCell >= 1) {
+            // Multiple stitches per cell: divide the cell appropriately
+            // For 2 stitches per cell: each gets half the cell minus offsets
+            // For 3 stitches per cell: each gets one third minus offsets
+            const segmentLength = (baseCellSize - (2 * stitchOffset)) / (stitchesPerCell * 2);
+            dashLength = segmentLength - (gapBetweenStitches / 2);
             gapLength = gapBetweenStitches;
           } else {
-            // Horizontal or vertical: (20 - 4px offsets - 4px gap) / 2 = 6px
-            dashLength = 6;
-            gapLength = gapBetweenStitches;
+            // Less than 1 stitch per cell (xlarge): one stitch spans multiple cells
+            // Should have continuous dashes with no gap in the middle
+            const cellsPerStitch = 1 / stitchesPerCell; // 2 for xlarge
+            const totalLength = baseCellSize * cellsPerStitch - (2 * stitchOffset);
+            // Use the full length as one dash, minimal gap
+            dashLength = totalLength;
+            gapLength = 0;
           }
 
           ctx.save();
@@ -206,6 +236,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         onDrawingStateChange({ ...drawingState, firstPoint: null });
         return;
       }
+
       const wrappedStart = {
         x: wrapCoordinate(drawingState.firstPoint.x, patternGridSize),
         y: wrapCoordinate(drawingState.firstPoint.y, patternGridSize),
@@ -214,7 +245,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         x: wrapCoordinate(point.gridX, patternGridSize),
         y: wrapCoordinate(point.gridY, patternGridSize),
       };
-      onAddStitch({ start: wrappedStart, end: wrappedEnd });
+      
+      // Include stitch size in the stitch data
+      onAddStitch({ start: wrappedStart, end: wrappedEnd, stitchSize });
       onDrawingStateChange({ ...drawingState, firstPoint: null });
       return;
     }

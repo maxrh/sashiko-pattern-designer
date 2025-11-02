@@ -72,6 +72,7 @@ export default function PatternDesigner() {
   const [backgroundColor, setBackgroundColor] = useState('#0f172a');
   const [selectedStitchColor, setSelectedStitchColor] = useState('#fb7185');
   const [sidebarTab, setSidebarTab] = useState('controls');
+  const [stitchSize, setStitchSize] = useState('large');
 
   const canvasRef = useRef(null);
 
@@ -95,13 +96,14 @@ export default function PatternDesigner() {
     setSelectedStitchIds(new Set());
   }, []);
 
-  const handleAddStitch = useCallback(({ start, end }) => {
+  const handleAddStitch = useCallback(({ start, end, stitchSize }) => {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
     const newStitch = {
       id: newId,
       start,
       end,
       color: null,
+      stitchSize: stitchSize || 'large',
     };
     setCurrentPattern((prev) => ({
       ...prev,
@@ -290,6 +292,8 @@ export default function PatternDesigner() {
                 onCanvasSizeChange={setCanvasSize}
                 drawingMode={drawingState.mode}
                 onModeChange={handleModeChange}
+                stitchSize={stitchSize}
+                onStitchSizeChange={setStitchSize}
                 onSelectAll={handleSelectAll}
                 onDeselectAll={handleDeselectAll}
                 onDeleteSelected={handleDeleteSelected}
@@ -344,6 +348,7 @@ export default function PatternDesigner() {
               onDrawingStateChange={setDrawingState}
               defaultThreadColor={defaultThreadColor}
               backgroundColor={backgroundColor}
+              stitchSize={stitchSize}
             />
           </div>
         </main>

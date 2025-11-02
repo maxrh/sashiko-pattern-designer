@@ -15,6 +15,8 @@ export function ControlsPanel({
   onCanvasSizeChange,
   drawingMode,
   onModeChange,
+  stitchSize,
+  onStitchSizeChange,
   onSelectAll,
   onDeselectAll,
   onDeleteSelected,
@@ -74,6 +76,22 @@ export function ControlsPanel({
             <RadioGroupItem value="draw">Draw Mode ✏️</RadioGroupItem>
           </RadioGroup>
         </div>
+
+        {drawingMode === 'draw' && (
+          <div className="space-y-2">
+            <Label htmlFor="stitch-size">Stitch Length</Label>
+            <Select
+              id="stitch-size"
+              value={stitchSize}
+              onChange={(event) => onStitchSizeChange(event.target.value)}
+            >
+              <option value="small">Small (1/3 cell)</option>
+              <option value="medium">Medium (1/2 cell)</option>
+              <option value="large">Large (1 cell)</option>
+              <option value="xlarge">X-Large (2 cells)</option>
+            </Select>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={onSelectAll}>
