@@ -1,5 +1,5 @@
 import { Children, cloneElement, createContext, useContext } from 'react';
-import { cn } from '../../lib/utils.js';
+import { cn } from '@/lib/utils';
 
 const RadioGroupContext = createContext(null);
 
