@@ -51,6 +51,11 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   }, [artboardSize, artboardOffset]);
 
   const handleMouseDown = (e) => {
+    // Don't interfere with canvas interactions in select or draw mode
+    if (drawingState.mode === 'select' || drawingState.mode === 'draw') {
+      return;
+    }
+    
     // Enable panning with middle mouse button OR left click in pan mode
     const shouldPan = e.button === 1 || (e.button === 0 && drawingState.mode === 'pan');
     

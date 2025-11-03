@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 const SNAP_THRESHOLD = 15;
 const SELECT_THRESHOLD = 10;
@@ -31,6 +31,23 @@ function getNearestGridPoint(clickX, clickY, cellSize) {
   const pixelY = gridY * cellSize;
   const distance = Math.hypot(clickX - pixelX, clickY - pixelY);
   return distance < SNAP_THRESHOLD ? { gridX, gridY } : null;
+}
+
+// Check if a line intersects with a rectangle
+function lineIntersectsRect(x1, y1, x2, y2, rectMinX, rectMinY, rectMaxX, rectMaxY) {
+  // Check if either endpoint is inside the rectangle
+  const startInside = x1 >= rectMinX && x1 <= rectMaxX && y1 >= rectMinY && y1 <= rectMaxY;
+  const endInside = x2 >= rectMinX && x2 <= rectMaxX && y2 >= rectMinY && y2 <= rectMaxY;
+  
+  if (startInside || endInside) return true;
+  
+  // Check if line bounding box overlaps with rectangle
+  const lineMinX = Math.min(x1, x2);
+  const lineMaxX = Math.max(x1, x2);
+  const lineMinY = Math.min(y1, y2);
+  const lineMaxY = Math.max(y1, y2);
+  
+  return !(lineMaxX < rectMinX || lineMinX > rectMaxX || lineMaxY < rectMinY || lineMinY > rectMaxY);
 }
 
 // Check if a line segment intersects or is contained within a rectangle
@@ -81,6 +98,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   repeatPattern = true,
 }, ref) {
   const canvasRef = useRef(null);
+  const [dragSelectRect, setDragSelectRect] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const justFinishedDragRef = useRef(false);
   const patternGridSize = Math.max(1, pattern?.gridSize ?? 1);
   const canvasGridSize = useMemo(() => Math.round(canvasSize / cellSize), [canvasSize, cellSize]);
   const artboardGridSize = useMemo(() => Math.round(artboardSize / cellSize), [artboardSize, cellSize]);
@@ -98,6 +119,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    
+    console.log('Canvas rendering with', selectedStitchIds.size, 'selected stitches:', Array.from(selectedStitchIds));
     const dpr = window.devicePixelRatio ?? 1;
 
     canvas.width = canvasSize * dpr;
@@ -183,6 +206,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             }
 
             const isSelected = selectedStitchIds.has(stitch.id);
+            if (isSelected && tileRow === 0 && tileCol === 0) {
+              console.log('Rendering selected stitch (absolute):', stitch.id, 'will be BLUE');
+            }
 
             // Calculate the offset direction (unit vector from start to end)
             const dx = endX - startX;
@@ -502,6 +528,22 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ctx.fill();
       ctx.restore();
     }
+
+    // Draw drag selection rectangle
+    if (dragSelectRect) {
+      ctx.save();
+      ctx.strokeStyle = '#3b82f6';
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      const x = Math.min(dragSelectRect.startX, dragSelectRect.endX);
+      const y = Math.min(dragSelectRect.startY, dragSelectRect.endY);
+      const width = Math.abs(dragSelectRect.endX - dragSelectRect.startX);
+      const height = Math.abs(dragSelectRect.endY - dragSelectRect.startY);
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x, y, width, height);
+      ctx.restore();
+    }
   }, [
     artboardOffset,
     artboardSize,
@@ -510,6 +552,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     canvasSize,
     cellSize,
     defaultThreadColor,
+    dragSelectRect,
     drawingState.firstPoint,
     drawingState.mode,
     pattern,
@@ -519,7 +562,179 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     tilesPerSide,
   ]);
 
+  const handleMouseDown = (event) => {
+    if (drawingState.mode !== 'select') return;
+    
+    // Prevent default to avoid any text selection or other browser behaviors
+    event.preventDefault();
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    console.log('Drag select started:', { x, y, mode: drawingState.mode });
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    setDragSelectRect({ startX: x, startY: y, endX: x, endY: y });
+  };
+
+  const handleMouseMove = (event) => {
+    if (!isDraggingRef.current || drawingState.mode !== 'select') {
+      if (isDraggingRef.current) {
+        console.log('Mouse move blocked:', { isDragging: isDraggingRef.current, mode: drawingState.mode });
+      }
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    console.log('Drag moving:', { x, y });
+    setDragSelectRect((prev) => prev ? { ...prev, endX: x, endY: y } : null);
+  };
+
+  const handleMouseUp = (event) => {
+    console.log('Mouse up:', { isDragging: isDraggingRef.current, mode: drawingState.mode, hasDragRect: !!dragSelectRect });
+    
+    // If we're not dragging, just clear the rect state and return without touching selection
+    if (!isDraggingRef.current) {
+      setDragSelectRect(null);
+      return;
+    }
+    
+    // If we were dragging but not in select mode or no rect, clean up and return
+    if (drawingState.mode !== 'select' || !dragSelectRect) {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      setDragSelectRect(null);
+      return;
+    }
+    
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    
+    // Calculate selection rectangle bounds
+    const minX = Math.min(dragSelectRect.startX, dragSelectRect.endX);
+    const maxX = Math.max(dragSelectRect.startX, dragSelectRect.endX);
+    const minY = Math.min(dragSelectRect.startY, dragSelectRect.endY);
+    const maxY = Math.max(dragSelectRect.startY, dragSelectRect.endY);
+    
+    console.log('Drag selection bounds:', { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY });
+    
+    // Check if it was just a tiny drag (essentially a click)
+    const width = maxX - minX;
+    const height = maxY - minY;
+    if (width < 5 && height < 5) {
+      console.log('Drag too small, treating as click');
+      setDragSelectRect(null);
+      return; // Let handleCanvasClick handle it
+    }
+    
+    // Find all stitches that intersect with the selection rectangle
+    const stitches = pattern?.stitches ?? [];
+    const selectedIds = new Set();
+    
+    console.log('Checking', stitches.length, 'stitches for intersection');
+    
+    stitches.forEach((stitch) => {
+      const isAbsoluteCoords = stitch.start.x >= patternGridSize || stitch.start.y >= patternGridSize ||
+                               stitch.end.x >= patternGridSize || stitch.end.y >= patternGridSize ||
+                               stitch.start.x < 0 || stitch.start.y < 0 ||
+                               stitch.end.x < 0 || stitch.end.y < 0;
+
+      if (isAbsoluteCoords) {
+        const shouldRepeat = stitch.repeat !== false;
+
+        if (shouldRepeat) {
+          // Check all possible tile offsets (including negative)
+          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
+              const tileOffsetX = tileCol * patternGridSize;
+              const tileOffsetY = tileRow * patternGridSize;
+            
+              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
+              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
+              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
+              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
+
+              // Check if line intersects with selection rectangle
+              const intersects = lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY);
+              if (intersects) {
+                console.log('Line intersects!', { stitchId: stitch.id, startX, startY, endX, endY, tileRow, tileCol });
+                selectedIds.add(stitch.id);
+                break;
+              }
+            }
+            if (selectedIds.has(stitch.id)) break;
+          }
+        } else {
+          // No repeat - just check the original position
+          const startX = artboardOffset + (stitch.start.x * cellSize);
+          const startY = artboardOffset + (stitch.start.y * cellSize);
+          const endX = artboardOffset + (stitch.end.x * cellSize);
+          const endY = artboardOffset + (stitch.end.y * cellSize);
+
+          // Check if line intersects with selection rectangle
+          if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
+            selectedIds.add(stitch.id);
+          }
+        }
+      } else {
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
+
+        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
+            const offsetX = tileCol * patternGridSize;
+            const offsetY = tileRow * patternGridSize;
+            
+            const startX = artboardOffset + ((stitch.start.x + offsetX) * cellSize);
+            const startY = artboardOffset + ((stitch.start.y + offsetY) * cellSize);
+            const endX = artboardOffset + ((stitch.end.x + offsetX) * cellSize);
+            const endY = artboardOffset + ((stitch.end.y + offsetY) * cellSize);
+
+            // Check if line intersects with selection rectangle
+            if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
+              selectedIds.add(stitch.id);
+              break;
+            }
+          }
+          if (selectedIds.has(stitch.id)) break;
+        }
+      }
+    });
+    
+    console.log('Found', selectedIds.size, 'stitches in selection:', Array.from(selectedIds));
+    
+    // Mark that we just finished a drag selection to prevent click handler from firing
+    justFinishedDragRef.current = true;
+    
+    // Update selection (add to existing if shift/ctrl is held)
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      const combined = new Set([...selectedStitchIds, ...selectedIds]);
+      console.log('Updating selection (combined):', Array.from(combined));
+      onSelectStitchIds(combined);
+    } else {
+      console.log('Updating selection (replace):', Array.from(selectedIds));
+      onSelectStitchIds(selectedIds);
+    }
+    
+    setDragSelectRect(null);
+  };
+
   const handleCanvasClick = (event) => {
+    // Ignore click if it's right after a drag selection
+    if (justFinishedDragRef.current) {
+      console.log('Ignoring click after drag selection');
+      justFinishedDragRef.current = false;
+      return;
+    }
+    
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -591,22 +806,43 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         // New format: use absolute coordinates
         // Check all tile positions if repeat is on
         const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
 
-        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
-            const tileOffsetX = tileCol * patternGridSize;
-            const tileOffsetY = tileRow * patternGridSize;
+        if (shouldRepeat) {
+          // For repeat, check all tiles including negative offsets
+          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
+              const tileOffsetX = tileCol * patternGridSize;
+              const tileOffsetY = tileRow * patternGridSize;
             
-            const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
-            const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
-            const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
-            const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
+              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
+              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
+              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
+              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
 
-            if (startX > canvasSize || startY > canvasSize) {
-              continue;
+              if (startX > canvasSize || startY > canvasSize) {
+                continue;
+              }
+
+              const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
+              if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = stitch.id;
+              }
             }
+          }
+        } else {
+          // For non-repeat, check single position at origin
+          const tileOffsetX = 0;
+          const tileOffsetY = 0;
+          
+          const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * cellSize);
+          const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * cellSize);
+          const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * cellSize);
+          const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * cellSize);
 
+          if (startX > canvasSize || startY > canvasSize) {
+            // Skip this stitch if it's outside canvas
+          } else {
             const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
             if (distance < closestDistance) {
               closestDistance = distance;
@@ -674,6 +910,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       height={canvasSize}
       className={`mx-auto bg-slate-950 ${getCursorClass()}`}
       onClick={handleCanvasClick}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     />
   );
 });
