@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card.jsx';
 
 export function ExportPanel({
   onNewPattern,
+  onSavePattern,
   onExportPattern,
   onImportPattern,
   onExportImage,
@@ -24,9 +25,12 @@ export function ExportPanel({
         <CardTitle>Export & Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button type="button" onClick={onNewPattern} className="w-full">
             New Pattern
+          </Button>
+          <Button type="button" onClick={onSavePattern} className="w-full" variant="default">
+            Save Pattern
           </Button>
         </div>
 

@@ -8,6 +8,15 @@ import { PatternSelector } from './PatternSelector.jsx';
 import { ContextualSidebar } from './ContextualSidebar.jsx';
 import { Badge } from './ui/badge.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs.jsx';
+import { 
+  saveCurrentPattern, 
+  loadCurrentPattern, 
+  loadSavedPatterns,
+  saveToPatternLibrary,
+  deletePattern,
+  exportPatternAsJSON,
+  importPatternFromJSON,
+} from '../lib/patternStorage.js';
 
 const CELL_SIZE = 20;
 const COLOR_PRESETS = [
@@ -60,23 +69,68 @@ function isValidPattern(data) {
 }
 
 export default function PatternDesigner() {
-  const [savedPatterns] = useState(() => patternsData.map(clonePattern));
+  // Load saved patterns from local storage + built-in patterns
+  const [savedPatterns, setSavedPatterns] = useState(() => {
+    const userPatterns = loadSavedPatterns();
+    const builtInPatterns = patternsData.map(clonePattern);
+    return [...builtInPatterns, ...userPatterns];
+  });
+
+  // Initialize state from local storage or defaults
   const [currentPattern, setCurrentPattern] = useState(() => {
-    const fallback = savedPatterns.find((pattern) => pattern.id === 'blank') ?? savedPatterns[0];
+    const saved = loadCurrentPattern();
+    if (saved && saved.pattern) {
+      return saved.pattern;
+    }
+    const fallback = patternsData.find((pattern) => pattern.id === 'blank') ?? patternsData[0];
     return clonePattern(fallback);
   });
-  const [stitchColors, setStitchColors] = useState(() => deriveColorMap(currentPattern));
+
+  const [stitchColors, setStitchColors] = useState(() => {
+    const saved = loadCurrentPattern();
+    if (saved && saved.stitchColors) {
+      return saved.stitchColors;
+    }
+    return deriveColorMap(currentPattern);
+  });
+
   const [selectedStitchIds, setSelectedStitchIds] = useState(() => new Set());
   const [drawingState, setDrawingState] = useState({ mode: 'select', firstPoint: null });
-  const [patternTiles, setPatternTiles] = useState(4);
-  const [defaultThreadColor, setDefaultThreadColor] = useState('#ffffff');
-  const [backgroundColor, setBackgroundColor] = useState('#0f172a');
-  const [selectedStitchColor, setSelectedStitchColor] = useState('#fb7185');
-  const [sidebarTab, setSidebarTab] = useState('controls');
-  const [stitchSize, setStitchSize] = useState('large');
-  const [repeatPattern, setRepeatPattern] = useState(true);
 
+  // Load UI state from local storage
+  const [patternTiles, setPatternTiles] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.patternTiles ?? 4;
+  });
+  const [defaultThreadColor, setDefaultThreadColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.defaultThreadColor ?? '#ffffff';
+  });
+  const [backgroundColor, setBackgroundColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.backgroundColor ?? '#0f172a';
+  });
+  const [selectedStitchColor, setSelectedStitchColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.selectedStitchColor ?? '#fb7185';
+  });
+  const [stitchSize, setStitchSize] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.stitchSize ?? 'large';
+  });
+  const [repeatPattern, setRepeatPattern] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.repeatPattern ?? true;
+  });
+
+  const [sidebarTab, setSidebarTab] = useState('controls');
+  const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
+
+  // Mark as hydrated after initial render to prevent SSR mismatch
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Update sidebar options when selection changes
   useEffect(() => {
@@ -110,6 +164,28 @@ export default function PatternDesigner() {
       setSelectedStitchColor(defaultThreadColor);
     }
   }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultThreadColor]);
+
+  // Auto-save to local storage whenever pattern, colors, or settings change
+  // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
+  useEffect(() => {
+    saveCurrentPattern(currentPattern, stitchColors, {
+      patternTiles,
+      defaultThreadColor,
+      backgroundColor,
+      selectedStitchColor,
+      stitchSize,
+      repeatPattern,
+    });
+  }, [
+    currentPattern,
+    stitchColors,
+    patternTiles,
+    defaultThreadColor,
+    backgroundColor,
+    selectedStitchColor,
+    stitchSize,
+    repeatPattern,
+  ]);
 
   const canvasSize = useMemo(() => {
     const gridSize = Math.max(1, currentPattern.gridSize ?? 1);
@@ -159,17 +235,15 @@ export default function PatternDesigner() {
       stitches: [...prev.stitches, newStitch],
     }));
     
-    // Apply the default thread color to the new stitch if it's not white
-    if (defaultThreadColor !== '#ffffff') {
-      setStitchColors((prev) => {
-        const next = new Map(prev);
-        next.set(newId, defaultThreadColor);
-        return next;
-      });
-    }
+    // Apply the selected stitch color to the new stitch
+    setStitchColors((prev) => {
+      const next = new Map(prev);
+      next.set(newId, selectedStitchColor);
+      return next;
+    });
     
     setSelectedStitchIds(new Set([newId]));
-  }, [defaultThreadColor]);
+  }, [selectedStitchColor]);
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedStitchIds.size === 0) return;
@@ -248,24 +322,57 @@ export default function PatternDesigner() {
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
   }, []);
 
+  const handleSavePattern = useCallback(() => {
+    const result = saveToPatternLibrary(currentPattern, stitchColors);
+    if (result.success) {
+      // Reload saved patterns to include the newly saved one
+      const userPatterns = loadSavedPatterns();
+      const builtInPatterns = patternsData.map(clonePattern);
+      setSavedPatterns([...builtInPatterns, ...userPatterns]);
+      
+      // Update current pattern ID if it was a new pattern
+      if (result.pattern.id !== currentPattern.id) {
+        setCurrentPattern(result.pattern);
+      }
+      
+      alert(`Pattern "${result.pattern.name}" saved successfully!`);
+    } else {
+      alert(`Failed to save pattern: ${result.error}`);
+    }
+  }, [currentPattern, stitchColors]);
+
+  const handleDeletePattern = useCallback((patternId) => {
+    if (confirm('Are you sure you want to delete this pattern?')) {
+      deletePattern(patternId);
+      
+      // Reload saved patterns
+      const userPatterns = loadSavedPatterns();
+      const builtInPatterns = patternsData.map(clonePattern);
+      setSavedPatterns([...builtInPatterns, ...userPatterns]);
+      
+      // If the deleted pattern was currently loaded, switch to blank
+      if (currentPattern.id === patternId) {
+        handleNewPattern();
+      }
+    }
+  }, [currentPattern.id, handleNewPattern]);
+
   const handleColorChange = useCallback((color) => {
     if (!color) return;
     
-    // Update the color state
+    // Update the selected stitch color state (used for drawing new stitches)
     setSelectedStitchColor(color);
     
-    // Auto-apply the color
+    // Auto-apply the color to selected stitches
     if (selectedStitchIds.size > 0) {
-      // Apply to selected stitches
       setStitchColors((prev) => {
         const next = new Map(prev);
         selectedStitchIds.forEach((id) => next.set(id, color));
         return next;
       });
-    } else {
-      // Set as default thread color for draw tool
-      setDefaultThreadColor(color);
     }
+    // When no selection, just updating selectedStitchColor is enough
+    // This will be used for the next drawn stitch
   }, [selectedStitchIds]);
 
   const handleClearColors = useCallback(() => {
@@ -362,12 +469,12 @@ export default function PatternDesigner() {
 
       <div className="relative flex flex-1">
         {/* Left Sidebar - Floating */}
-        <aside className="absolute left-6 top-6 z-10 flex w-80 flex-col">
+        <aside className="absolute left-0 top-0 z-10 flex w-80 flex-col bg-slate-950/95 backdrop-blur-sm p-4 max-h-[calc(100vh-6rem)] overflow-hidden">
           <Tabs
             value={sidebarTab}
             onValueChange={setSidebarTab}
             defaultValue="controls"
-            className="flex-1"
+            className="flex-1 flex flex-col"
           >
             <TabsList className="w-full justify-between">
               <TabsTrigger value="controls" className="flex-1 text-center">
@@ -388,10 +495,11 @@ export default function PatternDesigner() {
                 onDefaultThreadColorChange={setDefaultThreadColor}
                 patternName={currentPattern.name}
                 onPatternNameChange={handlePatternNameChange}
-                canvasInfo={`2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches`}
+                canvasInfo={isHydrated ? `2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches` : `2200px · ${CELL_SIZE}px cells`}
               />
               <ExportPanel
                 onNewPattern={handleNewPattern}
+                onSavePattern={handleSavePattern}
                 onExportPattern={handleExportPattern}
                 onImportPattern={handleImportPattern}
                 onExportImage={handleExportImage}
@@ -406,6 +514,7 @@ export default function PatternDesigner() {
                   handleSelectPattern(pattern);
                   setSidebarTab('controls');
                 }}
+                onDeletePattern={handleDeletePattern}
               />
             </TabsContent>
           </Tabs>
