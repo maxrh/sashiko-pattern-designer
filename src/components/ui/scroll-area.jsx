@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
-import { cn } from '../../lib/utils.js';
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 const ScrollArea = forwardRef(({ className, children, ...props }, ref) => (
   <div

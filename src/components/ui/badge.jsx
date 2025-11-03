@@ -1,4 +1,4 @@
-import { cn } from '../../lib/utils.js';
+import { cn } from '@/lib/utils';
 
 export function Badge({ className, variant = 'default', ...props }) {
   const variants = {

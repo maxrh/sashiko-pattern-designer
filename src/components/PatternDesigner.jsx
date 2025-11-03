@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import patternsData from '../data/patterns.json';
 import { CanvasViewport } from './CanvasViewport.jsx';
-import { CanvasSettings } from './CanvasSettings.jsx';
 import { Toolbar } from './Toolbar.jsx';
-import { ExportPanel } from './ExportPanel.jsx';
-import { PatternSelector } from './PatternSelector.jsx';
 import { ContextualSidebar } from './ContextualSidebar.jsx';
+import { AppSidebar } from './AppSidebar.jsx';
 import { Badge } from './ui/badge.jsx';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs.jsx';
+import { SidebarProvider, SidebarTrigger } from './ui/sidebar.tsx';
 import { 
   saveCurrentPattern, 
   loadCurrentPattern, 
@@ -454,74 +452,52 @@ export default function PatternDesigner() {
   }, [handleDeleteSelected, selectedStitchIds.size]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-950/80 px-6 py-4 backdrop-blur">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-white">Interactive Sashiko Pattern Designer</h1>
-            <p className="text-sm text-slate-400">Connect stitches on the grid, tile patterns, and craft your own sashiko designs.</p>
+    <SidebarProvider className="flex h-screen overflow-hidden">
+      {/* Left Sidebar */}
+      <AppSidebar
+        sidebarTab={sidebarTab}
+        onSidebarTabChange={setSidebarTab}
+        patternTiles={patternTiles}
+        onPatternTilesChange={setPatternTiles}
+        backgroundColor={backgroundColor}
+        onBackgroundColorChange={setBackgroundColor}
+        defaultThreadColor={defaultThreadColor}
+        onDefaultThreadColorChange={setDefaultThreadColor}
+        patternName={currentPattern.name}
+        onPatternNameChange={handlePatternNameChange}
+        canvasInfo={isHydrated ? `2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches` : `2200px · ${CELL_SIZE}px cells`}
+        onNewPattern={handleNewPattern}
+        onSavePattern={handleSavePattern}
+        onExportPattern={handleExportPattern}
+        onImportPattern={handleImportPattern}
+        onExportImage={handleExportImage}
+        savedPatterns={savedPatterns}
+        activePatternId={currentPattern.id}
+        onSelectPattern={(pattern) => {
+          handleSelectPattern(pattern);
+          setSidebarTab('controls');
+        }}
+        onDeletePattern={handleDeletePattern}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-slate-950 text-slate-100">
+        <header className="flex-none border-b border-slate-800 bg-slate-950/80 px-6 py-4 backdrop-blur">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <div>
+                <h1 className="text-xl font-semibold text-white">Interactive Sashiko Pattern Designer</h1>
+                <p className="text-sm text-slate-400">Connect stitches on the grid, tile patterns, and craft your own sashiko designs.</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="self-start">
+              {drawingState.mode === 'draw' ? 'Draw Mode ✏️' : drawingState.mode === 'pan' ? 'Pan Mode ✋' : 'Select Mode'}
+            </Badge>
           </div>
-          <Badge variant="outline" className="self-start">
-            {drawingState.mode === 'draw' ? 'Draw Mode ✏️' : drawingState.mode === 'pan' ? 'Pan Mode ✋' : 'Select Mode'}
-          </Badge>
-        </div>
-      </header>
+        </header>
 
-      <div className="relative flex flex-1">
-        {/* Left Sidebar - Floating */}
-        <aside className="absolute left-0 top-0 z-10 flex w-80 flex-col bg-slate-950/95 backdrop-blur-sm p-4 max-h-[calc(100vh-6rem)] overflow-hidden">
-          <Tabs
-            value={sidebarTab}
-            onValueChange={setSidebarTab}
-            defaultValue="controls"
-            className="flex-1 flex flex-col"
-          >
-            <TabsList className="w-full justify-between">
-              <TabsTrigger value="controls" className="flex-1 text-center">
-                Controls
-              </TabsTrigger>
-              <TabsTrigger value="patterns" className="flex-1 text-center">
-                Saved Patterns
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="controls" className="space-y-6">
-              <CanvasSettings
-                patternTiles={patternTiles}
-                onPatternTilesChange={setPatternTiles}
-                backgroundColor={backgroundColor}
-                onBackgroundColorChange={setBackgroundColor}
-                defaultThreadColor={defaultThreadColor}
-                onDefaultThreadColorChange={setDefaultThreadColor}
-                patternName={currentPattern.name}
-                onPatternNameChange={handlePatternNameChange}
-                canvasInfo={isHydrated ? `2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches` : `2200px · ${CELL_SIZE}px cells`}
-              />
-              <ExportPanel
-                onNewPattern={handleNewPattern}
-                onSavePattern={handleSavePattern}
-                onExportPattern={handleExportPattern}
-                onImportPattern={handleImportPattern}
-                onExportImage={handleExportImage}
-              />
-            </TabsContent>
-
-            <TabsContent value="patterns" className="space-y-4">
-              <PatternSelector
-                patterns={savedPatterns}
-                activePatternId={currentPattern.id}
-                onSelectPattern={(pattern) => {
-                  handleSelectPattern(pattern);
-                  setSidebarTab('controls');
-                }}
-                onDeletePattern={handleDeletePattern}
-              />
-            </TabsContent>
-          </Tabs>
-        </aside>
-
-        {/* Main Canvas Area - Full screen */}
-        <main className="absolute inset-0 flex flex-col">
+        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
           {/* Toolbar - Centered at top */}
           <div className="absolute left-1/2 top-6 z-10 -translate-x-1/2">
             <Toolbar
@@ -547,24 +523,25 @@ export default function PatternDesigner() {
             stitchSize={stitchSize}
             repeatPattern={repeatPattern}
           />
-        </main>
 
-        {/* Right Sidebar - Floating */}
-        <aside className="absolute right-6 top-6 z-10 flex w-80 flex-col">
-          <ContextualSidebar
-            selectedCount={selectedStitchIds.size}
-            stitchSize={stitchSize}
-            onStitchSizeChange={handleChangeSelectedStitchSize}
-            repeatPattern={repeatPattern}
-            onRepeatPatternChange={handleChangeRepeatPattern}
-            selectedStitchColor={selectedStitchColor}
-            onSelectedStitchColorChange={handleColorChange}
-            onClearColors={handleClearColors}
-            onDeleteSelected={handleDeleteSelected}
-            colorPresets={COLOR_PRESETS}
-          />
-        </aside>
-      </div>
-    </div>
+            {/* Right Sidebar - Floating */}
+            <aside className="absolute right-6 top-6 z-10 flex w-80 flex-col">
+              <ContextualSidebar
+                selectedCount={selectedStitchIds.size}
+                stitchSize={stitchSize}
+                onStitchSizeChange={handleChangeSelectedStitchSize}
+                repeatPattern={repeatPattern}
+                onRepeatPatternChange={handleChangeRepeatPattern}
+                selectedStitchColor={selectedStitchColor}
+                onSelectedStitchColorChange={handleColorChange}
+                onClearColors={handleClearColors}
+                onDeleteSelected={handleDeleteSelected}
+                colorPresets={COLOR_PRESETS}
+                isHydrated={isHydrated}
+              />
+            </aside>
+        </div>
+      </main>
+    </SidebarProvider>
   );
 }

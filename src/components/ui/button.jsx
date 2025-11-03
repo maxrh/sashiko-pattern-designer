@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
-import { cn } from '../../lib/utils.js';
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 const variants = {
   default: 'bg-sky-500 text-white hover:bg-sky-400 focus-visible:ring-sky-300',

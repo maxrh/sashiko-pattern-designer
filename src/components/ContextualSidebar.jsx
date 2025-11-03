@@ -15,6 +15,7 @@ export function ContextualSidebar({
   onClearColors,
   onDeleteSelected,
   colorPresets,
+  isHydrated = true,
 }) {
   const hasSelection = selectedCount > 0;
 
@@ -59,13 +60,16 @@ export function ContextualSidebar({
                 ? 'border-blue-500 bg-blue-500/20 text-blue-400'
                 : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300'
             }`}
+            suppressHydrationWarning
           >
-            Repeat: {repeatPattern ? 'On' : 'Off'}
+            Repeat: {isHydrated ? (repeatPattern ? 'On' : 'Off') : 'On'}
           </button>
-          <p className="text-xs text-slate-500">
-            {repeatPattern 
-              ? 'Lines appear in all tiles' 
-              : 'Lines appear only where drawn'}
+          <p className="text-xs text-slate-500" suppressHydrationWarning>
+            {isHydrated
+              ? (repeatPattern 
+                  ? 'Lines appear in all tiles' 
+                  : 'Lines appear only where drawn')
+              : 'Lines appear in all tiles'}
           </p>
         </div>
 
