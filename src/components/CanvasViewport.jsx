@@ -21,6 +21,12 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   stitchSize,
   repeatPattern,
   showGrid,
+  gridColor,
+  gridOpacity,
+  tileOutlineColor,
+  tileOutlineOpacity,
+  artboardOutlineColor,
+  artboardOutlineOpacity,
 }, ref) {
   const containerRef = useRef(null);
   const canvasWrapperRef = useRef(null);
@@ -208,6 +214,12 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           stitchSize={stitchSize}
           repeatPattern={repeatPattern}
           showGrid={showGrid}
+          gridColor={gridColor}
+          gridOpacity={gridOpacity}
+          tileOutlineColor={tileOutlineColor}
+          tileOutlineOpacity={tileOutlineOpacity}
+          artboardOutlineColor={artboardOutlineColor}
+          artboardOutlineOpacity={artboardOutlineOpacity}
         />
       </div>
     </div>

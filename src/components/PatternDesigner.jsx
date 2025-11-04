@@ -32,6 +32,12 @@ const DEFAULT_STITCH_COLOR = '#f5f5f5'; // white - default color for stitches
 const DEFAULT_STITCH_SIZE = 'medium';
 const DEFAULT_REPEAT_PATTERN = true;
 const DEFAULT_SHOW_GRID = true;
+const DEFAULT_GRID_COLOR = '#94a3b8';
+const DEFAULT_GRID_OPACITY = 0.25;
+const DEFAULT_TILE_OUTLINE_COLOR = '#94a3b8';
+const DEFAULT_TILE_OUTLINE_OPACITY = 0.15;
+const DEFAULT_ARTBOARD_OUTLINE_COLOR = '#3b82f6';
+const DEFAULT_ARTBOARD_OUTLINE_OPACITY = 0.5;
 
 function clonePattern(pattern) {
   if (!pattern) {
@@ -117,10 +123,8 @@ export default function PatternDesigner() {
   const [patternTiles, setPatternTiles] = useState(() => {
     return currentPattern.patternTiles ?? DEFAULT_PATTERN_TILES;
   });
-  const [defaultStitchColor, setDefaultStitchColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.defaultStitchColor ?? DEFAULT_STITCH_COLOR;
-  });
+  // Use constant for default stitch color (fallback for rendering)
+  const defaultStitchColor = DEFAULT_STITCH_COLOR;
   const [backgroundColor, setBackgroundColor] = useState(() => {
     const saved = loadCurrentPattern();
     return saved?.uiState?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR;
@@ -140,6 +144,32 @@ export default function PatternDesigner() {
   const [showGrid, setShowGrid] = useState(() => {
     const saved = loadCurrentPattern();
     return saved?.uiState?.showGrid ?? DEFAULT_SHOW_GRID;
+  });
+
+  // Grid and outline appearance settings
+  const [gridColor, setGridColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.gridColor ?? DEFAULT_GRID_COLOR;
+  });
+  const [gridOpacity, setGridOpacity] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.gridOpacity ?? DEFAULT_GRID_OPACITY;
+  });
+  const [tileOutlineColor, setTileOutlineColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.tileOutlineColor ?? DEFAULT_TILE_OUTLINE_COLOR;
+  });
+  const [tileOutlineOpacity, setTileOutlineOpacity] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.tileOutlineOpacity ?? DEFAULT_TILE_OUTLINE_OPACITY;
+  });
+  const [artboardOutlineColor, setArtboardOutlineColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.artboardOutlineColor ?? DEFAULT_ARTBOARD_OUTLINE_COLOR;
+  });
+  const [artboardOutlineOpacity, setArtboardOutlineOpacity] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.artboardOutlineOpacity ?? DEFAULT_ARTBOARD_OUTLINE_OPACITY;
   });
 
   const [sidebarTab, setSidebarTab] = useState('controls');
@@ -195,23 +225,33 @@ export default function PatternDesigner() {
   useEffect(() => {
     saveCurrentPattern(currentPattern, stitchColors, {
       patternTiles,
-      defaultStitchColor,
       backgroundColor,
       selectedStitchColor,
       stitchSize,
       repeatPattern,
       showGrid,
+      gridColor,
+      gridOpacity,
+      tileOutlineColor,
+      tileOutlineOpacity,
+      artboardOutlineColor,
+      artboardOutlineOpacity,
     });
   }, [
     currentPattern,
     stitchColors,
     patternTiles,
-    defaultStitchColor,
     backgroundColor,
     selectedStitchColor,
     stitchSize,
     repeatPattern,
     showGrid,
+    gridColor,
+    gridOpacity,
+    tileOutlineColor,
+    tileOutlineOpacity,
+    artboardOutlineColor,
+    artboardOutlineOpacity,
   ]);
 
   // Artboard = the total area containing all pattern tiles
@@ -363,12 +403,17 @@ export default function PatternDesigner() {
   const handleResetSettings = useCallback(() => {
     // Reset all settings to their default values
     setPatternTiles(DEFAULT_PATTERN_TILES);
-    setDefaultStitchColor(DEFAULT_STITCH_COLOR);
     setBackgroundColor(DEFAULT_BACKGROUND_COLOR);
     setSelectedStitchColor(DEFAULT_STITCH_COLOR);
     setStitchSize(DEFAULT_STITCH_SIZE);
     setRepeatPattern(DEFAULT_REPEAT_PATTERN);
     setShowGrid(DEFAULT_SHOW_GRID);
+    setGridColor(DEFAULT_GRID_COLOR);
+    setGridOpacity(DEFAULT_GRID_OPACITY);
+    setTileOutlineColor(DEFAULT_TILE_OUTLINE_COLOR);
+    setTileOutlineOpacity(DEFAULT_TILE_OUTLINE_OPACITY);
+    setArtboardOutlineColor(DEFAULT_ARTBOARD_OUTLINE_COLOR);
+    setArtboardOutlineOpacity(DEFAULT_ARTBOARD_OUTLINE_OPACITY);
   }, []);
 
   const handleSelectPattern = useCallback((pattern) => {
@@ -378,10 +423,30 @@ export default function PatternDesigner() {
     setStitchColors(deriveColorMap(cloned));
     setSelectedStitchIds(new Set());
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
+    
+    // Restore UI state if saved with the pattern
+    if (pattern.uiState) {
+      if (pattern.uiState.backgroundColor) setBackgroundColor(pattern.uiState.backgroundColor);
+      if (pattern.uiState.gridColor) setGridColor(pattern.uiState.gridColor);
+      if (pattern.uiState.gridOpacity !== undefined) setGridOpacity(pattern.uiState.gridOpacity);
+      if (pattern.uiState.tileOutlineColor) setTileOutlineColor(pattern.uiState.tileOutlineColor);
+      if (pattern.uiState.tileOutlineOpacity !== undefined) setTileOutlineOpacity(pattern.uiState.tileOutlineOpacity);
+      if (pattern.uiState.artboardOutlineColor) setArtboardOutlineColor(pattern.uiState.artboardOutlineColor);
+      if (pattern.uiState.artboardOutlineOpacity !== undefined) setArtboardOutlineOpacity(pattern.uiState.artboardOutlineOpacity);
+    }
   }, []);
 
   const handleSavePattern = useCallback(() => {
-    const result = saveToPatternLibrary(currentPattern, stitchColors);
+    const uiState = {
+      backgroundColor,
+      gridColor,
+      gridOpacity,
+      tileOutlineColor,
+      tileOutlineOpacity,
+      artboardOutlineColor,
+      artboardOutlineOpacity,
+    };
+    const result = saveToPatternLibrary(currentPattern, stitchColors, uiState);
     if (result.success) {
       // Reload saved patterns to include the newly saved one
       const userPatterns = loadSavedPatterns();
@@ -397,7 +462,7 @@ export default function PatternDesigner() {
     } else {
       alert(`Failed to save pattern: ${result.error}`);
     }
-  }, [currentPattern, stitchColors]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
 
   const handleDeletePattern = useCallback((patternId) => {
     if (confirm('Are you sure you want to delete this pattern?')) {
@@ -534,8 +599,6 @@ export default function PatternDesigner() {
         onPatternTilesChange={handlePatternTilesChange}
         backgroundColor={backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
-        defaultStitchColor={defaultStitchColor}
-        onDefaultStitchColorChange={setDefaultStitchColor}
         patternName={currentPattern.name}
         onPatternNameChange={handlePatternNameChange}
         tileSize={currentPattern.tileSize || 10}
@@ -556,6 +619,18 @@ export default function PatternDesigner() {
           handleSelectPattern(pattern);
         }}
         onDeletePattern={handleDeletePattern}
+        gridColor={gridColor}
+        onGridColorChange={setGridColor}
+        gridOpacity={gridOpacity}
+        onGridOpacityChange={setGridOpacity}
+        tileOutlineColor={tileOutlineColor}
+        onTileOutlineColorChange={setTileOutlineColor}
+        tileOutlineOpacity={tileOutlineOpacity}
+        onTileOutlineOpacityChange={setTileOutlineOpacity}
+        artboardOutlineColor={artboardOutlineColor}
+        onArtboardOutlineColorChange={setArtboardOutlineColor}
+        artboardOutlineOpacity={artboardOutlineOpacity}
+        onArtboardOutlineOpacityChange={setArtboardOutlineOpacity}
       />
 
       {/* Main Content Area */}
@@ -599,6 +674,12 @@ export default function PatternDesigner() {
             stitchSize={stitchSize}
             repeatPattern={repeatPattern}
             showGrid={showGrid}
+            gridColor={gridColor}
+            gridOpacity={gridOpacity}
+            tileOutlineColor={tileOutlineColor}
+            tileOutlineOpacity={tileOutlineOpacity}
+            artboardOutlineColor={artboardOutlineColor}
+            artboardOutlineOpacity={artboardOutlineOpacity}
           />
         </div>
       </main>

@@ -6,7 +6,6 @@ import {
 } from "./ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { CanvasSettings } from './CanvasSettings.jsx';
-import { ExportPanel } from './ExportPanel.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
 
 export function AppSidebar({
@@ -16,8 +15,6 @@ export function AppSidebar({
   onPatternTilesChange,
   backgroundColor,
   onBackgroundColorChange,
-  defaultStitchColor,
-  onDefaultStitchColorChange,
   patternName,
   onPatternNameChange,
   tileSize,
@@ -36,6 +33,18 @@ export function AppSidebar({
   activePatternId,
   onSelectPattern,
   onDeletePattern,
+  gridColor,
+  onGridColorChange,
+  gridOpacity,
+  onGridOpacityChange,
+  tileOutlineColor,
+  onTileOutlineColorChange,
+  tileOutlineOpacity,
+  onTileOutlineOpacityChange,
+  artboardOutlineColor,
+  onArtboardOutlineColorChange,
+  artboardOutlineOpacity,
+  onArtboardOutlineOpacityChange,
 }) {
   return (
       <Sidebar>
@@ -59,14 +68,12 @@ export function AppSidebar({
           <SidebarContent>
             <TabsContent value="controls" className="mt-0">
               <SidebarGroup>
-                <SidebarGroupContent className="space-y-6">
+                <SidebarGroupContent className="space-y-2">
                   <CanvasSettings
                     patternTiles={patternTiles}
                     onPatternTilesChange={onPatternTilesChange}
                     backgroundColor={backgroundColor}
                     onBackgroundColorChange={onBackgroundColorChange}
-                    defaultStitchColor={defaultStitchColor}
-                    onDefaultStitchColorChange={onDefaultStitchColorChange}
                     patternName={patternName}
                     onPatternNameChange={onPatternNameChange}
                     tileSize={tileSize}
@@ -78,8 +85,18 @@ export function AppSidebar({
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}
                     onResetSettings={onResetSettings}
-                  />
-                  <ExportPanel
+                    gridColor={gridColor}
+                    onGridColorChange={onGridColorChange}
+                    gridOpacity={gridOpacity}
+                    onGridOpacityChange={onGridOpacityChange}
+                    tileOutlineColor={tileOutlineColor}
+                    onTileOutlineColorChange={onTileOutlineColorChange}
+                    tileOutlineOpacity={tileOutlineOpacity}
+                    onTileOutlineOpacityChange={onTileOutlineOpacityChange}
+                    artboardOutlineColor={artboardOutlineColor}
+                    onArtboardOutlineColorChange={onArtboardOutlineColorChange}
+                    artboardOutlineOpacity={artboardOutlineOpacity}
+                    onArtboardOutlineOpacityChange={onArtboardOutlineOpacityChange}
                     onExportPattern={onExportPattern}
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}

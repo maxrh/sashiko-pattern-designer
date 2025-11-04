@@ -6,7 +6,16 @@
     "tileSize": 10,
     "gridSize": 20,
     "patternTiles": 4,
-    "stitches": []
+    "stitches": [],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b8",
+      "gridOpacity": 0.25,
+      "tileOutlineColor": "#94a3b8",
+      "tileOutlineOpacity": 0.15,
+      "artboardOutlineColor": "#3b82f6",
+      "artboardOutlineOpacity": 0.5
+    }
   },
   {
     "id": "asanoha",
@@ -16,15 +25,24 @@
     "gridSize": 20,
     "patternTiles": 4,
     "stitches": [
-      { "id": "asanoha-1", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-2", "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-3", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 10 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-4", "start": { "x": 5, "y": 10 }, "end": { "x": 10, "y": 5 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-5", "start": { "x": 0, "y": 0 }, "end": { "x": 5, "y": 5 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-6", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 0 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-7", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 10 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-8", "start": { "x": 5, "y": 5 }, "end": { "x": 0, "y": 10 }, "color": null, "stitchSize": "small", "repeat": true }
-    ]
+      { "id": "asanoha-1", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-2", "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-3", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 10 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-4", "start": { "x": 5, "y": 10 }, "end": { "x": 10, "y": 5 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-5", "start": { "x": 0, "y": 0 }, "end": { "x": 5, "y": 5 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-6", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 0 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-7", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 10 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "asanoha-8", "start": { "x": 5, "y": 5 }, "end": { "x": 0, "y": 10 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b8",
+      "gridOpacity": 0.25,
+      "tileOutlineColor": "#94a3b8",
+      "tileOutlineOpacity": 0.15,
+      "artboardOutlineColor": "#3b82f6",
+      "artboardOutlineOpacity": 0.5
+    }
   },
   {
     "id": "simple-cross",
@@ -34,11 +52,20 @@
     "gridSize": 20,
     "patternTiles": 5,
     "stitches": [
-      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": null, "stitchSize": "medium", "repeat": true },
-      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": null, "stitchSize": "medium", "repeat": true },
-      { "id": "cross-3", "start": { "x": 4, "y": 0 }, "end": { "x": 4, "y": 8 }, "color": null, "stitchSize": "medium", "repeat": true },
-      { "id": "cross-4", "start": { "x": 0, "y": 4 }, "end": { "x": 8, "y": 4 }, "color": null, "stitchSize": "medium", "repeat": true }
-    ]
+      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "cross-3", "start": { "x": 4, "y": 0 }, "end": { "x": 4, "y": 8 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "cross-4", "start": { "x": 0, "y": 4 }, "end": { "x": 8, "y": 4 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b8",
+      "gridOpacity": 0.25,
+      "tileOutlineColor": "#94a3b8",
+      "tileOutlineOpacity": 0.15,
+      "artboardOutlineColor": "#3b82f6",
+      "artboardOutlineOpacity": 0.5
+    }
   },
   {
     "id": "diagonal-flow",
@@ -48,9 +75,18 @@
     "gridSize": 20,
     "patternTiles": 6,
     "stitches": [
-      { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": null, "stitchSize": "small", "repeat": true }
-    ]
+      { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b8",
+      "gridOpacity": 0.25,
+      "tileOutlineColor": "#94a3b8",
+      "tileOutlineOpacity": 0.15,
+      "artboardOutlineColor": "#3b82f6",
+      "artboardOutlineOpacity": 0.5
+    }
   }
 ]

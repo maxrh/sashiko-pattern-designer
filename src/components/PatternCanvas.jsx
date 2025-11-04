@@ -101,6 +101,12 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   stitchSize,
   repeatPattern = true,
   showGrid = true,
+  gridColor = '#94a3b8',
+  gridOpacity = 0.25,
+  tileOutlineColor = '#94a3b8',
+  tileOutlineOpacity = 0.15,
+  artboardOutlineColor = '#3b82f6',
+  artboardOutlineOpacity = 0.5,
 }, ref) {
   const canvasRef = useRef(null);
   const [dragSelectRect, setDragSelectRect] = useState(null);
@@ -140,14 +146,20 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     if (showGrid) {
       // Draw artboard boundary (the area where pattern tiles are drawn)
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+      const artboardR = parseInt(artboardOutlineColor.slice(1, 3), 16);
+      const artboardG = parseInt(artboardOutlineColor.slice(3, 5), 16);
+      const artboardB = parseInt(artboardOutlineColor.slice(5, 7), 16);
+      ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${artboardOutlineOpacity})`;
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
       ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
 
       // Draw pattern tile boundaries (only within artboard and when repeat pattern is enabled)
       if (repeatPattern) {
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+        const tileR = parseInt(tileOutlineColor.slice(1, 3), 16);
+        const tileG = parseInt(tileOutlineColor.slice(3, 5), 16);
+        const tileB = parseInt(tileOutlineColor.slice(5, 7), 16);
+        ctx.strokeStyle = `rgba(${tileR}, ${tileG}, ${tileB}, ${tileOutlineOpacity})`;
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
         const patternTilePixelSize = patternTileSize * patternGridSize;
@@ -165,7 +177,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     // Draw grid dots across entire canvas (not just artboard)
     if (showGrid) {
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
+      const gridR = parseInt(gridColor.slice(1, 3), 16);
+      const gridG = parseInt(gridColor.slice(3, 5), 16);
+      const gridB = parseInt(gridColor.slice(5, 7), 16);
+      ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${gridOpacity})`;
       for (let x = 0; x <= canvasGridSize; x += 1) {
         for (let y = 0; y <= canvasGridSize; y += 1) {
           const centerX = x * patternGridSize;
@@ -504,6 +519,12 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     showGrid,
     stitchColors,
     tilesPerSide,
+    gridColor,
+    gridOpacity,
+    tileOutlineColor,
+    tileOutlineOpacity,
+    artboardOutlineColor,
+    artboardOutlineOpacity,
   ]);
 
   const handleMouseDown = (event) => {

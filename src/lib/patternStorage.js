@@ -35,6 +35,12 @@ export function saveCurrentPattern(pattern, stitchColors, uiState) {
         selectedStitchColor: uiState.selectedStitchColor,
         stitchSize: uiState.stitchSize,
         repeatPattern: uiState.repeatPattern,
+        gridColor: uiState.gridColor,
+        gridOpacity: uiState.gridOpacity,
+        tileOutlineColor: uiState.tileOutlineColor,
+        tileOutlineOpacity: uiState.tileOutlineOpacity,
+        artboardOutlineColor: uiState.artboardOutlineColor,
+        artboardOutlineOpacity: uiState.artboardOutlineOpacity,
       },
       timestamp: Date.now(),
     };
@@ -97,7 +103,7 @@ export function clearCurrentPattern() {
 /**
  * Save a pattern to the user's saved patterns collection
  */
-export function saveToPatternLibrary(pattern, stitchColors) {
+export function saveToPatternLibrary(pattern, stitchColors, uiState) {
   if (typeof window === 'undefined' || !window.localStorage) {
     return { success: false, error: 'localStorage not available' };
   }
@@ -128,6 +134,15 @@ export function saveToPatternLibrary(pattern, stitchColors) {
         stitchSize: stitch.stitchSize || 'small',
         repeat: stitch.repeat !== false,
       })),
+      uiState: uiState ? {
+        backgroundColor: uiState.backgroundColor,
+        gridColor: uiState.gridColor,
+        gridOpacity: uiState.gridOpacity,
+        tileOutlineColor: uiState.tileOutlineColor,
+        tileOutlineOpacity: uiState.tileOutlineOpacity,
+        artboardOutlineColor: uiState.artboardOutlineColor,
+        artboardOutlineOpacity: uiState.artboardOutlineOpacity,
+      } : undefined,
       savedAt: Date.now(),
     };
 
