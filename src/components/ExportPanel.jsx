@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { Button } from './ui/button.jsx';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card.jsx';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 export function ExportPanel({
   onNewPattern,
@@ -20,17 +20,17 @@ export function ExportPanel({
   };
 
   return (
-    <Card className="bg-slate-900/70">
+    <Card>
       <CardHeader>
         <CardTitle>Export & Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" onClick={onNewPattern} className="w-full">
-            New Pattern
+            New
           </Button>
           <Button type="button" onClick={onSavePattern} className="w-full" variant="default">
-            Save Pattern
+            Save
           </Button>
         </div>
 

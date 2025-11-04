@@ -5,7 +5,7 @@ export function Toolbar({
   onDeselectAll,
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-lg border border-slate-800 bg-slate-900/70 px-4 py-3">
+    <div className="flex items-center gap-4 rounded-lg border border-border bg-card/70 px-4 py-3 shadow-sm">
       {/* Tools */}
       <div className="flex items-center gap-2">
         <button
@@ -13,8 +13,8 @@ export function Toolbar({
           onClick={() => onModeChange('select')}
           className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
             drawingMode === 'select'
-              ? 'border-blue-500 bg-blue-500/20 text-blue-400'
-              : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+              ? 'border-primary bg-primary/20 text-primary'
+              : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted'
           }`}
           title="Select Mode"
         >
@@ -39,8 +39,8 @@ export function Toolbar({
           onClick={() => onModeChange('draw')}
           className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
             drawingMode === 'draw'
-              ? 'border-blue-500 bg-blue-500/20 text-blue-400'
-              : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+              ? 'border-primary bg-primary/20 text-primary'
+              : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted'
           }`}
           title="Draw Mode"
         >
@@ -65,8 +65,8 @@ export function Toolbar({
           onClick={() => onModeChange('pan')}
           className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
             drawingMode === 'pan'
-              ? 'border-blue-500 bg-blue-500/20 text-blue-400'
-              : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+              ? 'border-primary bg-primary/20 text-primary'
+              : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted'
           }`}
           title="Pan Mode (Spacebar)"
         >
@@ -87,21 +87,21 @@ export function Toolbar({
         </button>
       </div>
 
-      <div className="h-6 w-px bg-slate-700" />
+      <div className="h-6 w-px bg-border" />
 
       {/* Selection Actions */}
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onSelectAll}
-          className="rounded border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300"
+          className="rounded border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border/80 hover:bg-muted hover:text-foreground"
         >
           Select All
         </button>
         <button
           type="button"
           onClick={onDeselectAll}
-          className="rounded border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300"
+          className="rounded border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border/80 hover:bg-muted hover:text-foreground"
         >
           Deselect
         </button>

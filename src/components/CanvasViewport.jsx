@@ -66,7 +66,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
         x: e.clientX + containerRef.current.scrollLeft, 
         y: e.clientY + containerRef.current.scrollTop 
       });
-      document.body.style.cursor = 'grabbing';
+      containerRef.current.style.cursor = 'grabbing';
     }
   };
 
@@ -86,9 +86,9 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
       setIsPanning(false);
       // Reset cursor based on mode
       if (drawingState.mode === 'pan') {
-        document.body.style.cursor = 'grab';
+        containerRef.current.style.cursor = 'grab';
       } else {
-        document.body.style.cursor = '';
+        containerRef.current.style.cursor = '';
       }
     }
   };
@@ -143,7 +143,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-auto bg-slate-950"
+      className="relative flex-1 overflow-auto bg-background"
       style={{ 
         cursor: isPanning ? 'grabbing' : (drawingState.mode === 'pan' ? 'grab' : 'default'),
         userSelect: 'none',

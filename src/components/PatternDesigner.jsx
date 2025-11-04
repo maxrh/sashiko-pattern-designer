@@ -4,8 +4,8 @@ import { CanvasViewport } from './CanvasViewport.jsx';
 import { Toolbar } from './Toolbar.jsx';
 import { ContextualSidebar } from './ContextualSidebar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
-import { Badge } from './ui/badge.jsx';
-import { SidebarProvider, SidebarTrigger } from './ui/sidebar.tsx';
+import { Badge } from './ui/badge';
+import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { 
   saveCurrentPattern, 
   loadCurrentPattern, 
@@ -475,20 +475,19 @@ export default function PatternDesigner() {
         activePatternId={currentPattern.id}
         onSelectPattern={(pattern) => {
           handleSelectPattern(pattern);
-          setSidebarTab('controls');
         }}
         onDeletePattern={handleDeletePattern}
       />
 
       {/* Main Content Area */}
-      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-slate-950 text-slate-100">
-        <header className="flex-none border-b border-slate-800 bg-slate-950/80 px-6 py-4 backdrop-blur">
+      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-background text-foreground">
+        <header className="flex-none border-b border-border bg-background/80 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div>
-                <h1 className="text-xl font-semibold text-white">Interactive Sashiko Pattern Designer</h1>
-                <p className="text-sm text-slate-400">Connect stitches on the grid, tile patterns, and craft your own sashiko designs.</p>
+                <h1 className="text-xl font-semibold text-foreground">Sashiko Pattern Designer</h1>
+                <p className="text-sm text-muted-foreground">Connect stitches on the grid, tile patterns, and craft your own sashiko designs.</p>
               </div>
             </div>
             <Badge variant="outline" className="self-start">

@@ -4,7 +4,7 @@ import '../styles/global.css';
 const { title = 'Sashiko Pattern Designer' } = Astro.props;
 ---
 <!doctype html>
-<html lang="en" class="bg-slate-950">
+<html lang="en" class="bg-baground">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,7 +12,7 @@ const { title = 'Sashiko Pattern Designer' } = Astro.props;
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 	</head>
-	<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+	<body class="min-h-screen bg-baground text-foreground antialiased">
 		<slot />
 	</body>
 </html>

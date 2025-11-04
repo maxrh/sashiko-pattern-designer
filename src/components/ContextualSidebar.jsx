@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card.jsx';
-import { Label } from './ui/label.jsx';
-import { Select } from './ui/select.jsx';
-import { Button } from './ui/button.jsx';
-import { Badge } from './ui/badge.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 export function ContextualSidebar({
   selectedCount,
@@ -20,31 +20,28 @@ export function ContextualSidebar({
   const hasSelection = selectedCount > 0;
 
   return (
-    <Card className="bg-slate-900/70">
+    <Card>
       <CardHeader className="space-y-2">
         <CardTitle>Stitch Options</CardTitle>
         {hasSelection ? (
           <Badge>{selectedCount} stitch{selectedCount !== 1 ? 'es' : ''} selected</Badge>
         ) : (
-          <p className="text-xs text-slate-400">Default settings for draw tool</p>
+          <p className="text-xs text-muted-foreground">Default settings for draw tool</p>
         )}
       </CardHeader>
       <CardContent className="space-y-5 text-sm">
         {/* Stitch Size - Same for both modes */}
         <div className="space-y-2">
           <Label htmlFor="sidebar-stitch-size">Stitch Length</Label>
-          <Select
-            id="sidebar-stitch-size"
-            value={stitchSize}
-            onChange={(event) => {
-              if (event.target.value) {
-                onStitchSizeChange(event.target.value);
-              }
-            }}
-          >
-            <option value="medium">Medium (1/2 cell)</option>
-            <option value="large">Large (1 cell)</option>
-            <option value="xlarge">XLarge (2 cells)</option>
+          <Select value={stitchSize} onValueChange={onStitchSizeChange}>
+            <SelectTrigger id="sidebar-stitch-size" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="medium">Medium (1/2 cell)</SelectItem>
+              <SelectItem value="large">Large (1 cell)</SelectItem>
+              <SelectItem value="xlarge">XLarge (2 cells)</SelectItem>
+            </SelectContent>
           </Select>
         </div>
 
@@ -55,16 +52,16 @@ export function ContextualSidebar({
             type="button"
             id="sidebar-repeat"
             onClick={() => onRepeatPatternChange(!repeatPattern)}
-            className={`w-full rounded border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`w-full rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
               repeatPattern
-                ? 'border-blue-500 bg-blue-500/20 text-blue-400'
-                : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300'
+                ? 'border-primary bg-primary/20 text-primary'
+                : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted hover:text-foreground'
             }`}
             suppressHydrationWarning
           >
             Repeat: {isHydrated ? (repeatPattern ? 'On' : 'Off') : 'On'}
           </button>
-          <p className="text-xs text-slate-500" suppressHydrationWarning>
+          <p className="text-xs text-muted-foreground" suppressHydrationWarning>
             {isHydrated
               ? (repeatPattern 
                   ? 'Lines appear in all tiles' 
@@ -81,7 +78,7 @@ export function ContextualSidebar({
             id="stitch-color"
             value={selectedStitchColor}
             onChange={(e) => onSelectedStitchColorChange(e.target.value)}
-            className="h-10 w-full cursor-pointer rounded border border-slate-700 bg-slate-800"
+            className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
           />
           
           <div className="mt-2 flex flex-wrap gap-2">
@@ -92,7 +89,7 @@ export function ContextualSidebar({
                 onClick={() => {
                   onSelectedStitchColorChange(preset.value);
                 }}
-                className="h-8 w-8 rounded border-2 border-slate-700 transition-transform hover:scale-110"
+                className="h-8 w-8 rounded border-2 border-border transition-transform hover:scale-110"
                 style={{ backgroundColor: preset.value }}
                 title={preset.label}
               />
@@ -111,7 +108,7 @@ export function ContextualSidebar({
 
         {/* Delete Button - Only when selection exists */}
         {hasSelection && (
-          <div className="border-t border-slate-700 pt-4">
+          <div className="border-t border-border pt-4">
             <Button
               type="button"
               variant="destructive"
