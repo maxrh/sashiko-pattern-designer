@@ -18,6 +18,7 @@ export function CanvasSettings({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
+  artboardSize,
   canvasInfo,
   onNewPattern,
   onSavePattern,
@@ -27,7 +28,7 @@ export function CanvasSettings({
     <Card>
       <CardHeader className="space-y-2">
         <CardTitle>Canvas Settings</CardTitle>
-        <Badge variant="outline">{canvasInfo}</Badge>
+        <p className="text-sm text-muted-foreground">Artboard: {artboardSize}×{artboardSize}px</p>
       </CardHeader>
       <CardContent className="space-y-5 text-sm">
         <div className="space-y-2">

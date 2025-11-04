@@ -47,35 +47,59 @@
 
 ## Canvas System
 
-### Canvas Structure
-- **Canvas Size**: 2200x2200px fixed size
-- **Cell Size**: 20px per grid cell
-- **Artboard**: Centered on canvas, size depends on pattern tiles × gridSize
-  - Example: 5×5 tiles with 10×10 grid = 1000×1000px artboard
+### Canvas Structure (UPDATED)
+- **Canvas Size**: Dynamic, calculated based on artboard + margins
+- **Canvas Margin**: 40 grid cells on all sides of artboard
+- **Artboard**: Centered in canvas, size depends on pattern tiles × tileSize × gridSize
+  - Example: 5×5 tiles with 10×10 grid cells and 20px grid size = 1000×1000px artboard
 - **Extended Area**: 1 tile margin on all sides for cross-boundary line visibility
-  - Example: 5×5 artboard has visual space for 6×6 area (with margins)
+  - Example: 5×5 artboard has visual space for 6×6 area (with tile margins)
   - Only shows portions of repeating lines that cross from real artboard into margin
   - Cannot initiate drawing from margin area - drawing must start within artboard
 
+### Terminology (CRITICAL)
+- **Canvas**: The entire grid area where drawing happens (includes artboard + 40-cell margin)
+- **Artboard**: The total area of pattern tiles we draw inside (the actual pattern area)
+- **Grid Cell**: A single cell in the grid (size controlled by gridSize parameter in pixels)
+- **Grid Point**: Intersection points where grid cells meet (where stitches can connect)
+
 ### Coordinate System
-- **Canvas Grid Coordinates**: Absolute position on entire 2200×2200 canvas
+- **Canvas Grid Coordinates**: Absolute position on entire dynamic canvas
 - **Artboard-Relative Coordinates**: Relative to artboard top-left corner
   - Can be negative (in left/top margins)
   - Can exceed artboard size (in right/bottom margins)
-- **Pattern-Relative Coordinates**: Normalized to single tile (0 to patternGridSize-1)
+- **Pattern-Relative Coordinates**: Normalized to single tile (0 to patternTileSize)
   - Used for repeated lines that tile across the artboard
 
-### Artboard Offset Calculation
+### Canvas Size Calculation (UPDATED)
 ```javascript
-// gridSize represents cells per tile
-const artboardSize = patternTiles * patternGridSize * cellSize;
-const artboardOffset = (canvasSize - artboardSize) / 2;
+const CANVAS_MARGIN_CELLS = 40; // 40 grid cells of margin around artboard
+const patternGridSize = pattern?.gridSize ?? 20; // Pixel size per grid cell
+
+// Artboard = the total area containing all pattern tiles
+const artboardSize = patternTiles * patternTileSize * patternGridSize;
+
+// Canvas = artboard + 40 grid cells margin on all sides
+const canvasMarginPixels = CANVAS_MARGIN_CELLS * patternGridSize;
+const canvasSize = artboardSize + (2 * canvasMarginPixels);
+
+// Artboard is centered in canvas (offset by margin)
+const artboardOffset = canvasMarginPixels;
 ```
 
-**Example**: 4×4 tiles with gridSize 10
-- Each tile = 10 cells = 200px
-- Artboard = 4 × 10 cells × 20px = 800px
-- Offset = (2200 - 800) / 2 = 700px
+**Example**: 4×4 tiles with tileSize 10, gridSize 20px
+- Each tile = 10 cells × 20px = 200px
+- Artboard = 4 tiles × 200px = 800px
+- Canvas margin = 40 cells × 20px = 800px
+- Canvas size = 800px + (2 × 800px) = 2400px
+- Artboard offset = 800px (centered)
+
+**Example**: 5×5 tiles with tileSize 10, gridSize 10px
+- Each tile = 10 cells × 10px = 100px
+- Artboard = 5 tiles × 100px = 500px
+- Canvas margin = 40 cells × 10px = 400px
+- Canvas size = 500px + (2 × 400px) = 1300px
+- Artboard offset = 400px (centered)
 
 ### Extended Margin Area (CRITICAL BEHAVIOR)
 
@@ -208,43 +232,67 @@ const isPatternLine = stitch.repeat !== false &&
 - Position calculation: `artboardOffset + (stitch.start.x * cellSize)`
 - No tiling or repetition
 
-### Tile Boundary Handling (CRITICAL BEHAVIOR)
+### Tile Boundary Handling (CRITICAL BEHAVIOR - UPDATED)
 
 **Tile boundaries are SHARED grid points between adjacent tiles.**
 
 #### Boundary Semantics:
-- **Coordinate 0**: Left/top boundary of tile (same physical point as coordinate `gridSize` of previous tile)
-- **Coordinate gridSize**: Right/bottom boundary of tile (same physical point as coordinate 0 of next tile)
-- **Example with gridSize 10**:
+- **Coordinate 0**: Left/top boundary of tile (same physical point as coordinate `tileSize` of previous tile)
+- **Coordinate tileSize**: Right/bottom boundary of tile (same physical point as coordinate 0 of next tile)
+- **Example with tileSize 10**:
   - Tile 0 spans grid points 0-10 (absolute positions 0-10)
   - Tile 1 spans grid points 0-10 (absolute positions 10-20)
   - Grid point at coordinate 10 in tile 0 = grid point at coordinate 0 in tile 1
   - Physical location: absolute position 10
 
-#### Boundary Duplication Prevention:
-**Problem**: Lines starting or ending at boundary coordinates (0 or gridSize) would render in multiple tiles at the same physical location, causing visual duplication.
+#### Boundary Line Handling (UPDATED):
+**Special Case**: Lines that run along tile boundaries should be treated as crossing tiles.
 
-**Solution**: Filter boundary-touching lines from outer tiles:
+**Examples:**
+- Vertical line from (10,0) to (10,10): Runs along vertical boundary between tiles
+- Horizontal line from (0,10) to (10,10): Runs along horizontal boundary between tiles
+
+**Solution**: Only skip outer tiles for non-boundary-running lines:
 ```javascript
 // In rendering loop, for outer tiles only:
-if (isOuterTile && (stitch.start.x === 0 || stitch.start.x === patternGridSize || 
-                    stitch.start.y === 0 || stitch.start.y === patternGridSize ||
-                    stitch.end.x === 0 || stitch.end.x === patternGridSize ||
-                    stitch.end.y === 0 || stitch.end.y === patternGridSize)) {
-  continue; // Skip rendering in outer tiles
+if (isOuterTile) {
+  const lineRunsAlongVerticalBoundary = 
+    stitch.start.x === stitch.end.x && 
+    (stitch.start.x === 0 || stitch.start.x === patternTileSize);
+  
+  const lineRunsAlongHorizontalBoundary = 
+    stitch.start.y === stitch.end.y && 
+    (stitch.start.y === 0 || stitch.start.y === patternTileSize);
+  
+  // Lines along boundaries should be treated as crossing tiles (don't skip)
+  // All other boundary-touching lines should skip outer tiles
+  if (!lineRunsAlongVerticalBoundary && !lineRunsAlongHorizontalBoundary) {
+    if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
+        stitch.start.y === 0 || stitch.start.y === patternTileSize ||
+        stitch.end.x === 0 || stitch.end.x === patternTileSize ||
+        stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+      continue; // Skip rendering in outer tiles
+    }
+  }
 }
 ```
 
 **Effect**:
-- ✅ Lines touching boundaries render correctly within artboard tiles
-- ✅ Lines touching boundaries do NOT render in margin areas
-- ✅ No visual duplication at tile boundaries
-- ✅ User-drawn lines from edge points stay within artboard
+- ✅ Lines running along boundaries repeat with crossing effect (appear in outer tiles)
+- ✅ Diagonal/crossing lines repeat with crossing effect
+- ✅ Lines touching boundaries but not running along them stay within artboard
+- ✅ No unwanted duplication at tile boundaries
 
-**Example**: Line from (0,5) to (5,10) in gridSize 10 pattern
+**Example**: Line from (10,0) to (10,10) in tileSize 10 pattern
+- Treated as crossing between tiles (runs along vertical boundary)
+- Renders in artboard tiles AND outer tiles where it crosses
+- Creates visual "seam" effect showing the tile boundary
+
+**Example**: Line from (0,5) to (5,10) in tileSize 10 pattern
+- Touches boundary but doesn't run along it
 - Renders in artboard tiles: (0,5)→(5,10), (10,5)→(15,10), (20,5)→(25,10)...
 - Does NOT render in outer tiles (tileRow/Col -1 or >= tilesPerSide)
-- No duplication in margins despite coordinates touching boundaries
+- No duplication in margins
 
 ### Cross-Tile Lines (CRITICAL BEHAVIOR)
 
@@ -377,19 +425,30 @@ const intersectsArtboard = !(
 
 ## UI Components
 
-### CanvasSettings (Left Sidebar)
+### CanvasSettings (Left Sidebar) (UPDATED)
 
 **Purpose:** Configure canvas-level settings that affect the entire pattern view
 
 **Controls:**
 1. **Pattern Name**: Text input for naming the pattern
-2. **Pattern Tiles**: Dropdown (2×2 to 10×10) - controls artboard size
-3. **Background Color**: Color picker for canvas background
-4. **Default Thread Color**: Color picker for fallback thread color
+2. **Pattern Tiles**: Slider (1×1 to 10×10, step 1) - controls how many times pattern repeats on artboard
+   - Affects artboard size and canvas size dynamically
+3. **Tile Size**: Slider (5×5 to 20×20 grid cells, step 1) - number of grid cells per pattern tile
+   - Affects the resolution/detail level of each pattern tile
+4. **Grid Size**: Slider (10px to 50px, step 1) - pixel size of each grid cell
+   - Affects visual scale of the entire pattern
+   - Changes canvas margin size (40 cells × grid size)
+5. **Background Color**: Color picker for canvas background
+6. **Default Stitch Color**: Color picker for fallback thread color
    - Used when stitches have no color override
    - Independent from drawing color
 
-**Display:** Badge showing canvas info (size, cell size, stitch count)
+**Display:** Badge showing canvas info (tile count, grid size)
+
+**Interaction Effects:**
+- Changing Pattern Tiles: Artboard and canvas resize dynamically
+- Changing Tile Size: Pattern detail level changes, artboard may resize
+- Changing Grid Size: Everything scales proportionally, canvas margin adjusts
 
 ### ContextualSidebar (Right Sidebar)
 

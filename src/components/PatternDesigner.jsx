@@ -272,7 +272,8 @@ export default function PatternDesigner() {
       return next;
     });
     
-    setSelectedStitchIds(new Set([newId]));
+    // Don't auto-select newly created stitches
+    setSelectedStitchIds(new Set());
   }, [selectedStitchColor]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -541,7 +542,8 @@ export default function PatternDesigner() {
         onTileSizeChange={handleTileSizeChange}
         gridSize={currentPattern.gridSize || CELL_SIZE}
         onGridSizeChange={handleGridSizeChange}
-                canvasInfo={`${patternTiles}×${patternTiles} tiles · Grid size ${currentPattern.gridSize || CELL_SIZE}px (5mm)`}
+        artboardSize={artboardSize}
+        canvasInfo={`Artboard: ${artboardSize}×${artboardSize}px · Tiles: ${patternTiles}×${patternTiles} · Tile grid: ${currentPattern.tileSize || 10}×${currentPattern.tileSize || 10} · Grid size: ${currentPattern.gridSize || CELL_SIZE}px`}
         onNewPattern={handleNewPattern}
         onSavePattern={handleSavePattern}
         onResetSettings={handleResetSettings}

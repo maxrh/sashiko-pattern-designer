@@ -205,16 +205,28 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
                                 tileCol < 0 || tileCol >= tilesPerSide;
             
-            // BOUNDARY DUPLICATION PREVENTION:
-            // Lines starting OR ending at coordinate 0 or gridSize are at tile boundaries
-            // Don't render them in outer tiles to prevent duplication
-            // coordinate 0 = left/top boundary (shared with tile -1)
-            // coordinate gridSize = right/bottom boundary (shared with tile +1)
-            if (isOuterTile && (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
-                                stitch.start.y === 0 || stitch.start.y === patternTileSize ||
-                                stitch.end.x === 0 || stitch.end.x === patternTileSize ||
-                                stitch.end.y === 0 || stitch.end.y === patternTileSize)) {
-              continue;
+            // BOUNDARY LINE HANDLING:
+            // A line that runs along a boundary (e.g., vertical line at x=10) should cross tiles
+            // Only skip outer tiles for lines that don't run along boundaries
+            if (isOuterTile) {
+              const lineRunsAlongVerticalBoundary = 
+                stitch.start.x === stitch.end.x && 
+                (stitch.start.x === 0 || stitch.start.x === patternTileSize);
+              
+              const lineRunsAlongHorizontalBoundary = 
+                stitch.start.y === stitch.end.y && 
+                (stitch.start.y === 0 || stitch.start.y === patternTileSize);
+              
+              // Lines along boundaries should be treated as crossing tiles (don't skip)
+              // All other boundary-touching lines should skip outer tiles
+              if (!lineRunsAlongVerticalBoundary && !lineRunsAlongHorizontalBoundary) {
+                if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
+                    stitch.start.y === 0 || stitch.start.y === patternTileSize ||
+                    stitch.end.x === 0 || stitch.end.x === patternTileSize ||
+                    stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+                  continue;
+                }
+              }
             }
             
             // Calculate position within this specific tile
@@ -647,6 +659,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       justFinishedDragRef.current = false;
       return;
     }
+
+    // Ignore click if pan mode is active (hand tool)
+    if (drawingState.mode === 'pan') {
+      return;
+    }
     
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -769,6 +786,31 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           // For repeat, check all tiles including negative offsets
           for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
             for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
+              // Check if this is an outer tile
+              const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
+                                  tileCol < 0 || tileCol >= tilesPerSide;
+              
+              // Apply same filtering as rendering: skip outer tiles for boundary lines
+              if (isOuterTile) {
+                const lineRunsAlongVerticalBoundary = 
+                  stitch.start.x === stitch.end.x && 
+                  (stitch.start.x === 0 || stitch.start.x === patternTileSize);
+                
+                const lineRunsAlongHorizontalBoundary = 
+                  stitch.start.y === stitch.end.y && 
+                  (stitch.start.y === 0 || stitch.start.y === patternTileSize);
+                
+                // Skip outer tiles for non-boundary-running lines
+                if (!lineRunsAlongVerticalBoundary && !lineRunsAlongHorizontalBoundary) {
+                  if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
+                      stitch.start.y === 0 || stitch.start.y === patternTileSize ||
+                      stitch.end.x === 0 || stitch.end.x === patternTileSize ||
+                      stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+                    continue;
+                  }
+                }
+              }
+              
               const tileOffsetX = tileCol * patternTileSize;
               const tileOffsetY = tileRow * patternTileSize;
             
@@ -779,6 +821,28 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
               if (startX > canvasSize || startY > canvasSize) {
                 continue;
+              }
+              
+              // For outer tiles, only check if line intersects artboard
+              if (isOuterTile) {
+                const artboardStartPixel = artboardOffset;
+                const artboardEndPixel = artboardOffset + artboardSize;
+                
+                const lineMinX = Math.min(startX, endX);
+                const lineMaxX = Math.max(startX, endX);
+                const lineMinY = Math.min(startY, endY);
+                const lineMaxY = Math.max(startY, endY);
+                
+                const intersectsArtboard = !(
+                  lineMaxX < artboardStartPixel ||
+                  lineMinX > artboardEndPixel ||
+                  lineMaxY < artboardStartPixel ||
+                  lineMinY > artboardEndPixel
+                );
+                
+                if (!intersectsArtboard) {
+                  continue;
+                }
               }
 
               const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);

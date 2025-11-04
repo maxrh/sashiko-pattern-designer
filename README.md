@@ -107,11 +107,28 @@ Your work will persist across page refreshes and browser sessions.
 
 ## 🎨 Usage Tips
 
+### Getting Started
 1. **Starting Fresh**: Click "New Pattern" to start with a blank canvas
 2. **Editing Patterns**: Load a built-in pattern and modify it to create variations
 3. **Saving Your Work**: Name your pattern in Canvas Settings, then click "Save Pattern"
-4. **Color Workflow**: Set default thread color for the canvas, then use stitch color to customize individual stitches
-5. **Tile Boundaries**: Lines at coordinate 0 or gridSize are boundary lines - they won't duplicate in margins
+
+### Canvas Configuration
+- **Pattern Tiles**: Slider (1-10) controls how many times the pattern repeats
+- **Tile Size**: Slider (5-20) sets the number of grid cells per tile (pattern detail level)
+- **Grid Size**: Slider (10-50px) controls the pixel size of each grid cell (visual scale)
+  - Larger grid size = bigger pattern, more visible detail
+  - Canvas automatically resizes with 40 grid cells of margin around the artboard
+
+### Color Workflow
+- **Default Stitch Color** (Canvas Settings): Fallback color for stitches without custom colors
+- **Stitch Color** (Right Sidebar): Color for new stitches and editing selected stitches
+- Use color presets for quick selection, or pick custom colors
+
+### Drawing Tips
+- **Tile Boundaries**: Lines running along tile boundaries (e.g., vertical line at x=10) will show crossing effect
+- **Cross-Tile Lines**: Lines that span across tiles will repeat correctly across the artboard
+- **Pattern Repeat**: Toggle ON for traditional repeating patterns, OFF for single-instance designs
+- **Selection**: Click individual stitches or drag to select multiple; use Shift/Ctrl to add to selection
 
 ## 📐 Technical Details
 
