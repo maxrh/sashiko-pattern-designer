@@ -139,17 +139,19 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ctx.setLineDash([]);
       ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
 
-      // Draw pattern cell boundaries (only within artboard)
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([]);
-      const patternCellPixelSize = patternGridSize * cellSize;
-      for (let row = 0; row <= tilesPerSide; row += 1) {
-        for (let col = 0; col <= tilesPerSide; col += 1) {
-          const x = artboardOffset + (col * patternCellPixelSize);
-          const y = artboardOffset + (row * patternCellPixelSize);
-          if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
-            ctx.strokeRect(x, y, Math.min(patternCellPixelSize, artboardSize - col * patternCellPixelSize), Math.min(patternCellPixelSize, artboardSize - row * patternCellPixelSize));
+      // Draw pattern cell boundaries (only within artboard and when repeat pattern is enabled)
+      if (repeatPattern) {
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        const patternCellPixelSize = patternGridSize * cellSize;
+        for (let row = 0; row <= tilesPerSide; row += 1) {
+          for (let col = 0; col <= tilesPerSide; col += 1) {
+            const x = artboardOffset + (col * patternCellPixelSize);
+            const y = artboardOffset + (row * patternCellPixelSize);
+            if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
+              ctx.strokeRect(x, y, Math.min(patternCellPixelSize, artboardSize - col * patternCellPixelSize), Math.min(patternCellPixelSize, artboardSize - row * patternCellPixelSize));
+            }
           }
         }
       }
@@ -479,6 +481,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     drawingState.mode,
     pattern,
     patternGridSize,
+    repeatPattern,
     selectedStitchIds,
     showGrid,
     stitchColors,
