@@ -1,6 +1,7 @@
-import { MousePointer, Edit3, Hand, Grip } from 'lucide-react';
+import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff } from 'lucide-react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
+import { Toggle } from './ui/toggle';
 import { SidebarTrigger } from './ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -20,6 +21,8 @@ export function Toolbar({
   colorPresets,
   stitchSize,
   onStitchSizeChange,
+  showGrid,
+  onShowGridChange,
 }) {
   return (
     <TooltipProvider>
@@ -204,6 +207,25 @@ export function Toolbar({
             </TooltipTrigger>
             <TooltipContent>
               <p>Clear selection</p>
+            </TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
+
+        <ButtonGroupSeparator />
+
+        <ButtonGroup>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showGrid ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => onShowGridChange(!showGrid)}
+              >
+                {showGrid ? <Eye /> : <EyeOff />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Show/Hide Grid</p>
             </TooltipContent>
           </Tooltip>
         </ButtonGroup>

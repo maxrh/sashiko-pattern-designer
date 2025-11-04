@@ -17,6 +17,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   backgroundColor,
   stitchSize,
   repeatPattern,
+  showGrid,
 }, ref) {
   const containerRef = useRef(null);
   const canvasWrapperRef = useRef(null);
@@ -194,6 +195,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           backgroundColor={backgroundColor}
           stitchSize={stitchSize}
           repeatPattern={repeatPattern}
+          showGrid={showGrid}
         />
       </div>
     </div>

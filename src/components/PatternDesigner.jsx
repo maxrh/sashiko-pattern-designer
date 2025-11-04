@@ -31,6 +31,7 @@ const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // neutral-100
 const DEFAULT_STITCH_COLOR = '#f5f5f5'; // white - default color for stitches
 const DEFAULT_STITCH_SIZE = 'medium';
 const DEFAULT_REPEAT_PATTERN = true;
+const DEFAULT_SHOW_GRID = true;
 
 function clonePattern(pattern) {
   if (!pattern) {
@@ -126,6 +127,10 @@ export default function PatternDesigner() {
     const saved = loadCurrentPattern();
     return saved?.uiState?.repeatPattern ?? DEFAULT_REPEAT_PATTERN;
   });
+  const [showGrid, setShowGrid] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.showGrid ?? DEFAULT_SHOW_GRID;
+  });
 
   const [sidebarTab, setSidebarTab] = useState('controls');
   const [isHydrated, setIsHydrated] = useState(false);
@@ -178,6 +183,7 @@ export default function PatternDesigner() {
       selectedStitchColor,
       stitchSize,
       repeatPattern,
+      showGrid,
     });
   }, [
     currentPattern,
@@ -188,6 +194,7 @@ export default function PatternDesigner() {
     selectedStitchColor,
     stitchSize,
     repeatPattern,
+    showGrid,
   ]);
 
   const canvasSize = useMemo(() => {
@@ -324,6 +331,7 @@ export default function PatternDesigner() {
     setSelectedStitchColor(DEFAULT_STITCH_COLOR);
     setStitchSize(DEFAULT_STITCH_SIZE);
     setRepeatPattern(DEFAULT_REPEAT_PATTERN);
+    setShowGrid(DEFAULT_SHOW_GRID);
   }, []);
 
   const handleSelectPattern = useCallback((pattern) => {
@@ -480,7 +488,7 @@ export default function PatternDesigner() {
         onDefaultStitchColorChange={setDefaultStitchColor}
         patternName={currentPattern.name}
         onPatternNameChange={handlePatternNameChange}
-        canvasInfo={isHydrated ? `2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches` : `2200px · ${CELL_SIZE}px cells`}
+        canvasInfo={`Tiles: ${patternTiles}×${patternTiles} · Grid: 5mm `}
         onNewPattern={handleNewPattern}
         onSavePattern={handleSavePattern}
         onResetSettings={handleResetSettings}
@@ -512,6 +520,8 @@ export default function PatternDesigner() {
               colorPresets={COLOR_PRESETS}
               stitchSize={stitchSize}
               onStitchSizeChange={handleChangeSelectedStitchSize}
+              showGrid={showGrid}
+              onShowGridChange={setShowGrid}
             />
           </div>
         </header>
@@ -533,6 +543,7 @@ export default function PatternDesigner() {
             backgroundColor={backgroundColor}
             stitchSize={stitchSize}
             repeatPattern={repeatPattern}
+            showGrid={showGrid}
           />
         </div>
       </main>

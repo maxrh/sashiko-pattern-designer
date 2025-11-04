@@ -96,6 +96,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   backgroundColor,
   stitchSize,
   repeatPattern = true,
+  showGrid = true,
 }, ref) {
   const canvasRef = useRef(null);
   const [dragSelectRect, setDragSelectRect] = useState(null);
@@ -131,34 +132,38 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
-    // Draw artboard boundary
-    ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
+    if (showGrid) {
+      // Draw artboard boundary
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
 
-    // Draw pattern cell boundaries (only within artboard)
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([]);
-    const patternCellPixelSize = patternGridSize * cellSize;
-    for (let row = 0; row <= tilesPerSide; row += 1) {
-      for (let col = 0; col <= tilesPerSide; col += 1) {
-        const x = artboardOffset + (col * patternCellPixelSize);
-        const y = artboardOffset + (row * patternCellPixelSize);
-        if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
-          ctx.strokeRect(x, y, Math.min(patternCellPixelSize, artboardSize - col * patternCellPixelSize), Math.min(patternCellPixelSize, artboardSize - row * patternCellPixelSize));
+      // Draw pattern cell boundaries (only within artboard)
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+      const patternCellPixelSize = patternGridSize * cellSize;
+      for (let row = 0; row <= tilesPerSide; row += 1) {
+        for (let col = 0; col <= tilesPerSide; col += 1) {
+          const x = artboardOffset + (col * patternCellPixelSize);
+          const y = artboardOffset + (row * patternCellPixelSize);
+          if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
+            ctx.strokeRect(x, y, Math.min(patternCellPixelSize, artboardSize - col * patternCellPixelSize), Math.min(patternCellPixelSize, artboardSize - row * patternCellPixelSize));
+          }
         }
       }
     }
 
     // Draw grid dots across entire canvas
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
-    for (let x = 0; x <= canvasGridSize; x += 1) {
-      for (let y = 0; y <= canvasGridSize; y += 1) {
-        const centerX = x * cellSize;
-        const centerY = y * cellSize;
-        ctx.fillRect(centerX - 1.5, centerY - 1.5, 3, 3);
+    if (showGrid) {
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
+      for (let x = 0; x <= canvasGridSize; x += 1) {
+        for (let y = 0; y <= canvasGridSize; y += 1) {
+          const centerX = x * cellSize;
+          const centerY = y * cellSize;
+          ctx.fillRect(centerX - 1.5, centerY - 1.5, 3, 3);
+        }
       }
     }
 
@@ -475,6 +480,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     pattern,
     patternGridSize,
     selectedStitchIds,
+    showGrid,
     stitchColors,
     tilesPerSide,
   ]);
