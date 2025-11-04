@@ -13,7 +13,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   onAddStitch,
   drawingState,
   onDrawingStateChange,
-  defaultThreadColor,
+  defaultStitchColor,
   backgroundColor,
   stitchSize,
   repeatPattern,
@@ -190,7 +190,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           onAddStitch={onAddStitch}
           drawingState={drawingState}
           onDrawingStateChange={onDrawingStateChange}
-          defaultThreadColor={defaultThreadColor}
+          defaultStitchColor={defaultStitchColor}
           backgroundColor={backgroundColor}
           stitchSize={stitchSize}
           repeatPattern={repeatPattern}

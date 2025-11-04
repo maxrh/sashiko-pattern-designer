@@ -1,111 +1,213 @@
+import { MousePointer, Edit3, Hand, Grip } from 'lucide-react';
+import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
+import { Button } from './ui/button';
+import { SidebarTrigger } from './ui/sidebar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
 export function Toolbar({
   drawingMode,
   onModeChange,
   onSelectAll,
   onDeselectAll,
+  repeatPattern,
+  onRepeatPatternChange,
+  selectedStitchColor,
+  onSelectedStitchColorChange,
+  onClearColors,
+  colorPresets,
+  stitchSize,
+  onStitchSizeChange,
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-lg border border-border bg-card/70 px-4 py-3 shadow-sm">
-      {/* Tools */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onModeChange('select')}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
-            drawingMode === 'select'
-              ? 'border-primary bg-primary/20 text-primary'
-              : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted'
-          }`}
-          title="Select Mode"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-            />
-          </svg>
-        </button>
+    <TooltipProvider>
+      <div className="flex items-center gap-4">
+        <ButtonGroup>
+          <SidebarTrigger />
+        </ButtonGroup>
 
-        <button
-          type="button"
-          onClick={() => onModeChange('draw')}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
-            drawingMode === 'draw'
-              ? 'border-primary bg-primary/20 text-primary'
-              : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted'
-          }`}
-          title="Draw Mode"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-            />
-          </svg>
-        </button>
+        <ButtonGroupSeparator />
 
-        <button
-          type="button"
-          onClick={() => onModeChange('pan')}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all ${
-            drawingMode === 'pan'
-              ? 'border-primary bg-primary/20 text-primary'
-              : 'border-border bg-muted/50 text-muted-foreground hover:border-border/80 hover:bg-muted'
-          }`}
-          title="Pan Mode (Spacebar)"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
-            />
-          </svg>
-        </button>
+        <ButtonGroup>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={drawingMode === 'select' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => onModeChange('select')}
+              >
+                <MousePointer />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Select Tool</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={drawingMode === 'draw' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => onModeChange('draw')}
+              >
+                <Edit3 />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Draw Tool</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={drawingMode === 'pan' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => onModeChange('pan')}
+              >
+                <Hand />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Pan Tool (Spacebar)</p>
+            </TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
+
+        <ButtonGroupSeparator />
+
+        
+
+        <ButtonGroup>
+
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                  >
+                    <div 
+                      className="w-4 h-4 rounded "
+                      style={{ backgroundColor: selectedStitchColor }}
+                    />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stitch Color</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="toolbar-stitch-color">Stitch Color</Label>
+                  <input
+                    type="color"
+                    id="toolbar-stitch-color"
+                    value={selectedStitchColor}
+                    onChange={(e) => onSelectedStitchColorChange(e.target.value)}
+                    className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Presets</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {colorPresets.map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => onSelectedStitchColorChange(preset.value)}
+                        className="h-8 w-8 rounded border-2 border-border transition-transform hover:scale-110"
+                        style={{ backgroundColor: preset.value }}
+                        title={preset.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClearColors}
+                  className="w-full"
+                >
+                  Clear Custom Colors
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Select value={stitchSize} onValueChange={onStitchSizeChange}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stitch Size</p>
+              </TooltipContent>
+            </Tooltip>
+            <SelectContent>
+              <SelectItem value="small">Small (≈2mm)</SelectItem>
+              <SelectItem value="medium">Medium (≈4mm)</SelectItem>
+              <SelectItem value="large">Large (≈8mm)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={repeatPattern ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => onRepeatPatternChange(!repeatPattern)}
+              >
+                <Grip />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Repeat Pattern</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          
+        </ButtonGroup>
+
+        <ButtonGroupSeparator />
+
+        <ButtonGroup>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                onClick={onSelectAll}>
+                Select All
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Select all pattern elements</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                onClick={onDeselectAll}>
+                Deselect
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Clear selection</p>
+            </TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
       </div>
-
-      <div className="h-6 w-px bg-border" />
-
-      {/* Selection Actions */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onSelectAll}
-          className="rounded border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border/80 hover:bg-muted hover:text-foreground"
-        >
-          Select All
-        </button>
-        <button
-          type="button"
-          onClick={onDeselectAll}
-          className="rounded border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border/80 hover:bg-muted hover:text-foreground"
-        >
-          Deselect
-        </button>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }

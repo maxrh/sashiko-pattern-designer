@@ -3,8 +3,6 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 export function ExportPanel({
-  onNewPattern,
-  onSavePattern,
   onExportPattern,
   onImportPattern,
   onExportImage,
@@ -25,15 +23,6 @@ export function ExportPanel({
         <CardTitle>Export & Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          <Button type="button" onClick={onNewPattern} className="w-full">
-            New
-          </Button>
-          <Button type="button" onClick={onSavePattern} className="w-full" variant="default">
-            Save
-          </Button>
-        </div>
-
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" variant="outline" onClick={onExportPattern}>
             Export JSON

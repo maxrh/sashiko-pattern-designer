@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 
 const TILE_OPTIONS = [2, 3, 4, 5, 6, 8, 10];
 
@@ -10,11 +11,14 @@ export function CanvasSettings({
   onPatternTilesChange,
   backgroundColor,
   onBackgroundColorChange,
-  defaultThreadColor,
-  onDefaultThreadColorChange,
+  defaultStitchColor,
+  onDefaultStitchColorChange,
   patternName,
   onPatternNameChange,
   canvasInfo,
+  onNewPattern,
+  onSavePattern,
+  onResetSettings,
 }) {
   return (
     <Card>
@@ -71,22 +75,36 @@ export function CanvasSettings({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="default-thread-color">Default Thread Color</Label>
+          <Label htmlFor="default-stitch-color">Default Stitch Color</Label>
           <div className="flex gap-2">
             <input
               type="color"
-              id="default-thread-color"
-              value={defaultThreadColor}
-              onChange={(e) => onDefaultThreadColorChange(e.target.value)}
+              id="default-stitch-color"
+              value={defaultStitchColor}
+              onChange={(e) => onDefaultStitchColorChange(e.target.value)}
               className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background"
             />
             <div className="flex flex-1 items-center rounded-md border border-input bg-background px-3 text-xs text-foreground">
-              {defaultThreadColor.toUpperCase()}
+              {defaultStitchColor.toUpperCase()}
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
             This color will be used for new stitches
           </p>
+        </div>
+
+        <div className="space-y-2 border-t border-border pt-4">
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" onClick={onNewPattern} className="w-full">
+              New
+            </Button>
+            <Button type="button" onClick={onSavePattern} className="w-full" variant="default">
+              Save
+            </Button>
+          </div>
+          <Button type="button" onClick={onResetSettings} variant="outline" className="w-full">
+            Reset to Defaults
+          </Button>
         </div>
       </CardContent>
     </Card>

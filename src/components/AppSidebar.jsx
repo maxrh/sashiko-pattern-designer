@@ -16,13 +16,14 @@ export function AppSidebar({
   onPatternTilesChange,
   backgroundColor,
   onBackgroundColorChange,
-  defaultThreadColor,
-  onDefaultThreadColorChange,
+  defaultStitchColor,
+  onDefaultStitchColorChange,
   patternName,
   onPatternNameChange,
   canvasInfo,
   onNewPattern,
   onSavePattern,
+  onResetSettings,
   onExportPattern,
   onImportPattern,
   onExportImage,
@@ -39,7 +40,7 @@ export function AppSidebar({
           defaultValue="controls"
           className="flex h-full min-h-0 flex-col"
         >
-          <div className="border-b border-sidebar-border p-2">
+          <div className="border-b border-sidebar-border p-4">
             <TabsList className="w-full">
               <TabsTrigger value="controls" className="flex-1">
                 Controls
@@ -59,15 +60,16 @@ export function AppSidebar({
                     onPatternTilesChange={onPatternTilesChange}
                     backgroundColor={backgroundColor}
                     onBackgroundColorChange={onBackgroundColorChange}
-                    defaultThreadColor={defaultThreadColor}
-                    onDefaultThreadColorChange={onDefaultThreadColorChange}
+                    defaultStitchColor={defaultStitchColor}
+                    onDefaultStitchColorChange={onDefaultStitchColorChange}
                     patternName={patternName}
                     onPatternNameChange={onPatternNameChange}
                     canvasInfo={canvasInfo}
-                  />
-                  <ExportPanel
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}
+                    onResetSettings={onResetSettings}
+                  />
+                  <ExportPanel
                     onExportPattern={onExportPattern}
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}

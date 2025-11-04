@@ -1,8 +1,4 @@
-import { 
-  SidebarGroup, 
-  SidebarGroupLabel, 
-  SidebarGroupContent 
-} from './ui/sidebar';
+
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { PatternCard } from './PatternCard';
@@ -14,66 +10,54 @@ export function PatternSelector({ patterns, activePatternId, onSelectPattern, on
   const userPatterns = patterns.filter(p => !builtInIds.includes(p.id));
 
   return (
-    <div className="space-y">
+    <div className="space-y-4">
       {/* Built-in Patterns */}
       <Collapsible defaultOpen className="group/collapsible">
-        <SidebarGroup>
-          <SidebarGroupLabel asChild>
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-sidebar-accent rounded-lg">
-              <span className="text-sm font-semibold text-foreground">Starter Patterns</span>
-              <div className="flex items-center gap-2">
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-              </div>
-            </CollapsibleTrigger>
-          </SidebarGroupLabel>
-          <CollapsibleContent>
-            <SidebarGroupContent>
-              <div className="grid gap-3 mt-3">
-                {builtInPatterns.map((pattern) => (
-                  <PatternCard
-                    key={pattern.id}
-                    pattern={pattern}
-                    isActive={activePatternId === pattern.id}
-                    canDelete={false}
-                    onSelectPattern={onSelectPattern}
-                    onDeletePattern={onDeletePattern}
-                  />
-                ))}
-              </div>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
+        <CollapsibleTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center justify-between w-full rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 hover:bg-sidebar-accent">
+          <span>Starter Patterns</span>
+          <div className="flex items-center gap-2">
+            <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="grid gap-2 py-4">
+            {builtInPatterns.map((pattern) => (
+              <PatternCard
+                key={pattern.id}
+                pattern={pattern}
+                isActive={activePatternId === pattern.id}
+                canDelete={false}
+                onSelectPattern={onSelectPattern}
+                onDeletePattern={onDeletePattern}
+              />
+            ))}
+          </div>
+        </CollapsibleContent>
       </Collapsible>
 
       {/* User Saved Patterns */}
       {userPatterns.length > 0 && (
         <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-sidebar-accent rounded-lg">
-                <span className="text-sm font-semibold text-foreground">My Patterns</span>
-                <div className="flex items-center gap-2">
-                  <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                </div>
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <div className="grid gap-3 mt-3">
-                  {userPatterns.map((pattern) => (
-                    <PatternCard
-                      key={pattern.id}
-                      pattern={pattern}
-                      isActive={activePatternId === pattern.id}
-                      canDelete={true}
-                      onSelectPattern={onSelectPattern}
-                      onDeletePattern={onDeletePattern}
-                    />
-                  ))}
-                </div>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
+          <CollapsibleTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center justify-between w-full rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 hover:bg-sidebar-accent">
+            <span>My Patterns</span>
+            <div className="flex items-center gap-2">
+              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="grid gap-2 py-4">
+              {userPatterns.map((pattern) => (
+                <PatternCard
+                  key={pattern.id}
+                  pattern={pattern}
+                  isActive={activePatternId === pattern.id}
+                  canDelete={true}
+                  onSelectPattern={onSelectPattern}
+                  onDeletePattern={onDeletePattern}
+                />
+              ))}
+            </div>
+          </CollapsibleContent>
         </Collapsible>
       )}
     </div>
