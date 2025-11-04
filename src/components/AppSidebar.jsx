@@ -3,8 +3,8 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-} from "./ui/sidebar.tsx";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs.jsx';
+} from "./ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { CanvasSettings } from './CanvasSettings.jsx';
 import { ExportPanel } from './ExportPanel.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
@@ -16,13 +16,14 @@ export function AppSidebar({
   onPatternTilesChange,
   backgroundColor,
   onBackgroundColorChange,
-  defaultThreadColor,
-  onDefaultThreadColorChange,
+  defaultStitchColor,
+  onDefaultStitchColorChange,
   patternName,
   onPatternNameChange,
   canvasInfo,
   onNewPattern,
   onSavePattern,
+  onResetSettings,
   onExportPattern,
   onImportPattern,
   onExportImage,
@@ -32,58 +33,65 @@ export function AppSidebar({
   onDeletePattern,
 }) {
   return (
-    <Sidebar>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <Tabs
-              value={sidebarTab}
-              onValueChange={onSidebarTabChange}
-              defaultValue="controls"
-              className="flex-1 flex flex-col"
-            >
-              <TabsList className="w-full justify-between">
-                <TabsTrigger value="controls" className="flex-1 text-center">
-                  Controls
-                </TabsTrigger>
-                <TabsTrigger value="patterns" className="flex-1 text-center">
-                  Patterns
-                </TabsTrigger>
-              </TabsList>
+      <Sidebar>
+        <Tabs
+          value={sidebarTab}
+          onValueChange={onSidebarTabChange}
+          defaultValue="controls"
+          className="flex h-full min-h-0 flex-col"
+        >
+          <div className="border-b border-sidebar-border p-4">
+            <TabsList className="w-full">
+              <TabsTrigger value="controls" className="flex-1">
+                Controls
+              </TabsTrigger>
+              <TabsTrigger value="patterns" className="flex-1">
+                Patterns
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-              <TabsContent value="controls" className="space-y-6">
-                <CanvasSettings
-                  patternTiles={patternTiles}
-                  onPatternTilesChange={onPatternTilesChange}
-                  backgroundColor={backgroundColor}
-                  onBackgroundColorChange={onBackgroundColorChange}
-                  defaultThreadColor={defaultThreadColor}
-                  onDefaultThreadColorChange={onDefaultThreadColorChange}
-                  patternName={patternName}
-                  onPatternNameChange={onPatternNameChange}
-                  canvasInfo={canvasInfo}
-                />
-                <ExportPanel
-                  onNewPattern={onNewPattern}
-                  onSavePattern={onSavePattern}
-                  onExportPattern={onExportPattern}
-                  onImportPattern={onImportPattern}
-                  onExportImage={onExportImage}
-                />
-              </TabsContent>
+          <SidebarContent>
+            <TabsContent value="controls" className="mt-0">
+              <SidebarGroup>
+                <SidebarGroupContent className="space-y-6">
+                  <CanvasSettings
+                    patternTiles={patternTiles}
+                    onPatternTilesChange={onPatternTilesChange}
+                    backgroundColor={backgroundColor}
+                    onBackgroundColorChange={onBackgroundColorChange}
+                    defaultStitchColor={defaultStitchColor}
+                    onDefaultStitchColorChange={onDefaultStitchColorChange}
+                    patternName={patternName}
+                    onPatternNameChange={onPatternNameChange}
+                    canvasInfo={canvasInfo}
+                    onNewPattern={onNewPattern}
+                    onSavePattern={onSavePattern}
+                    onResetSettings={onResetSettings}
+                  />
+                  <ExportPanel
+                    onExportPattern={onExportPattern}
+                    onImportPattern={onImportPattern}
+                    onExportImage={onExportImage}
+                  />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </TabsContent>
 
-              <TabsContent value="patterns" className="space-y-4">
-                <PatternSelector
-                  patterns={savedPatterns}
-                  activePatternId={activePatternId}
-                  onSelectPattern={onSelectPattern}
-                  onDeletePattern={onDeletePattern}
-                />
-              </TabsContent>
-            </Tabs>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+            <TabsContent value="patterns" className="mt-0">
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <PatternSelector
+                    patterns={savedPatterns}
+                    activePatternId={activePatternId}
+                    onSelectPattern={onSelectPattern}
+                    onDeletePattern={onDeletePattern}
+                  />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </TabsContent>
+          </SidebarContent>
+        </Tabs>
+      </Sidebar>
   );
 }

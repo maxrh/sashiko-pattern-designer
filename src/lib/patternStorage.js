@@ -12,6 +12,10 @@ const STORAGE_KEYS = {
  * Save current pattern to local storage (auto-save on changes)
  */
 export function saveCurrentPattern(pattern, stitchColors, uiState) {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
+  
   try {
     const data = {
       pattern: {
@@ -44,6 +48,10 @@ export function saveCurrentPattern(pattern, stitchColors, uiState) {
  * Load current pattern from local storage
  */
 export function loadCurrentPattern() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+  
   try {
     const data = localStorage.getItem(STORAGE_KEYS.CURRENT_PATTERN);
     if (!data) return null;
@@ -71,6 +79,10 @@ export function loadCurrentPattern() {
  * Clear current pattern from local storage
  */
 export function clearCurrentPattern() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
+  
   try {
     localStorage.removeItem(STORAGE_KEYS.CURRENT_PATTERN);
     return true;
@@ -84,6 +96,10 @@ export function clearCurrentPattern() {
  * Save a pattern to the user's saved patterns collection
  */
 export function saveToPatternLibrary(pattern, stitchColors) {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return { success: false, error: 'localStorage not available' };
+  }
+  
   try {
     const savedPatterns = loadSavedPatterns();
     const builtInIds = ['blank', 'asanoha', 'simple-cross', 'diagonal-flow'];
@@ -105,7 +121,7 @@ export function saveToPatternLibrary(pattern, stitchColors) {
         start: { ...stitch.start },
         end: { ...stitch.end },
         color: stitchColors.get(stitch.id) || stitch.color || null,
-        stitchSize: stitch.stitchSize || 'medium',
+        stitchSize: stitch.stitchSize || 'small',
         repeat: stitch.repeat !== false,
       })),
       savedAt: Date.now(),
@@ -134,6 +150,10 @@ export function saveToPatternLibrary(pattern, stitchColors) {
  * Load all saved patterns from local storage
  */
 export function loadSavedPatterns() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return [];
+  }
+  
   try {
     const data = localStorage.getItem(STORAGE_KEYS.SAVED_PATTERNS);
     if (!data) return [];
@@ -150,6 +170,10 @@ export function loadSavedPatterns() {
  * Delete a pattern from saved patterns
  */
 export function deletePattern(patternId) {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
+  
   try {
     const savedPatterns = loadSavedPatterns();
     const filtered = savedPatterns.filter(p => p.id !== patternId);
@@ -175,7 +199,7 @@ export function exportPatternAsJSON(pattern, stitchColors) {
       start: { ...stitch.start },
       end: { ...stitch.end },
       color: stitchColors.get(stitch.id) || stitch.color || null,
-      stitchSize: stitch.stitchSize || 'medium',
+      stitchSize: stitch.stitchSize || 'small',
       repeat: stitch.repeat !== false,
     })),
     exportedAt: new Date().toISOString(),

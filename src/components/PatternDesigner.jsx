@@ -2,10 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import patternsData from '../data/patterns.json';
 import { CanvasViewport } from './CanvasViewport.jsx';
 import { Toolbar } from './Toolbar.jsx';
-import { ContextualSidebar } from './ContextualSidebar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
-import { Badge } from './ui/badge.jsx';
-import { SidebarProvider, SidebarTrigger } from './ui/sidebar.tsx';
+import { Badge } from './ui/badge';
+import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { 
   saveCurrentPattern, 
   loadCurrentPattern, 
@@ -19,12 +18,20 @@ import {
 const CELL_SIZE = 20;
 const COLOR_PRESETS = [
   { label: 'Indigo', value: '#6366f1' },
-  { label: 'White', value: '#ffffff' },
+  { label: 'White', value: '#f5f5f5' },
   { label: 'Red', value: '#ef4444' },
   { label: 'Teal', value: '#14b8a6' },
   { label: 'Coral', value: '#fb7185' },
   { label: 'Black', value: '#0b1120' },
 ];
+
+// Default settings constants
+const DEFAULT_PATTERN_TILES = 4;
+const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // neutral-100
+const DEFAULT_STITCH_COLOR = '#f5f5f5'; // white - default color for stitches
+const DEFAULT_STITCH_SIZE = 'medium';
+const DEFAULT_REPEAT_PATTERN = true;
+const DEFAULT_SHOW_GRID = true;
 
 function clonePattern(pattern) {
   if (!pattern) {
@@ -98,27 +105,31 @@ export default function PatternDesigner() {
   // Load UI state from local storage
   const [patternTiles, setPatternTiles] = useState(() => {
     const saved = loadCurrentPattern();
-    return saved?.uiState?.patternTiles ?? 4;
+    return saved?.uiState?.patternTiles ?? DEFAULT_PATTERN_TILES;
   });
-  const [defaultThreadColor, setDefaultThreadColor] = useState(() => {
+  const [defaultStitchColor, setDefaultStitchColor] = useState(() => {
     const saved = loadCurrentPattern();
-    return saved?.uiState?.defaultThreadColor ?? '#ffffff';
+    return saved?.uiState?.defaultStitchColor ?? DEFAULT_STITCH_COLOR;
   });
   const [backgroundColor, setBackgroundColor] = useState(() => {
     const saved = loadCurrentPattern();
-    return saved?.uiState?.backgroundColor ?? '#0f172a';
+    return saved?.uiState?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR;
   });
   const [selectedStitchColor, setSelectedStitchColor] = useState(() => {
     const saved = loadCurrentPattern();
-    return saved?.uiState?.selectedStitchColor ?? '#fb7185';
+    return saved?.uiState?.selectedStitchColor ?? DEFAULT_STITCH_COLOR;
   });
   const [stitchSize, setStitchSize] = useState(() => {
     const saved = loadCurrentPattern();
-    return saved?.uiState?.stitchSize ?? 'large';
+    return saved?.uiState?.stitchSize ?? DEFAULT_STITCH_SIZE;
   });
   const [repeatPattern, setRepeatPattern] = useState(() => {
     const saved = loadCurrentPattern();
-    return saved?.uiState?.repeatPattern ?? true;
+    return saved?.uiState?.repeatPattern ?? DEFAULT_REPEAT_PATTERN;
+  });
+  const [showGrid, setShowGrid] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.showGrid ?? DEFAULT_SHOW_GRID;
   });
 
   const [sidebarTab, setSidebarTab] = useState('controls');
@@ -152,37 +163,38 @@ export default function PatternDesigner() {
       }
       
       // Update color if all selected stitches have the same color
-      const colors = selectedStitches.map(s => stitchColors.get(s.id) || s.color || defaultThreadColor);
+      const colors = selectedStitches.map(s => stitchColors.get(s.id) || s.color || defaultStitchColor);
       const uniqueColors = [...new Set(colors)];
       if (uniqueColors.length === 1 && uniqueColors[0]) {
         setSelectedStitchColor(uniqueColors[0]);
       }
-    } else {
-      // When nothing selected, show the default draw tool settings
-      setSelectedStitchColor(defaultThreadColor);
     }
-  }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultThreadColor]);
+    // When nothing selected, preserve the current selectedStitchColor for drawing
+    // Don't reset it to defaultStitchColor to maintain user's color choice
+  }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultStitchColor]);
 
   // Auto-save to local storage whenever pattern, colors, or settings change
   // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
   useEffect(() => {
     saveCurrentPattern(currentPattern, stitchColors, {
       patternTiles,
-      defaultThreadColor,
+      defaultStitchColor,
       backgroundColor,
       selectedStitchColor,
       stitchSize,
       repeatPattern,
+      showGrid,
     });
   }, [
     currentPattern,
     stitchColors,
     patternTiles,
-    defaultThreadColor,
+    defaultStitchColor,
     backgroundColor,
     selectedStitchColor,
     stitchSize,
     repeatPattern,
+    showGrid,
   ]);
 
   const canvasSize = useMemo(() => {
@@ -212,12 +224,12 @@ export default function PatternDesigner() {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
     
     // Determine default stitch size based on orientation if not provided
-    let defaultSize = 'medium';
+    let defaultSize = 'small';
     if (!stitchSize) {
       const gridDx = Math.abs(end.x - start.x);
       const gridDy = Math.abs(end.y - start.y);
       const isDiagonal = gridDx > 0 && gridDy > 0;
-      defaultSize = isDiagonal ? 'medium' : 'large';
+      defaultSize = isDiagonal ? 'small' : 'medium';
     }
     
     const newStitch = {
@@ -309,6 +321,17 @@ export default function PatternDesigner() {
 
   const handlePatternNameChange = useCallback((name) => {
     setCurrentPattern((prev) => ({ ...prev, name }));
+  }, []);
+
+  const handleResetSettings = useCallback(() => {
+    // Reset all settings to their default values
+    setPatternTiles(DEFAULT_PATTERN_TILES);
+    setDefaultStitchColor(DEFAULT_STITCH_COLOR);
+    setBackgroundColor(DEFAULT_BACKGROUND_COLOR);
+    setSelectedStitchColor(DEFAULT_STITCH_COLOR);
+    setStitchSize(DEFAULT_STITCH_SIZE);
+    setRepeatPattern(DEFAULT_REPEAT_PATTERN);
+    setShowGrid(DEFAULT_SHOW_GRID);
   }, []);
 
   const handleSelectPattern = useCallback((pattern) => {
@@ -461,13 +484,14 @@ export default function PatternDesigner() {
         onPatternTilesChange={setPatternTiles}
         backgroundColor={backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
-        defaultThreadColor={defaultThreadColor}
-        onDefaultThreadColorChange={setDefaultThreadColor}
+        defaultStitchColor={defaultStitchColor}
+        onDefaultStitchColorChange={setDefaultStitchColor}
         patternName={currentPattern.name}
         onPatternNameChange={handlePatternNameChange}
-        canvasInfo={isHydrated ? `2200px · ${CELL_SIZE}px cells · ${currentPattern.stitches.length} stitches` : `2200px · ${CELL_SIZE}px cells`}
+        canvasInfo={`Tiles: ${patternTiles}×${patternTiles} · Grid: 5mm `}
         onNewPattern={handleNewPattern}
         onSavePattern={handleSavePattern}
+        onResetSettings={handleResetSettings}
         onExportPattern={handleExportPattern}
         onImportPattern={handleImportPattern}
         onExportImage={handleExportImage}
@@ -475,38 +499,35 @@ export default function PatternDesigner() {
         activePatternId={currentPattern.id}
         onSelectPattern={(pattern) => {
           handleSelectPattern(pattern);
-          setSidebarTab('controls');
         }}
         onDeletePattern={handleDeletePattern}
       />
 
       {/* Main Content Area */}
-      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-slate-950 text-slate-100">
-        <header className="flex-none border-b border-slate-800 bg-slate-950/80 px-6 py-4 backdrop-blur">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-xl font-semibold text-white">Interactive Sashiko Pattern Designer</h1>
-                <p className="text-sm text-slate-400">Connect stitches on the grid, tile patterns, and craft your own sashiko designs.</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="self-start">
-              {drawingState.mode === 'draw' ? 'Draw Mode ✏️' : drawingState.mode === 'pan' ? 'Pan Mode ✋' : 'Select Mode'}
-            </Badge>
-          </div>
-        </header>
-
-        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          {/* Toolbar - Centered at top */}
-          <div className="absolute left-1/2 top-6 z-10 -translate-x-1/2">
+      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-background text-foreground">
+        <header className="flex-none border-b border-border bg-sidebar px-6 py-4 ">
+          <div className="flex items-center gap-4">
             <Toolbar
               drawingMode={drawingState.mode}
               onModeChange={handleModeChange}
               onSelectAll={handleSelectAll}
               onDeselectAll={handleDeselectAll}
+              repeatPattern={repeatPattern}
+              onRepeatPatternChange={handleChangeRepeatPattern}
+              selectedStitchColor={selectedStitchColor}
+              onSelectedStitchColorChange={handleColorChange}
+              onClearColors={handleClearColors}
+              colorPresets={COLOR_PRESETS}
+              stitchSize={stitchSize}
+              onStitchSizeChange={handleChangeSelectedStitchSize}
+              showGrid={showGrid}
+              onShowGridChange={setShowGrid}
             />
           </div>
+        </header>
+
+        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        
 
           <CanvasViewport
             ref={canvasRef}
@@ -518,28 +539,12 @@ export default function PatternDesigner() {
             onAddStitch={handleAddStitch}
             drawingState={drawingState}
             onDrawingStateChange={setDrawingState}
-            defaultThreadColor={defaultThreadColor}
+            defaultStitchColor={defaultStitchColor}
             backgroundColor={backgroundColor}
             stitchSize={stitchSize}
             repeatPattern={repeatPattern}
+            showGrid={showGrid}
           />
-
-            {/* Right Sidebar - Floating */}
-            <aside className="absolute right-6 top-6 z-10 flex w-80 flex-col">
-              <ContextualSidebar
-                selectedCount={selectedStitchIds.size}
-                stitchSize={stitchSize}
-                onStitchSizeChange={handleChangeSelectedStitchSize}
-                repeatPattern={repeatPattern}
-                onRepeatPatternChange={handleChangeRepeatPattern}
-                selectedStitchColor={selectedStitchColor}
-                onSelectedStitchColorChange={handleColorChange}
-                onClearColors={handleClearColors}
-                onDeleteSelected={handleDeleteSelected}
-                colorPresets={COLOR_PRESETS}
-                isHydrated={isHydrated}
-              />
-            </aside>
         </div>
       </main>
     </SidebarProvider>
