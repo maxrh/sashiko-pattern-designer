@@ -50,15 +50,16 @@ function lineIntersectsRect(x1, y1, x2, y2, rectMinX, rectMinY, rectMaxX, rectMa
   return !(lineMaxX < rectMinX || lineMinX > rectMaxX || lineMaxY < rectMinY || lineMinY > rectMaxY);
 }
 
-// Check if a line segment intersects or is contained within a rectangle
-// Extended by extraMargin on all sides to allow drawing beyond artboard edges
+// Check if a line segment intersects or is contained within the artboard area
+// Artboard = the total area containing all pattern tiles
+// Extended by extraMargin on all sides to allow drawing beyond artboard edges into canvas padding
 function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY, artboardSize, extraMargin = 0) {
   const minX = artboardX - extraMargin;
   const maxX = artboardX + artboardSize + extraMargin;
   const minY = artboardY - extraMargin;
   const maxY = artboardY + artboardSize + extraMargin;
   
-  // Check if either endpoint is inside the artboard
+  // Check if either endpoint is inside the artboard (with margin)
   const startInside = startX >= minX && startX <= maxX && startY >= minY && startY <= maxY;
   const endInside = endX >= minX && endX <= maxX && endY >= minY && endY <= maxY;
   
@@ -71,7 +72,7 @@ function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY
   const lineMinY = Math.min(startY, endY);
   const lineMaxY = Math.max(startY, endY);
   
-  // If line bounding box doesn't overlap artboard, no intersection
+  // If line bounding box doesn't overlap artboard (with margin), no intersection
   if (lineMaxX < minX || lineMinX > maxX || lineMaxY < minY || lineMinY > maxY) {
     return false;
   }
@@ -80,11 +81,14 @@ function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY
   return true;
 }
 
+// PatternCanvas component renders the drawing surface:
+// - Canvas = the entire grid area (includes artboard + padding)
+// - Artboard = the total area containing all pattern tiles (inside the canvas)
 export const PatternCanvas = forwardRef(function PatternCanvas({
-  canvasSize,
-  cellSize,
-  artboardOffset = 0,
-  artboardSize,
+  canvasSize,        // Size of entire canvas (grid area)
+  cellSize,          // Size of each grid cell in pixels
+  artboardOffset = 0, // Padding between canvas edge and artboard (typically 40px)
+  artboardSize,      // Size of artboard (total pattern tile area)
   pattern,
   stitchColors,
   selectedStitchIds,
@@ -104,7 +108,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const isDraggingRef = useRef(false);
   const justFinishedDragRef = useRef(false);
   const patternTileSize = Math.max(1, pattern?.tileSize ?? 1);
-  const patternGridSize = cellSize; // This is now the pixel size per grid cell
+  const patternGridSize = cellSize; // Pixel size per grid cell
   const canvasGridSize = useMemo(() => Math.round(canvasSize / patternGridSize), [canvasSize, patternGridSize]);
   const artboardGridSize = useMemo(() => Math.round(artboardSize / patternGridSize), [artboardSize, patternGridSize]);
   const tilesPerSide = useMemo(
@@ -130,35 +134,36 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
+    // Fill entire canvas background
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
     if (showGrid) {
-      // Draw artboard boundary
+      // Draw artboard boundary (the area where pattern tiles are drawn)
       ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
       ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
 
-      // Draw pattern cell boundaries (only within artboard and when repeat pattern is enabled)
+      // Draw pattern tile boundaries (only within artboard and when repeat pattern is enabled)
       if (repeatPattern) {
         ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
-        const patternCellPixelSize = patternTileSize * patternGridSize;
+        const patternTilePixelSize = patternTileSize * patternGridSize;
         for (let row = 0; row <= tilesPerSide; row += 1) {
           for (let col = 0; col <= tilesPerSide; col += 1) {
-            const x = artboardOffset + (col * patternCellPixelSize);
-            const y = artboardOffset + (row * patternCellPixelSize);
+            const x = artboardOffset + (col * patternTilePixelSize);
+            const y = artboardOffset + (row * patternTilePixelSize);
             if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
-              ctx.strokeRect(x, y, Math.min(patternCellPixelSize, artboardSize - col * patternCellPixelSize), Math.min(patternCellPixelSize, artboardSize - row * patternCellPixelSize));
+              ctx.strokeRect(x, y, Math.min(patternTilePixelSize, artboardSize - col * patternTilePixelSize), Math.min(patternTilePixelSize, artboardSize - row * patternTilePixelSize));
             }
           }
         }
       }
     }
 
-    // Draw grid dots across entire canvas
+    // Draw grid dots across entire canvas (not just artboard)
     if (showGrid) {
       ctx.fillStyle = 'rgba(148, 163, 184, 0.25)';
       for (let x = 0; x <= canvasGridSize; x += 1) {
@@ -192,11 +197,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const startsAtBoundaryY = stitch.start.y === patternTileSize || stitch.start.y === 0;
       
       if (isPatternLine) {
-        // Pattern line with repeat ON - render in artboard tiles (0 to tilesPerSide-1)
-        // Also render in outer tiles (-1 and tilesPerSide) if the line crosses into those areas
+        // Pattern line with repeat ON - render in all artboard tiles (0 to tilesPerSide-1)
+        // Also render in outer tiles (-1 and tilesPerSide) for lines that cross into canvas padding
         for (let tileRow = -1; tileRow < tilesPerSide + 1; tileRow++) {
           for (let tileCol = -1; tileCol < tilesPerSide + 1; tileCol++) {
-            // Check if this is an outer tile (beyond the real artboard)
+            // Check if this is an outer tile (beyond the artboard, in the canvas padding)
             const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
                                 tileCol < 0 || tileCol >= tilesPerSide;
             
@@ -227,13 +232,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               continue;
             }
             
-            // For outer tiles, only render if the line actually crosses into the real artboard
+            // For outer tiles (in canvas padding), only render if the line actually crosses into the artboard
             if (isOuterTile) {
               // Calculate the artboard boundaries in canvas pixels
               const artboardStartPixel = artboardOffset;
               const artboardEndPixel = artboardOffset + artboardSize;
               
-              // Check if this line segment intersects with the real artboard area
+              // Check if this line segment intersects with the artboard area
               // A line intersects if any part of it is within [artboardStart, artboardEnd] for both x and y
               const lineMinX = Math.min(startX, endX);
               const lineMaxX = Math.max(startX, endX);
@@ -248,7 +253,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               );
               
               if (!intersectsArtboard) {
-                continue; // Skip this line in this outer tile - it doesn't touch the artboard
+                continue; // Skip - line doesn't touch the artboard from this outer tile
               }
             }
 

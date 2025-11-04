@@ -5,8 +5,6 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 
-const GRID_SIZE_OPTIONS = [10, 11, 20, 22, 25, 44, 50];
-
 export function CanvasSettings({
   patternTiles,
   onPatternTilesChange,
@@ -56,7 +54,7 @@ export function CanvasSettings({
             className="w-full"
           />
           <p className="text-xs text-muted-foreground">
-            Controls how many times the pattern repeats on the canvas
+            Controls how many times the pattern repeats on the artboard
           </p>
         </div>
 
@@ -80,11 +78,11 @@ export function CanvasSettings({
           <Label htmlFor="grid-size">Grid Size: {gridSize}px</Label>
           <Slider
             id="grid-size"
-            min={0}
-            max={GRID_SIZE_OPTIONS.length - 1}
+            min={10}
+            max={50}
             step={1}
-            value={[GRID_SIZE_OPTIONS.indexOf(gridSize)]}
-            onValueChange={(value) => onGridSizeChange(GRID_SIZE_OPTIONS[value[0]])}
+            value={[gridSize]}
+            onValueChange={(value) => onGridSizeChange(value[0])}
             className="w-full"
           />
           <p className="text-xs text-muted-foreground">

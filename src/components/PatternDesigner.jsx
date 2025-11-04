@@ -214,7 +214,9 @@ export default function PatternDesigner() {
     showGrid,
   ]);
 
-  const canvasSize = useMemo(() => {
+  // Artboard = the total area containing all pattern tiles
+  // (not to be confused with canvas which includes padding around the artboard)
+  const artboardSize = useMemo(() => {
     const tileSize = Math.max(1, currentPattern.tileSize ?? 1);
     const gridSize = currentPattern.gridSize ?? CELL_SIZE;
     return patternTiles * tileSize * gridSize;
