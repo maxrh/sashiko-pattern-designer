@@ -20,6 +20,10 @@ export function AppSidebar({
   onDefaultStitchColorChange,
   patternName,
   onPatternNameChange,
+  tileSize,
+  onTileSizeChange,
+  gridSize,
+  onGridSizeChange,
   canvasInfo,
   onNewPattern,
   onSavePattern,
@@ -64,6 +68,10 @@ export function AppSidebar({
                     onDefaultStitchColorChange={onDefaultStitchColorChange}
                     patternName={patternName}
                     onPatternNameChange={onPatternNameChange}
+                    tileSize={tileSize}
+                    onTileSizeChange={onTileSizeChange}
+                    gridSize={gridSize}
+                    onGridSizeChange={onGridSizeChange}
                     canvasInfo={canvasInfo}
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}

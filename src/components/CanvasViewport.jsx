@@ -25,9 +25,10 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  const patternGridSize = Math.max(1, pattern?.gridSize ?? 1);
-  const artboardSize = patternTiles * patternGridSize * CELL_SIZE;
-  const artboardOffset = (CANVAS_SIZE - artboardSize) / 2;
+  const patternTileSize = Math.max(1, pattern?.tileSize ?? 1);
+  const patternGridSize = pattern?.gridSize ?? CELL_SIZE;
+  const artboardSize = patternTiles * patternTileSize * patternGridSize;
+  const artboardOffset = Math.round((CANVAS_SIZE - artboardSize) / 2);
 
   useImperativeHandle(ref, () => ({
     exportAsImage: () => canvasRef.current?.exportAsImage(),
@@ -181,7 +182,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
         <PatternCanvas
           ref={canvasRef}
           canvasSize={CANVAS_SIZE}
-          cellSize={CELL_SIZE}
+          cellSize={patternGridSize}
           artboardOffset={artboardOffset}
           artboardSize={artboardSize}
           pattern={pattern}

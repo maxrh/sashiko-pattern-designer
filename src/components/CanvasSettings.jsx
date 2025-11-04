@@ -3,8 +3,9 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Slider } from './ui/slider';
 
-const TILE_OPTIONS = [2, 3, 4, 5, 6, 8, 10];
+const GRID_SIZE_OPTIONS = [10, 11, 20, 22, 25, 44, 50];
 
 export function CanvasSettings({
   patternTiles,
@@ -15,6 +16,10 @@ export function CanvasSettings({
   onDefaultStitchColorChange,
   patternName,
   onPatternNameChange,
+  tileSize,
+  onTileSizeChange,
+  gridSize,
+  onGridSizeChange,
   canvasInfo,
   onNewPattern,
   onSavePattern,
@@ -40,21 +45,50 @@ export function CanvasSettings({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="pattern-tiles">Pattern Tiles</Label>
-          <Select value={String(patternTiles)} onValueChange={(value) => onPatternTilesChange(Number(value))}>
-            <SelectTrigger id="pattern-tiles" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TILE_OPTIONS.map((tiles) => (
-                <SelectItem key={tiles} value={String(tiles)}>
-                  {tiles}×{tiles}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="pattern-tiles">Pattern Tiles: {patternTiles}×{patternTiles}</Label>
+          <Slider
+            id="pattern-tiles"
+            min={1}
+            max={10}
+            step={1}
+            value={[patternTiles]}
+            onValueChange={(value) => onPatternTilesChange(value[0])}
+            className="w-full"
+          />
           <p className="text-xs text-muted-foreground">
             Controls how many times the pattern repeats on the canvas
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tile-size">Tile Size: {tileSize}×{tileSize} grid</Label>
+          <Slider
+            id="tile-size"
+            min={5}
+            max={20}
+            step={1}
+            value={[tileSize]}
+            onValueChange={(value) => onTileSizeChange(value[0])}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">
+            Number of grid cells per pattern tile
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="grid-size">Grid Size: {gridSize}px</Label>
+          <Slider
+            id="grid-size"
+            min={0}
+            max={GRID_SIZE_OPTIONS.length - 1}
+            step={1}
+            value={[GRID_SIZE_OPTIONS.indexOf(gridSize)]}
+            onValueChange={(value) => onGridSizeChange(GRID_SIZE_OPTIONS[value[0]])}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">
+            Pixel size of each grid cell
           </p>
         </div>
 

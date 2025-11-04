@@ -3,14 +3,18 @@
     "id": "blank",
     "name": "Blank Canvas",
     "description": "Start with a clean canvas",
-    "gridSize": 10,
+    "tileSize": 10,
+    "gridSize": 20,
+    "patternTiles": 4,
     "stitches": []
   },
   {
     "id": "asanoha",
     "name": "Asanoha",
     "description": "Hemp leaf pattern",
-    "gridSize": 10,
+    "tileSize": 10,
+    "gridSize": 20,
+    "patternTiles": 4,
     "stitches": [
       { "id": "asanoha-1", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "color": null, "stitchSize": "small", "repeat": true },
       { "id": "asanoha-2", "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "color": null, "stitchSize": "small", "repeat": true },
@@ -26,10 +30,12 @@
     "id": "simple-cross",
     "name": "Simple Cross",
     "description": "Cross stitches on an 8x8 grid",
-    "gridSize": 8,
+    "tileSize": 8,
+    "gridSize": 20,
+    "patternTiles": 5,
     "stitches": [
-      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": null, "stitchSize": "small", "repeat": true },
+      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": null, "stitchSize": "medium", "repeat": true },
+      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": null, "stitchSize": "medium", "repeat": true },
       { "id": "cross-3", "start": { "x": 4, "y": 0 }, "end": { "x": 4, "y": 8 }, "color": null, "stitchSize": "medium", "repeat": true },
       { "id": "cross-4", "start": { "x": 0, "y": 4 }, "end": { "x": 8, "y": 4 }, "color": null, "stitchSize": "medium", "repeat": true }
     ]
@@ -38,11 +44,13 @@
     "id": "diagonal-flow",
     "name": "Diagonal Flow",
     "description": "Flowing diagonal lines on a 6x6 grid",
-    "gridSize": 6,
+    "tileSize": 6,
+    "gridSize": 20,
+    "patternTiles": 6,
     "stitches": [
       { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": null, "stitchSize": "small", "repeat": true },
       { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": null, "stitchSize": "small", "repeat": true },
-      { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": null, "stitchSize": "medium", "repeat": true }
+      { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": null, "stitchSize": "small", "repeat": true }
     ]
   }
 ]
