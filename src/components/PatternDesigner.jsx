@@ -29,8 +29,8 @@ const COLOR_PRESETS = [
 
 // Default settings constants
 const DEFAULT_PATTERN_TILES = 4;
-const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // neutral-100
-const DEFAULT_STITCH_COLOR = '#f5f5f5'; // white - default color for stitches
+const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // 
+const DEFAULT_STITCH_COLOR = '#f5f5f5'; // default color for stitches
 const DEFAULT_STITCH_SIZE = 'medium';
 const DEFAULT_REPEAT_PATTERN = true;
 const DEFAULT_SHOW_GRID = true;

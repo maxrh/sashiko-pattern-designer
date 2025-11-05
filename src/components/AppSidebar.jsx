@@ -66,14 +66,22 @@ export function AppSidebar({
           className="flex h-full min-h-0 flex-col"
         >
           <div className="border-b border-sidebar-border p-4">
-            <TabsList className="w-full">
-              <TabsTrigger value="controls" className="flex-1">
+            <TabsList className="relative w-full bg-primary ">
+              
+              <TabsTrigger value="controls" className="relative bg-transparent shadow-none z-10 flex-1 data-[state=inactive]:text-primary-foreground data-[state=active]:bg-transparent">
                 Settings
               </TabsTrigger>
-              <TabsTrigger value="patterns" className="flex-1">
+              <TabsTrigger value="patterns" className="relative bg-transparent shadow-none z-10 flex-1 data-[state=inactive]:text-primary-foreground data-[state=active]:bg-transparent">
                 Library
               </TabsTrigger>
+              {/* Sliding background indicator */}
+              <div 
+                className={`absolute top-1 h-[calc(100%-8px)] rounded-md bg-primary-foreground ${
+                  sidebarTab === 'patterns' ? 'left-[50%] right-1 tab-slider-right' : 'left-1 right-[50%] tab-slider-left'
+                }`}
+              />
             </TabsList>
+            
           </div>
 
           <SidebarContent>
