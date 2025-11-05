@@ -305,21 +305,21 @@ if (isOuterTile) {
 }
 ```
 
-**Normalization Logic for Boundary-Touching Lines:**
+**Normalization Logic for Boundary-Touching Lines (UPDATED):**
 
-When storing a line that starts on a boundary and goes inward (e.g., x=10 to x=9), the system normalizes to the tile that contains the END point (the "inner" tile) to ensure correct repeat positioning:
+When storing a line that starts on a boundary and goes inward (regardless of length), the system normalizes to the tile that contains the END point (the "inner" tile) to ensure correct repeat positioning:
 
 ```javascript
-// Check if line just touches boundary (1 cell apart)
-const lineLength = Math.sqrt(dx * dx + dy * dy);
+// Detect if line is going from boundary inward
 const startOnBoundary = (startGridX % patternTileSize === 0) || 
                        (startGridY % patternTileSize === 0);
 const endOnBoundary = (endGridX % patternTileSize === 0) || 
                      (endGridY % patternTileSize === 0);
 
 let baseTileX, baseTileY;
-if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
+if (startOnBoundary && !endOnBoundary) {
   // Start on boundary, end inside - use END's tile for normalization
+  // This works regardless of line length (1 cell, 2 cells, 3 cells, etc.)
   baseTileX = Math.floor(endGridX / patternTileSize);
   baseTileY = Math.floor(endGridY / patternTileSize);
 } else {
@@ -332,6 +332,8 @@ if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
 const normalizedStartX = startGridX - (baseTileX * patternTileSize);
 const normalizedEndX = endGridX - (baseTileX * patternTileSize);
 ```
+
+**Key Fix**: Removed the `lineLength <= 1.5` restriction. The normalization now works for ANY line that starts on a boundary and ends inside a tile, regardless of how long the line is (1 cell, 2 cells, 3 cells, etc.).
 
 **Examples (tileSize 10, 4×4 artboard):**
 
@@ -354,10 +356,11 @@ const normalizedEndX = endGridX - (baseTileX * patternTileSize);
    - Length = 2.83, end.x = 11, end.y = 11 → crosses both
    - Repeats in both directions: 5×5
 
-5. **Boundary touch inward** (10,2) to (9,2):
-   - Length = 1, lineLength ≤ 1.5 → just touching
-   - Normalizes to tile 0 (where x=9 is)
-   - Stored as (10,2) to (9,2) in tile 0 context
+5. **Boundary touch inward** (10,2) to (9,2) or (10,2) to (8,2):
+   - Start on boundary, end inside → normalizes to END's tile
+   - 1-cell: (10,2)→(9,2) normalizes to tile 0, stored as (10,2)→(9,2)
+   - 2-cell: (10,2)→(8,2) normalizes to tile 0, stored as (10,2)→(8,2)
+   - Works for ANY length as long as end is inside tile
    - Repeats normally: 4×4 (no outer tiles)
 
 **Effect**:

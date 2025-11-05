@@ -813,17 +813,15 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           // If start and end are in adjacent tiles (line just touches boundary),
           // normalize to the tile that contains the majority of the line
           // For lines going from boundary into tile, use the "inner" tile
-          const dx = endGridX - startGridX;
-          const dy = endGridY - startGridY;
-          const lineLength = Math.sqrt(dx * dx + dy * dy);
           
           // Use the tile of whichever point is NOT on a boundary, or use end tile for ties
           const startOnBoundary = (startGridX % patternTileSize === 0) || (startGridY % patternTileSize === 0);
           const endOnBoundary = (endGridX % patternTileSize === 0) || (endGridY % patternTileSize === 0);
           
           let baseTileX, baseTileY;
-          if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
-            // Start on boundary, end inside - use end's tile
+          if (startOnBoundary && !endOnBoundary) {
+            // Start on boundary, end inside - use end's tile (regardless of line length)
+            // This ensures lines drawn from boundary inward normalize to the correct tile
             baseTileX = endTileX;
             baseTileY = endTileY;
           } else {
