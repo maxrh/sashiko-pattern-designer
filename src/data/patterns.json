@@ -47,15 +47,67 @@
   {
     "id": "simple-cross",
     "name": "Simple Cross",
-    "description": "Cross stitches on an 8x8 grid",
-    "tileSize": 8,
-    "gridSize": 20,
-    "patternTiles": 5,
+    "description": "Cross stitches on an 6x6 grid",
+    "tileSize": 6,
+    "gridSize": 15,
+    "patternTiles": 6,
     "stitches": [
-      { "id": "cross-1", "start": { "x": 0, "y": 0 }, "end": { "x": 8, "y": 8 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
-      { "id": "cross-2", "start": { "x": 8, "y": 0 }, "end": { "x": 0, "y": 8 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
-      { "id": "cross-3", "start": { "x": 4, "y": 0 }, "end": { "x": 4, "y": 8 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
-      { "id": "cross-4", "start": { "x": 0, "y": 4 }, "end": { "x": 8, "y": 4 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true }
+      {
+        "id": "stitch-1762366054266-501c00",
+        "start": {
+          "x": 1,
+          "y": 0
+        },
+        "end": {
+          "x": -1,
+          "y": 0
+        },
+        "color": "#f5f5f5",
+        "stitchSize": "large",
+        "repeat": true
+      },
+      {
+        "id": "stitch-1762366056332-314a90",
+        "start": {
+          "x": 0,
+          "y": 5
+        },
+        "end": {
+          "x": 0,
+          "y": 7
+        },
+        "color": "#f5f5f5",
+        "stitchSize": "large",
+        "repeat": true
+      },
+      {
+        "id": "stitch-1762366060743-64f8c4",
+        "start": {
+          "x": 2,
+          "y": 3
+        },
+        "end": {
+          "x": 4,
+          "y": 3
+        },
+        "color": "#f5f5f5",
+        "stitchSize": "large",
+        "repeat": true
+      },
+      {
+        "id": "stitch-1762366061588-f72ae1",
+        "start": {
+          "x": 3,
+          "y": 2
+        },
+        "end": {
+          "x": 3,
+          "y": 4
+        },
+        "color": "#f5f5f5",
+        "stitchSize": "large",
+        "repeat": true
+      }
     ],
     "uiState": {
       "backgroundColor": "#0f172a",
