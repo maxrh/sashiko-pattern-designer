@@ -83,4 +83,24 @@
   body {
     @apply bg-background text-foreground;
   }
+  button,
+  [role="button"],
+  [role="slider"],
+  [role="switch"],
+  [role="menuitem"],
+  [role="tab"],
+  button[data-state],
+  [role="button"][data-state],
+  [data-radix-collection-item],
+  input[type="color"],
+  input[type="range"],
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]) {
+    @apply cursor-pointer;
+  }
+  button:disabled,
+  [role="button"][disabled],
+  [aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
 }

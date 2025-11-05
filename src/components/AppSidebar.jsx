@@ -33,6 +33,7 @@ export function AppSidebar({
   canvasInfo,
   onNewPattern,
   onSavePattern,
+  saveState,
   onResetSettings,
   onExportPattern,
   onImportPattern,
@@ -65,10 +66,10 @@ export function AppSidebar({
           <div className="border-b border-sidebar-border p-4">
             <TabsList className="w-full">
               <TabsTrigger value="controls" className="flex-1">
-                Controls
+                Settings
               </TabsTrigger>
               <TabsTrigger value="patterns" className="flex-1">
-                Patterns
+                Library
               </TabsTrigger>
             </TabsList>
           </div>
@@ -92,6 +93,7 @@ export function AppSidebar({
                     canvasInfo={canvasInfo}
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}
+                    saveState={saveState}
                     onResetSettings={onResetSettings}
                     gridColor={gridColor}
                     onGridColorChange={onGridColorChange}

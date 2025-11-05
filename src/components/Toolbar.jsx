@@ -1,4 +1,4 @@
-import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff } from 'lucide-react';
+import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2 } from 'lucide-react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
 import { Toggle } from './ui/toggle';
@@ -23,6 +23,10 @@ export function Toolbar({
   onStitchSizeChange,
   showGrid,
   onShowGridChange,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }) {
   return (
     <TooltipProvider>
@@ -186,27 +190,33 @@ export function Toolbar({
         <ButtonGroup>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
+              <Button
                 variant="outline"
-                onClick={onSelectAll}>
-                Select All
+                size="icon"
+                onClick={onUndo}
+                disabled={!canUndo}
+              >
+                <Undo2 />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Select all pattern elements</p>
+              <p>Undo (Ctrl+Z)</p>
             </TooltipContent>
           </Tooltip>
-          
+
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
+              <Button
                 variant="outline"
-                onClick={onDeselectAll}>
-                Deselect
+                size="icon"
+                onClick={onRedo}
+                disabled={!canRedo}
+              >
+                <Redo2 />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Clear selection</p>
+              <p>Redo (Ctrl+Y)</p>
             </TooltipContent>
           </Tooltip>
         </ButtonGroup>

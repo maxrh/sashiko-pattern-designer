@@ -14,7 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { ChevronRight, Info, Download, Upload } from 'lucide-react';
+import { Spinner } from './ui/spinner';
+import { ChevronRight, Info, Download, Upload, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function CanvasSettings({
   patternTiles,
@@ -31,6 +33,7 @@ export function CanvasSettings({
   canvasInfo,
   onNewPattern,
   onSavePattern,
+  saveState = 'idle',
   onResetSettings,
   gridColor,
   onGridColorChange,
@@ -59,12 +62,25 @@ export function CanvasSettings({
     }
   };
 
+  const handleNewPatternClick = () => {
+    toast.warning('Clear artboard?', {
+      description: 'Current pattern will be lost if not saved to library.',
+      duration: Infinity,
+      action: {
+        label: 'OK',
+        onClick: () => onNewPattern(),
+      },
+      cancel: {
+        label: 'Cancel',
+      },
+    });
+  };
+
   return (
     <Card>
-      <CardHeader className="space-y-2">
+      {/* <CardHeader className="space-y-2">
         <CardTitle>Canvas Settings</CardTitle>
-        <p className="text-sm text-muted-foreground">Artboard: {artboardSize}×{artboardSize}px</p>
-      </CardHeader>
+      </CardHeader> */}
       <CardContent className="space-y-5 text-sm">
         <div className="space-y-2">
           <Label htmlFor="pattern-name">Pattern Name</Label>
@@ -75,6 +91,17 @@ export function CanvasSettings({
             onChange={(e) => onPatternNameChange(e.target.value)}
             placeholder="Untitled pattern"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="artboard-size">Pattern Size</Label>
+          <input
+            type="text"
+            id="artboard-size"
+            value={`${artboardSize}×${artboardSize}px`}
+            disabled
+            className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
           />
         </div>
 
@@ -266,11 +293,19 @@ export function CanvasSettings({
 
         <div className="space-y-2 border-t border-border pt-4">
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" onClick={onNewPattern} className="w-full">
+            <Button type="button" onClick={handleNewPatternClick} className="w-full">
               New
             </Button>
-            <Button type="button" onClick={onSavePattern} className="w-full" variant="default">
-              Save
+            <Button 
+              type="button" 
+              onClick={onSavePattern} 
+              className={`w-full transition-colors duration-300 ${saveState === 'saved' ? 'bg-emerald-700 hover:bg-emerald-700' : ''}`}
+              variant="default"
+              disabled={saveState === 'saving'}
+            >
+              {saveState === 'saving' && <Spinner className="mr-1 h-4 w-4" />}
+              {saveState === 'saved' && <Check className="mr-1 h-4 w-4" />}
+              {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved!' : 'Save'}
             </Button>
           </div>
           <Button type="button" onClick={onResetSettings} variant="outline" className="w-full">
