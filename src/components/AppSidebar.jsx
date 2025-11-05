@@ -1,12 +1,20 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
 } from "./ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { CanvasSettings } from './CanvasSettings.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
+import { ScanQrCode, ChevronsUpDown } from 'lucide-react';
 
 export function AppSidebar({
   sidebarTab,
@@ -119,6 +127,32 @@ export function AppSidebar({
             </TabsContent>
           </SidebarContent>
         </Tabs>
+
+        <SidebarFooter>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex w-full items-center gap-2 rounded-md p-2 hover:bg-sidebar-accent">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <ScanQrCode className="h-4 w-4" />
+              </div>
+              <div className="flex flex-1 flex-col items-start text-left text-sm">
+                <span className="font-semibold">Sashiko Pattern Designer</span>
+                <span className="text-xs text-muted-foreground">Made by MONSUN</span>
+              </div>
+              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem>
+                Link 1
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                Link 2
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                Link 3
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarFooter>
       </Sidebar>
   );
 }

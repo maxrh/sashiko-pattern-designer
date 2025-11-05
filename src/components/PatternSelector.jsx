@@ -1,5 +1,5 @@
 
-import { ChevronDown } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { PatternCard } from './PatternCard';
 
@@ -16,7 +16,7 @@ export function PatternSelector({ patterns, activePatternId, onSelectPattern, on
         <CollapsibleTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center justify-between w-full rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 hover:bg-sidebar-accent">
           <span>Starter Patterns</span>
           <div className="flex items-center gap-2">
-            <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -41,7 +41,7 @@ export function PatternSelector({ patterns, activePatternId, onSelectPattern, on
           <CollapsibleTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center justify-between w-full rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 hover:bg-sidebar-accent">
             <span>My Patterns</span>
             <div className="flex items-center gap-2">
-              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>

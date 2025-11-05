@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { ChevronDown, Info, Download, Upload } from 'lucide-react';
+import { ChevronRight, Info, Download, Upload } from 'lucide-react';
 
 export function CanvasSettings({
   patternTiles,
@@ -172,7 +172,7 @@ export function CanvasSettings({
         <Collapsible open={isGridAppearanceOpen} onOpenChange={setIsGridAppearanceOpen} className="space-y-2">
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
             <span>Grid Appearance</span>
-            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isGridAppearanceOpen ? 'rotate-180' : ''}`} />
+            <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isGridAppearanceOpen ? 'rotate-90' : ''}`} />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-2">
             <div className="space-y-2">
