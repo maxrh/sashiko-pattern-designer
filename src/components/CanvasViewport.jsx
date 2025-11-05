@@ -1,7 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { PatternCanvas } from './PatternCanvas.jsx';
 
-const CANVAS_SIZE = 2200; // Fixed large canvas size
+// Canvas terminology:
+// - "canvas" = the entire grid area where drawing happens (with margin around artboard)
+// - "artboard" = the total area of pattern tiles we draw inside
+const CANVAS_MARGIN_CELLS = 40; // 40 grid cells of margin around artboard
 const CELL_SIZE = 20;
 
 export const CanvasViewport = forwardRef(function CanvasViewport({
@@ -18,6 +21,12 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   stitchSize,
   repeatPattern,
   showGrid,
+  gridColor,
+  gridOpacity,
+  tileOutlineColor,
+  tileOutlineOpacity,
+  artboardOutlineColor,
+  artboardOutlineOpacity,
 }, ref) {
   const containerRef = useRef(null);
   const canvasWrapperRef = useRef(null);
@@ -25,16 +34,22 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  const patternGridSize = Math.max(1, pattern?.gridSize ?? 1);
-  const artboardSize = patternTiles * patternGridSize * CELL_SIZE;
-  const artboardOffset = (CANVAS_SIZE - artboardSize) / 2;
+  const patternTileSize = Math.max(1, pattern?.tileSize ?? 1);
+  const patternGridSize = pattern?.gridSize ?? CELL_SIZE;
+  // Artboard = the total area containing all pattern tiles
+  const artboardSize = patternTiles * patternTileSize * patternGridSize;
+  // Canvas = artboard + 40 grid cells margin on all sides
+  const canvasMarginPixels = CANVAS_MARGIN_CELLS * patternGridSize;
+  const canvasSize = artboardSize + (2 * canvasMarginPixels);
+  // Artboard is centered in canvas (offset by margin)
+  const artboardOffset = canvasMarginPixels;
 
   useImperativeHandle(ref, () => ({
     exportAsImage: () => canvasRef.current?.exportAsImage(),
     getCanvasElement: () => canvasRef.current?.getCanvasElement(),
   }));
 
-  // Center viewport on artboard on mount and when artboard size changes
+  // Center viewport on canvas (which contains artboard with padding) on mount and when size changes
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     
@@ -42,14 +57,17 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
     requestAnimationFrame(() => {
       if (!containerRef.current) return;
       
-      // Calculate scroll position to center the artboard
-      const scrollX = artboardOffset - (containerRef.current.clientWidth - artboardSize) / 2;
-      const scrollY = artboardOffset - (containerRef.current.clientHeight - artboardSize) / 2;
+      // Calculate scroll position to center the canvas in viewport
+      const containerWidth = containerRef.current.clientWidth;
+      const containerHeight = containerRef.current.clientHeight;
+      
+      const scrollX = Math.max(0, (canvasSize - containerWidth) / 2);
+      const scrollY = Math.max(0, (canvasSize - containerHeight) / 2);
       
       containerRef.current.scrollLeft = scrollX;
       containerRef.current.scrollTop = scrollY;
     });
-  }, [artboardSize, artboardOffset]);
+  }, [canvasSize]);
 
   const handleMouseDown = (e) => {
     // Don't interfere with canvas interactions in select or draw mode
@@ -173,15 +191,15 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
       <div
         ref={canvasWrapperRef}
         style={{
-          width: CANVAS_SIZE,
-          height: CANVAS_SIZE,
+          width: canvasSize,
+          height: canvasSize,
           position: 'relative',
         }}
       >
         <PatternCanvas
           ref={canvasRef}
-          canvasSize={CANVAS_SIZE}
-          cellSize={CELL_SIZE}
+          canvasSize={canvasSize}
+          cellSize={patternGridSize}
           artboardOffset={artboardOffset}
           artboardSize={artboardSize}
           pattern={pattern}
@@ -196,6 +214,12 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           stitchSize={stitchSize}
           repeatPattern={repeatPattern}
           showGrid={showGrid}
+          gridColor={gridColor}
+          gridOpacity={gridOpacity}
+          tileOutlineColor={tileOutlineColor}
+          tileOutlineOpacity={tileOutlineOpacity}
+          artboardOutlineColor={artboardOutlineColor}
+          artboardOutlineOpacity={artboardOutlineOpacity}
         />
       </div>
     </div>

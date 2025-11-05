@@ -42,15 +42,15 @@
 :root {
   --radius: 0.625rem;
   --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.28 0.04 260);
   --card: oklch(0.985 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.28 0.04 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.28 0.04 260);
+  --primary: oklch(0.28 0.04 260);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary-foreground: oklch(0.28 0.04 260);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
@@ -65,11 +65,11 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.28 0.04 260);
+  --sidebar-primary: oklch(0.28 0.04 260);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-accent-foreground: oklch(0.28 0.04 260);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
@@ -82,5 +82,35 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  button,
+  [role="button"],
+  [role="slider"],
+  [role="switch"],
+  [role="menuitem"],
+  [role="tab"],
+  button[data-state],
+  [role="button"][data-state],
+  [data-radix-collection-item],
+  input[type="color"],
+  input[type="range"],
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]) {
+    @apply cursor-pointer;
+  }
+  button:disabled,
+  [role="button"][disabled],
+  [aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
+}
+
+@layer utilities {
+  .tab-slider-left {
+    transition: left 200ms ease-in-out, right 200ms ease-in-out 100ms;
+  }
+  
+  .tab-slider-right {
+    transition: left 200ms ease-in-out 100ms, right 200ms ease-in-out;
   }
 }

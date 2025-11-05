@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { Trash2, MoreVertical } from 'lucide-react';
 
 export function PatternCard({ 
@@ -21,7 +20,6 @@ export function PatternCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{pattern.name}</CardTitle>
           <div className="flex items-center gap-2">
-            <Badge>{pattern.gridSize}x{pattern.gridSize}</Badge>
             {canDelete && (
               <div className="relative">
                 <button

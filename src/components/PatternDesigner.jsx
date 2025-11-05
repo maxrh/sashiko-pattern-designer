@@ -5,6 +5,8 @@ import { Toolbar } from './Toolbar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
 import { Badge } from './ui/badge';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
+import { Toaster } from './ui/sonner';
+import { toast } from 'sonner';
 import { 
   saveCurrentPattern, 
   loadCurrentPattern, 
@@ -27,11 +29,17 @@ const COLOR_PRESETS = [
 
 // Default settings constants
 const DEFAULT_PATTERN_TILES = 4;
-const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // neutral-100
-const DEFAULT_STITCH_COLOR = '#f5f5f5'; // white - default color for stitches
+const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // 
+const DEFAULT_STITCH_COLOR = '#f5f5f5'; // default color for stitches
 const DEFAULT_STITCH_SIZE = 'medium';
 const DEFAULT_REPEAT_PATTERN = true;
 const DEFAULT_SHOW_GRID = true;
+const DEFAULT_GRID_COLOR = '#94a3b8';
+const DEFAULT_GRID_OPACITY = 0.25;
+const DEFAULT_TILE_OUTLINE_COLOR = '#94a3b8';
+const DEFAULT_TILE_OUTLINE_OPACITY = 0.15;
+const DEFAULT_ARTBOARD_OUTLINE_COLOR = '#3b82f6';
+const DEFAULT_ARTBOARD_OUTLINE_OPACITY = 0.5;
 
 function clonePattern(pattern) {
   if (!pattern) {
@@ -39,7 +47,9 @@ function clonePattern(pattern) {
       id: 'pattern-blank',
       name: 'Untitled Pattern',
       description: '',
-      gridSize: 10,
+      tileSize: 10,
+      gridSize: 20,
+      patternTiles: 4,
       stitches: [],
     };
   }
@@ -68,7 +78,9 @@ function isValidPattern(data) {
   return (
     data &&
     typeof data === 'object' &&
+    typeof data.tileSize === 'number' &&
     typeof data.gridSize === 'number' &&
+    typeof data.patternTiles === 'number' &&
     Array.isArray(data.stitches)
   );
 }
@@ -85,7 +97,14 @@ export default function PatternDesigner() {
   const [currentPattern, setCurrentPattern] = useState(() => {
     const saved = loadCurrentPattern();
     if (saved && saved.pattern) {
-      return saved.pattern;
+      // Ensure the loaded pattern has required fields (migration for old data)
+      const migratedPattern = {
+        ...saved.pattern,
+        tileSize: saved.pattern.tileSize ?? 10, // Add missing tileSize
+        gridSize: saved.pattern.gridSize ?? CELL_SIZE, // Ensure gridSize exists
+        patternTiles: saved.pattern.patternTiles ?? DEFAULT_PATTERN_TILES, // Add missing patternTiles
+      };
+      return migratedPattern;
     }
     const fallback = patternsData.find((pattern) => pattern.id === 'blank') ?? patternsData[0];
     return clonePattern(fallback);
@@ -102,15 +121,20 @@ export default function PatternDesigner() {
   const [selectedStitchIds, setSelectedStitchIds] = useState(() => new Set());
   const [drawingState, setDrawingState] = useState({ mode: 'select', firstPoint: null });
 
-  // Load UI state from local storage
+  // Undo/redo history - store last 10 states
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedoAction = useRef(false);
+
+  // Save state for showing spinner and success message
+  const [saveState, setSaveState] = useState('idle'); // 'idle' | 'saving' | 'saved'
+
+  // Load pattern tiles from the pattern itself, not UI state
   const [patternTiles, setPatternTiles] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.patternTiles ?? DEFAULT_PATTERN_TILES;
+    return currentPattern.patternTiles ?? DEFAULT_PATTERN_TILES;
   });
-  const [defaultStitchColor, setDefaultStitchColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.defaultStitchColor ?? DEFAULT_STITCH_COLOR;
-  });
+  // Use constant for default stitch color (fallback for rendering)
+  const defaultStitchColor = DEFAULT_STITCH_COLOR;
   const [backgroundColor, setBackgroundColor] = useState(() => {
     const saved = loadCurrentPattern();
     return saved?.uiState?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR;
@@ -132,6 +156,32 @@ export default function PatternDesigner() {
     return saved?.uiState?.showGrid ?? DEFAULT_SHOW_GRID;
   });
 
+  // Grid and outline appearance settings
+  const [gridColor, setGridColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.gridColor ?? DEFAULT_GRID_COLOR;
+  });
+  const [gridOpacity, setGridOpacity] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.gridOpacity ?? DEFAULT_GRID_OPACITY;
+  });
+  const [tileOutlineColor, setTileOutlineColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.tileOutlineColor ?? DEFAULT_TILE_OUTLINE_COLOR;
+  });
+  const [tileOutlineOpacity, setTileOutlineOpacity] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.tileOutlineOpacity ?? DEFAULT_TILE_OUTLINE_OPACITY;
+  });
+  const [artboardOutlineColor, setArtboardOutlineColor] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.artboardOutlineColor ?? DEFAULT_ARTBOARD_OUTLINE_COLOR;
+  });
+  const [artboardOutlineOpacity, setArtboardOutlineOpacity] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.artboardOutlineOpacity ?? DEFAULT_ARTBOARD_OUTLINE_OPACITY;
+  });
+
   const [sidebarTab, setSidebarTab] = useState('controls');
   const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
@@ -140,6 +190,13 @@ export default function PatternDesigner() {
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  // Sync pattern tiles with current pattern
+  useEffect(() => {
+    if (currentPattern.patternTiles && currentPattern.patternTiles !== patternTiles) {
+      setPatternTiles(currentPattern.patternTiles);
+    }
+  }, [currentPattern.patternTiles, patternTiles]);
 
   // Update sidebar options when selection changes
   useEffect(() => {
@@ -173,39 +230,80 @@ export default function PatternDesigner() {
     // Don't reset it to defaultStitchColor to maintain user's color choice
   }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultStitchColor]);
 
+  // Save state to history whenever pattern or colors change (for undo/redo)
+  useEffect(() => {
+    // Skip if this change was caused by undo/redo
+    if (isUndoRedoAction.current) {
+      isUndoRedoAction.current = false;
+      return;
+    }
+
+    const newState = {
+      pattern: clonePattern(currentPattern),
+      stitchColors: new Map(stitchColors),
+      timestamp: Date.now(),
+    };
+
+    setHistory(prev => {
+      // If we're not at the end of history, remove everything after current index
+      const newHistory = historyIndex >= 0 ? prev.slice(0, historyIndex + 1) : prev;
+      // Add new state and keep only last 10
+      const updated = [...newHistory, newState].slice(-10);
+      return updated;
+    });
+
+    setHistoryIndex(prev => {
+      const newHistory = historyIndex >= 0 ? history.slice(0, historyIndex + 1) : history;
+      return Math.min(newHistory.length, 9); // Max index is 9 (for 10 items)
+    });
+  }, [currentPattern, stitchColors]);
+
   // Auto-save to local storage whenever pattern, colors, or settings change
   // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
   useEffect(() => {
     saveCurrentPattern(currentPattern, stitchColors, {
       patternTiles,
-      defaultStitchColor,
       backgroundColor,
       selectedStitchColor,
       stitchSize,
       repeatPattern,
       showGrid,
+      gridColor,
+      gridOpacity,
+      tileOutlineColor,
+      tileOutlineOpacity,
+      artboardOutlineColor,
+      artboardOutlineOpacity,
     });
   }, [
     currentPattern,
     stitchColors,
     patternTiles,
-    defaultStitchColor,
     backgroundColor,
     selectedStitchColor,
     stitchSize,
     repeatPattern,
     showGrid,
+    gridColor,
+    gridOpacity,
+    tileOutlineColor,
+    tileOutlineOpacity,
+    artboardOutlineColor,
+    artboardOutlineOpacity,
   ]);
 
-  const canvasSize = useMemo(() => {
-    const gridSize = Math.max(1, currentPattern.gridSize ?? 1);
-    return patternTiles * gridSize * CELL_SIZE;
-  }, [patternTiles, currentPattern.gridSize]);
+  // Artboard = the total area containing all pattern tiles
+  // (not to be confused with canvas which includes padding around the artboard)
+  const artboardSize = useMemo(() => {
+    const tileSize = Math.max(1, currentPattern.tileSize ?? 1);
+    const gridSize = currentPattern.gridSize ?? CELL_SIZE;
+    return patternTiles * tileSize * gridSize;
+  }, [patternTiles, currentPattern.tileSize, currentPattern.gridSize]);
 
   const patternInfo = useMemo(() => {
-    const gridSize = Math.max(1, currentPattern.gridSize ?? 1);
-    return `${patternTiles}×${patternTiles} pattern tiles (${gridSize}×${gridSize} grid each)`;
-  }, [patternTiles, currentPattern.gridSize]);
+    const tileSize = Math.max(1, currentPattern.tileSize ?? 1);
+    return `${patternTiles}×${patternTiles} pattern tiles (${tileSize}×${tileSize} grid each)`;
+  }, [patternTiles, currentPattern.tileSize]);
 
   const handleModeChange = useCallback((mode) => {
     setDrawingState({ mode, firstPoint: null });
@@ -219,6 +317,28 @@ export default function PatternDesigner() {
   const handleDeselectAll = useCallback(() => {
     setSelectedStitchIds(new Set());
   }, []);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      isUndoRedoAction.current = true;
+      setCurrentPattern(clonePattern(prevState.pattern));
+      setStitchColors(new Map(prevState.stitchColors));
+      setHistoryIndex(historyIndex - 1);
+      setSelectedStitchIds(new Set()); // Clear selection on undo
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      isUndoRedoAction.current = true;
+      setCurrentPattern(clonePattern(nextState.pattern));
+      setStitchColors(new Map(nextState.stitchColors));
+      setHistoryIndex(historyIndex + 1);
+      setSelectedStitchIds(new Set()); // Clear selection on redo
+    }
+  }, [history, historyIndex]);
 
   const handleAddStitch = useCallback(({ start, end, stitchSize, repeat }) => {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -252,7 +372,8 @@ export default function PatternDesigner() {
       return next;
     });
     
-    setSelectedStitchIds(new Set([newId]));
+    // Don't auto-select newly created stitches
+    setSelectedStitchIds(new Set());
   }, [selectedStitchColor]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -305,33 +426,54 @@ export default function PatternDesigner() {
   }, [selectedStitchIds]);
 
   const handleNewPattern = useCallback(() => {
-    const gridSize = currentPattern.gridSize || 10;
+    const tileSize = currentPattern.tileSize || 10;
+    const gridSize = currentPattern.gridSize || 20;
     const freshPattern = {
       id: `pattern-${Date.now()}`,
       name: 'Untitled Pattern',
       description: '',
+      tileSize,
       gridSize,
+      patternTiles,
       stitches: [],
     };
     setCurrentPattern(freshPattern);
     setSelectedStitchIds(new Set());
     setStitchColors(new Map());
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
-  }, [currentPattern.gridSize]);
+  }, [currentPattern.tileSize, currentPattern.gridSize]);
 
   const handlePatternNameChange = useCallback((name) => {
     setCurrentPattern((prev) => ({ ...prev, name }));
   }, []);
 
+  const handleTileSizeChange = useCallback((tileSize) => {
+    setCurrentPattern((prev) => ({ ...prev, tileSize }));
+  }, []);
+
+  const handleGridSizeChange = useCallback((gridSize) => {
+    setCurrentPattern((prev) => ({ ...prev, gridSize }));
+  }, []);
+
+  const handlePatternTilesChange = useCallback((tiles) => {
+    setPatternTiles(tiles);
+    setCurrentPattern((prev) => ({ ...prev, patternTiles: tiles }));
+  }, []);
+
   const handleResetSettings = useCallback(() => {
     // Reset all settings to their default values
     setPatternTiles(DEFAULT_PATTERN_TILES);
-    setDefaultStitchColor(DEFAULT_STITCH_COLOR);
     setBackgroundColor(DEFAULT_BACKGROUND_COLOR);
     setSelectedStitchColor(DEFAULT_STITCH_COLOR);
     setStitchSize(DEFAULT_STITCH_SIZE);
     setRepeatPattern(DEFAULT_REPEAT_PATTERN);
     setShowGrid(DEFAULT_SHOW_GRID);
+    setGridColor(DEFAULT_GRID_COLOR);
+    setGridOpacity(DEFAULT_GRID_OPACITY);
+    setTileOutlineColor(DEFAULT_TILE_OUTLINE_COLOR);
+    setTileOutlineOpacity(DEFAULT_TILE_OUTLINE_OPACITY);
+    setArtboardOutlineColor(DEFAULT_ARTBOARD_OUTLINE_COLOR);
+    setArtboardOutlineOpacity(DEFAULT_ARTBOARD_OUTLINE_OPACITY);
   }, []);
 
   const handleSelectPattern = useCallback((pattern) => {
@@ -341,41 +483,73 @@ export default function PatternDesigner() {
     setStitchColors(deriveColorMap(cloned));
     setSelectedStitchIds(new Set());
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
+    
+    // Restore UI state if saved with the pattern
+    if (pattern.uiState) {
+      if (pattern.uiState.backgroundColor) setBackgroundColor(pattern.uiState.backgroundColor);
+      if (pattern.uiState.gridColor) setGridColor(pattern.uiState.gridColor);
+      if (pattern.uiState.gridOpacity !== undefined) setGridOpacity(pattern.uiState.gridOpacity);
+      if (pattern.uiState.tileOutlineColor) setTileOutlineColor(pattern.uiState.tileOutlineColor);
+      if (pattern.uiState.tileOutlineOpacity !== undefined) setTileOutlineOpacity(pattern.uiState.tileOutlineOpacity);
+      if (pattern.uiState.artboardOutlineColor) setArtboardOutlineColor(pattern.uiState.artboardOutlineColor);
+      if (pattern.uiState.artboardOutlineOpacity !== undefined) setArtboardOutlineOpacity(pattern.uiState.artboardOutlineOpacity);
+    }
   }, []);
 
   const handleSavePattern = useCallback(() => {
-    const result = saveToPatternLibrary(currentPattern, stitchColors);
-    if (result.success) {
-      // Reload saved patterns to include the newly saved one
-      const userPatterns = loadSavedPatterns();
-      const builtInPatterns = patternsData.map(clonePattern);
-      setSavedPatterns([...builtInPatterns, ...userPatterns]);
-      
-      // Update current pattern ID if it was a new pattern
-      if (result.pattern.id !== currentPattern.id) {
-        setCurrentPattern(result.pattern);
+    setSaveState('saving');
+    
+    // Use setTimeout to ensure state update is processed
+    setTimeout(() => {
+      const uiState = {
+        backgroundColor,
+        gridColor,
+        gridOpacity,
+        tileOutlineColor,
+        tileOutlineOpacity,
+        artboardOutlineColor,
+        artboardOutlineOpacity,
+      };
+      const result = saveToPatternLibrary(currentPattern, stitchColors, uiState);
+      if (result.success) {
+        // Reload saved patterns to include the newly saved one
+        const userPatterns = loadSavedPatterns();
+        const builtInPatterns = patternsData.map(clonePattern);
+        setSavedPatterns([...builtInPatterns, ...userPatterns]);
+        
+        // Update current pattern ID if it was a new pattern
+        if (result.pattern.id !== currentPattern.id) {
+          setCurrentPattern(result.pattern);
+        }
+        
+        setSaveState('saved');
+        
+        // Reset to idle after 2 seconds
+        setTimeout(() => {
+          setSaveState('idle');
+        }, 2000);
+      } else {
+        setSaveState('idle');
+        alert(`Failed to save pattern: ${result.error}`);
       }
-      
-      alert(`Pattern "${result.pattern.name}" saved successfully!`);
-    } else {
-      alert(`Failed to save pattern: ${result.error}`);
-    }
-  }, [currentPattern, stitchColors]);
+    }, 300);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
 
   const handleDeletePattern = useCallback((patternId) => {
-    if (confirm('Are you sure you want to delete this pattern?')) {
-      deletePattern(patternId);
-      
-      // Reload saved patterns
-      const userPatterns = loadSavedPatterns();
-      const builtInPatterns = patternsData.map(clonePattern);
-      setSavedPatterns([...builtInPatterns, ...userPatterns]);
-      
-      // If the deleted pattern was currently loaded, switch to blank
-      if (currentPattern.id === patternId) {
-        handleNewPattern();
-      }
+    deletePattern(patternId);
+    
+    // Reload saved patterns
+    const userPatterns = loadSavedPatterns();
+    const builtInPatterns = patternsData.map(clonePattern);
+    setSavedPatterns([...builtInPatterns, ...userPatterns]);
+    
+    // If the deleted pattern was currently loaded, switch to blank
+    if (currentPattern.id === patternId) {
+      handleNewPattern();
     }
+    
+    // Show success toast
+    toast.success('Pattern deleted successfully');
   }, [currentPattern.id, handleNewPattern]);
 
   const handleColorChange = useCallback((color) => {
@@ -429,12 +603,25 @@ export default function PatternDesigner() {
         if (!isValidPattern(parsed)) {
           throw new Error('Invalid pattern schema');
         }
+        // Handle legacy format migration
+        let tileSize, gridSize;
+        if (parsed.tileSize !== undefined) {
+          // New format
+          tileSize = parsed.tileSize;
+          gridSize = parsed.gridSize ?? 20;
+        } else {
+          // Legacy format - old gridSize becomes tileSize
+          tileSize = parsed.gridSize ?? 10;
+          gridSize = 20;
+        }
+        
         const normalized = clonePattern({
           ...parsed,
           id: parsed.id ?? `pattern-${Date.now()}`,
           name: parsed.name ?? 'Imported Pattern',
           description: parsed.description ?? '',
-          gridSize: parsed.gridSize ?? 10,
+          tileSize,
+          gridSize,
         });
         setCurrentPattern(normalized);
         setStitchColors(deriveColorMap(normalized));
@@ -461,6 +648,18 @@ export default function PatternDesigner() {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
+      // Undo: Ctrl+Z or Cmd+Z
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+        return;
+      }
+      // Redo: Ctrl+Y or Cmd+Y or Ctrl+Shift+Z or Cmd+Shift+Z
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedStitchIds.size > 0) {
         event.preventDefault();
         handleDeleteSelected();
@@ -472,7 +671,7 @@ export default function PatternDesigner() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDeleteSelected, selectedStitchIds.size]);
+  }, [handleDeleteSelected, handleUndo, handleRedo, selectedStitchIds.size]);
 
   return (
     <SidebarProvider className="flex h-screen overflow-hidden">
@@ -481,16 +680,20 @@ export default function PatternDesigner() {
         sidebarTab={sidebarTab}
         onSidebarTabChange={setSidebarTab}
         patternTiles={patternTiles}
-        onPatternTilesChange={setPatternTiles}
+        onPatternTilesChange={handlePatternTilesChange}
         backgroundColor={backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
-        defaultStitchColor={defaultStitchColor}
-        onDefaultStitchColorChange={setDefaultStitchColor}
         patternName={currentPattern.name}
         onPatternNameChange={handlePatternNameChange}
-        canvasInfo={`Tiles: ${patternTiles}×${patternTiles} · Grid: 5mm `}
+        tileSize={currentPattern.tileSize || 10}
+        onTileSizeChange={handleTileSizeChange}
+        gridSize={currentPattern.gridSize || CELL_SIZE}
+        onGridSizeChange={handleGridSizeChange}
+        artboardSize={artboardSize}
+        canvasInfo={`Artboard: ${artboardSize}×${artboardSize}px · Tiles: ${patternTiles}×${patternTiles} · Tile grid: ${currentPattern.tileSize || 10}×${currentPattern.tileSize || 10} · Grid size: ${currentPattern.gridSize || CELL_SIZE}px`}
         onNewPattern={handleNewPattern}
         onSavePattern={handleSavePattern}
+        saveState={saveState}
         onResetSettings={handleResetSettings}
         onExportPattern={handleExportPattern}
         onImportPattern={handleImportPattern}
@@ -501,6 +704,20 @@ export default function PatternDesigner() {
           handleSelectPattern(pattern);
         }}
         onDeletePattern={handleDeletePattern}
+        gridColor={gridColor}
+        onGridColorChange={setGridColor}
+        gridOpacity={gridOpacity}
+        onGridOpacityChange={setGridOpacity}
+        tileOutlineColor={tileOutlineColor}
+        onTileOutlineColorChange={setTileOutlineColor}
+        tileOutlineOpacity={tileOutlineOpacity}
+        onTileOutlineOpacityChange={setTileOutlineOpacity}
+        artboardOutlineColor={artboardOutlineColor}
+        onArtboardOutlineColorChange={setArtboardOutlineColor}
+        artboardOutlineOpacity={artboardOutlineOpacity}
+        onArtboardOutlineOpacityChange={setArtboardOutlineOpacity}
+        currentPattern={currentPattern}
+        stitchColors={stitchColors}
       />
 
       {/* Main Content Area */}
@@ -522,6 +739,10 @@ export default function PatternDesigner() {
               onStitchSizeChange={handleChangeSelectedStitchSize}
               showGrid={showGrid}
               onShowGridChange={setShowGrid}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={historyIndex > 0}
+              canRedo={historyIndex < history.length - 1}
             />
           </div>
         </header>
@@ -544,9 +765,16 @@ export default function PatternDesigner() {
             stitchSize={stitchSize}
             repeatPattern={repeatPattern}
             showGrid={showGrid}
+            gridColor={gridColor}
+            gridOpacity={gridOpacity}
+            tileOutlineColor={tileOutlineColor}
+            tileOutlineOpacity={tileOutlineOpacity}
+            artboardOutlineColor={artboardOutlineColor}
+            artboardOutlineOpacity={artboardOutlineOpacity}
           />
         </div>
       </main>
+      <Toaster />
     </SidebarProvider>
   );
 }
