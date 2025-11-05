@@ -731,8 +731,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const lineIntersectsArtboardArea = !(
         (startGridX < 0 && endGridX < 0) ||
         (startGridY < 0 && endGridY < 0) ||
-        (startGridX >= artboardGridSize && endGridX >= artboardGridSize) ||
-        (startGridY >= artboardGridSize && endGridY >= artboardGridSize)
+        (startGridX > artboardGridSize && endGridX > artboardGridSize) ||
+        (startGridY > artboardGridSize && endGridY > artboardGridSize)
       );
 
       // When repeat is ON and line touches artboard, reduce coordinates to first tile pattern
@@ -742,30 +742,64 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       
       if (repeatPattern && lineIntersectsArtboardArea) {
         // Reduce coordinates to the first tile while preserving cross-tile relationships
-        // We want lines to stay within the pattern space (0 to patternTileSize-1) for their "base" position
+        // We want lines to stay within the pattern space (0 to patternTileSize) for their "base" position
         // But they can extend beyond that to represent cross-tile lines
         
-        // Find which tile the START point is in
-        const startTileX = Math.floor(startGridX / patternTileSize);
-        const startTileY = Math.floor(startGridY / patternTileSize);
+        // Check if this is a boundary line (runs exactly along a tile edge)
+        const isVerticalBoundaryLine = startGridX === endGridX && (startGridX % patternTileSize === 0);
+        const isHorizontalBoundaryLine = startGridY === endGridY && (startGridY % patternTileSize === 0);
         
-        // Normalize the start point to pattern-relative coordinates (within first tile)
-        const normalizedStartX = startGridX - (startTileX * patternTileSize);
-        const normalizedStartY = startGridY - (startTileY * patternTileSize);
-        
-        // Calculate the offset from start to end
-        const dx = endGridX - startGridX;
-        const dy = endGridY - startGridY;
-        
-        // Apply the same offset to get the normalized end position
-        finalStart = {
-          x: normalizedStartX,
-          y: normalizedStartY,
-        };
-        finalEnd = {
-          x: normalizedStartX + dx,
-          y: normalizedStartY + dy,
-        };
+        if (isVerticalBoundaryLine || isHorizontalBoundaryLine) {
+          // Boundary lines need special handling
+          // Lines at tile multiples (x=10,20,30 with tileSize=10) should all map to the SAME boundary
+          // We use modulo, but when result is 0 for non-zero input, we treat it as the boundary
+          
+          const normalizeBoundaryCoord = (coord) => {
+            const mod = coord % patternTileSize;
+            // coord=0 -> 0 (left/top edge)
+            // coord=10,20,30... -> 0 (these are all the same repeating boundary)
+            return mod;
+          };
+          
+          // Calculate the offset between start and end
+          const dx = endGridX - startGridX;
+          const dy = endGridY - startGridY;
+          
+          // Normalize the start point
+          finalStart = {
+            x: normalizeBoundaryCoord(startGridX),
+            y: normalizeBoundaryCoord(startGridY),
+          };
+          
+          // Apply the offset to get the end point
+          finalEnd = {
+            x: finalStart.x + dx,
+            y: finalStart.y + dy,
+          };
+        } else {
+          // Non-boundary lines: use floor-based normalization
+          // Find which tile the START point is in
+          const startTileX = Math.floor(startGridX / patternTileSize);
+          const startTileY = Math.floor(startGridY / patternTileSize);
+          
+          // Normalize the start point to pattern-relative coordinates (within first tile)
+          const normalizedStartX = startGridX - (startTileX * patternTileSize);
+          const normalizedStartY = startGridY - (startTileY * patternTileSize);
+          
+          // Calculate the offset from start to end
+          const dx = endGridX - startGridX;
+          const dy = endGridY - startGridY;
+          
+          // Apply the same offset to get the normalized end position
+          finalStart = {
+            x: normalizedStartX,
+            y: normalizedStartY,
+          };
+          finalEnd = {
+            x: normalizedStartX + dx,
+            y: normalizedStartY + dy,
+          };
+        }
         shouldRepeat = true;
       } else {
         // Store absolute artboard coordinates (not wrapped)
