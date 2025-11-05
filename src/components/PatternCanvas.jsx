@@ -221,33 +221,51 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                                 tileCol < 0 || tileCol >= tilesPerSide;
             
             // BOUNDARY LINE HANDLING:
-            // Lines running along boundaries should repeat in the perpendicular direction only
+            // - Lines crossing boundaries OR running along boundaries: repeat in outer tiles in crossing/running direction
+            // - Lines crossing corners: repeat 5x5 (all outer tiles)
+            // - Lines just touching boundaries: repeat 4x4 (skip outer tiles)
             if (isOuterTile) {
-              const lineRunsAlongVerticalBoundary = 
-                stitch.start.x === stitch.end.x && 
-                (stitch.start.x === 0 || stitch.start.x === patternTileSize);
+              // A line crosses if BOTH start and end are not within normal tile bounds
+              // OR if end extends beyond bounds and start is not on the boundary it's leaving from
+              const startOnLeftBoundary = stitch.start.x === 0;
+              const startOnRightBoundary = stitch.start.x === patternTileSize;
+              const startOnTopBoundary = stitch.start.y === 0;
+              const startOnBottomBoundary = stitch.start.y === patternTileSize;
               
-              const lineRunsAlongHorizontalBoundary = 
-                stitch.start.y === stitch.end.y && 
-                (stitch.start.y === 0 || stitch.start.y === patternTileSize);
+              // If line goes slightly outside bounds (by 1), it's just touching boundary, not crossing
+              // True crossing: goes outside by more than 1 grid cell
+              const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
+              const justTouchingBoundary = lineLength <= 1.5; // Allow for diagonal (sqrt(2) ≈ 1.41)
               
-              // Vertical boundary line: only render in left/right outer tiles (tileCol -1 or tilesPerSide)
-              if (lineRunsAlongVerticalBoundary) {
-                if (tileRow < 0 || tileRow >= tilesPerSide) {
-                  continue; // Skip top/bottom outer tiles
-                }
+              const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize);
+              const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize);
+              
+              // A line runs along a boundary if BOTH endpoints are on the SAME boundary
+              const bothOnVerticalBoundary = 
+                (stitch.start.x === 0 || stitch.start.x === patternTileSize) &&
+                (stitch.end.x === 0 || stitch.end.x === patternTileSize) &&
+                stitch.start.x === stitch.end.x;
+              
+              const bothOnHorizontalBoundary = 
+                (stitch.start.y === 0 || stitch.start.y === patternTileSize) &&
+                (stitch.end.y === 0 || stitch.end.y === patternTileSize) &&
+                stitch.start.y === stitch.end.y;
+              
+              // Lines crossing horizontally OR running along vertical boundary: repeat in X direction (left/right outer tiles)
+              const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
+              
+              // Lines crossing vertically OR running along horizontal boundary: repeat in Y direction (top/bottom outer tiles)
+              const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
+              
+              // Determine which outer tiles to render in
+              const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
+              const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+              
+              // Skip this outer tile if line shouldn't repeat in this direction
+              if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
+                continue;
               }
-              // Horizontal boundary line: only render in top/bottom outer tiles (tileRow -1 or tilesPerSide)
-              else if (lineRunsAlongHorizontalBoundary) {
-                if (tileCol < 0 || tileCol >= tilesPerSide) {
-                  continue; // Skip left/right outer tiles
-                }
-              }
-              // Lines touching boundaries but not running along them: skip all outer tiles
-              else if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
-                       stitch.start.y === 0 || stitch.start.y === patternTileSize ||
-                       stitch.end.x === 0 || stitch.end.x === patternTileSize ||
-                       stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+              if (isTopBottomOuterTile && !shouldRepeatInYDirection) {
                 continue;
               }
             }
@@ -786,26 +804,47 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           };
         } else {
           // Non-boundary lines: use floor-based normalization
-          // Find which tile the START point is in
+          // Find which tile the START and END points are in
           const startTileX = Math.floor(startGridX / patternTileSize);
           const startTileY = Math.floor(startGridY / patternTileSize);
+          const endTileX = Math.floor(endGridX / patternTileSize);
+          const endTileY = Math.floor(endGridY / patternTileSize);
           
-          // Normalize the start point to pattern-relative coordinates (within first tile)
-          const normalizedStartX = startGridX - (startTileX * patternTileSize);
-          const normalizedStartY = startGridY - (startTileY * patternTileSize);
-          
-          // Calculate the offset from start to end
+          // If start and end are in adjacent tiles (line just touches boundary),
+          // normalize to the tile that contains the majority of the line
+          // For lines going from boundary into tile, use the "inner" tile
           const dx = endGridX - startGridX;
           const dy = endGridY - startGridY;
+          const lineLength = Math.sqrt(dx * dx + dy * dy);
           
-          // Apply the same offset to get the normalized end position
+          // Use the tile of whichever point is NOT on a boundary, or use end tile for ties
+          const startOnBoundary = (startGridX % patternTileSize === 0) || (startGridY % patternTileSize === 0);
+          const endOnBoundary = (endGridX % patternTileSize === 0) || (endGridY % patternTileSize === 0);
+          
+          let baseTileX, baseTileY;
+          if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
+            // Start on boundary, end inside - use end's tile
+            baseTileX = endTileX;
+            baseTileY = endTileY;
+          } else {
+            // Normal case: use start's tile
+            baseTileX = startTileX;
+            baseTileY = startTileY;
+          }
+          
+          // Normalize both points to the base tile
+          const normalizedStartX = startGridX - (baseTileX * patternTileSize);
+          const normalizedStartY = startGridY - (baseTileY * patternTileSize);
+          const normalizedEndX = endGridX - (baseTileX * patternTileSize);
+          const normalizedEndY = endGridY - (baseTileY * patternTileSize);
+          
           finalStart = {
             x: normalizedStartX,
             y: normalizedStartY,
           };
           finalEnd = {
-            x: normalizedStartX + dx,
-            y: normalizedStartY + dy,
+            x: normalizedEndX,
+            y: normalizedEndY,
           };
         }
         shouldRepeat = true;
@@ -855,31 +894,38 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               
               // Apply same filtering as rendering: skip outer tiles for boundary lines
               if (isOuterTile) {
-                const lineRunsAlongVerticalBoundary = 
-                  stitch.start.x === stitch.end.x && 
-                  (stitch.start.x === 0 || stitch.start.x === patternTileSize);
+                const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
+                const justTouchingBoundary = lineLength <= 1.5;
                 
-                const lineRunsAlongHorizontalBoundary = 
-                  stitch.start.y === stitch.end.y && 
-                  (stitch.start.y === 0 || stitch.start.y === patternTileSize);
+                const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize);
+                const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize);
                 
-                // Vertical boundary line: only clickable in left/right outer tiles
-                if (lineRunsAlongVerticalBoundary) {
-                  if (tileRow < 0 || tileRow >= tilesPerSide) {
-                    continue; // Skip top/bottom outer tiles
-                  }
+                // A line runs along a boundary if BOTH endpoints are on the SAME boundary
+                const bothOnVerticalBoundary = 
+                  (stitch.start.x === 0 || stitch.start.x === patternTileSize) &&
+                  (stitch.end.x === 0 || stitch.end.x === patternTileSize) &&
+                  stitch.start.x === stitch.end.x;
+                
+                const bothOnHorizontalBoundary = 
+                  (stitch.start.y === 0 || stitch.start.y === patternTileSize) &&
+                  (stitch.end.y === 0 || stitch.end.y === patternTileSize) &&
+                  stitch.start.y === stitch.end.y;
+                
+                // Lines crossing horizontally OR running along vertical boundary: clickable in X direction (left/right outer tiles)
+                const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
+                
+                // Lines crossing vertically OR running along horizontal boundary: clickable in Y direction (top/bottom outer tiles)
+                const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
+                
+                // Determine which outer tiles to check
+                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
+                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+                
+                // Skip this outer tile if line shouldn't be clickable in this direction
+                if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
+                  continue;
                 }
-                // Horizontal boundary line: only clickable in top/bottom outer tiles
-                else if (lineRunsAlongHorizontalBoundary) {
-                  if (tileCol < 0 || tileCol >= tilesPerSide) {
-                    continue; // Skip left/right outer tiles
-                  }
-                }
-                // Lines touching boundaries but not running along them: skip all outer tiles
-                else if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
-                         stitch.start.y === 0 || stitch.start.y === patternTileSize ||
-                         stitch.end.x === 0 || stitch.end.x === patternTileSize ||
-                         stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+                if (isTopBottomOuterTile && !shouldRepeatInYDirection) {
                   continue;
                 }
               }

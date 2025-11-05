@@ -245,54 +245,127 @@ const isPatternLine = stitch.repeat !== false &&
   - Grid point at coordinate 10 in tile 0 = grid point at coordinate 0 in tile 1
   - Physical location: absolute position 10
 
-#### Boundary Line Handling (UPDATED):
-**Special Case**: Lines that run along tile boundaries should be treated as crossing tiles.
+#### Boundary Line Handling (UPDATED - Final):
 
-**Examples:**
-- Vertical line from (10,0) to (10,10): Runs along vertical boundary between tiles
-- Horizontal line from (0,10) to (10,10): Runs along horizontal boundary between tiles
+**The system distinguishes between three types of boundary-related lines:**
 
-**Solution**: Only skip outer tiles for non-boundary-running lines:
+1. **Lines Running Along Boundaries**: Both start and end on the SAME boundary
+   - Vertical boundary line: `start.x === end.x && (x === 0 || x === patternTileSize)`
+   - Horizontal boundary line: `start.y === end.y && (y === 0 || y === patternTileSize)`
+   - **Behavior**: Repeat in perpendicular direction only
+     - Vertical boundary → repeats in left/right outer tiles (5x in X direction on 4x4 board)
+     - Horizontal boundary → repeats in top/bottom outer tiles (5x in Y direction on 4x4 board)
+
+2. **Lines Crossing Tile Boundaries**: Actually span into adjacent tile(s)
+   - Detected by: Line length > 1.5 grid cells AND end coordinate outside tile bounds
+   - Example: (5,5) to (11,5) - end.x exceeds patternTileSize
+   - **Behavior**: Repeat in ALL outer tiles in the crossing direction (5x5 if crossing both X and Y)
+
+3. **Lines Touching Boundaries**: Start or end on boundary but don't run along or truly cross
+   - Detected by: Line length ≤ 1.5 grid cells (just 1 cell apart, possibly diagonal)
+   - Example: (10,2) to (9,2) - starts on boundary, goes inward
+   - **Behavior**: Repeat normally 4x4 (skip all outer tiles)
+
+**Detection Logic:**
 ```javascript
-// In rendering loop, for outer tiles only:
 if (isOuterTile) {
-  const lineRunsAlongVerticalBoundary = 
-    stitch.start.x === stitch.end.x && 
-    (stitch.start.x === 0 || stitch.start.x === patternTileSize);
+  // Detect lines running along boundaries (both endpoints on SAME boundary)
+  const bothOnVerticalBoundary = 
+    (stitch.start.x === 0 || stitch.start.x === patternTileSize) &&
+    (stitch.end.x === 0 || stitch.end.x === patternTileSize) &&
+    stitch.start.x === stitch.end.x;
   
-  const lineRunsAlongHorizontalBoundary = 
-    stitch.start.y === stitch.end.y && 
-    (stitch.start.y === 0 || stitch.start.y === patternTileSize);
+  const bothOnHorizontalBoundary = 
+    (stitch.start.y === 0 || stitch.start.y === patternTileSize) &&
+    (stitch.end.y === 0 || stitch.end.y === patternTileSize) &&
+    stitch.start.y === stitch.end.y;
   
-  // Lines along boundaries should be treated as crossing tiles (don't skip)
-  // All other boundary-touching lines should skip outer tiles
-  if (!lineRunsAlongVerticalBoundary && !lineRunsAlongHorizontalBoundary) {
-    if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
-        stitch.start.y === 0 || stitch.start.y === patternTileSize ||
-        stitch.end.x === 0 || stitch.end.x === patternTileSize ||
-        stitch.end.y === 0 || stitch.end.y === patternTileSize) {
-      continue; // Skip rendering in outer tiles
-    }
-  }
+  // Detect true crossing: line length > 1.5 AND end outside tile bounds
+  const lineLength = Math.sqrt(
+    Math.pow(stitch.end.x - stitch.start.x, 2) + 
+    Math.pow(stitch.end.y - stitch.start.y, 2)
+  );
+  const justTouchingBoundary = lineLength <= 1.5; // Single cell or diagonal
+  
+  const crossesHorizontally = !justTouchingBoundary && 
+    (stitch.end.x < 0 || stitch.end.x > patternTileSize);
+  const crossesVertically = !justTouchingBoundary && 
+    (stitch.end.y < 0 || stitch.end.y > patternTileSize);
+  
+  // Determine which directions should repeat in outer tiles
+  const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
+  const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
+  
+  const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
+  const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+  
+  // Skip outer tile if line shouldn't repeat in this direction
+  if (isLeftRightOuterTile && !shouldRepeatInXDirection) continue;
+  if (isTopBottomOuterTile && !shouldRepeatInYDirection) continue;
 }
 ```
 
+**Normalization Logic for Boundary-Touching Lines:**
+
+When storing a line that starts on a boundary and goes inward (e.g., x=10 to x=9), the system normalizes to the tile that contains the END point (the "inner" tile) to ensure correct repeat positioning:
+
+```javascript
+// Check if line just touches boundary (1 cell apart)
+const lineLength = Math.sqrt(dx * dx + dy * dy);
+const startOnBoundary = (startGridX % patternTileSize === 0) || 
+                       (startGridY % patternTileSize === 0);
+const endOnBoundary = (endGridX % patternTileSize === 0) || 
+                     (endGridY % patternTileSize === 0);
+
+let baseTileX, baseTileY;
+if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
+  // Start on boundary, end inside - use END's tile for normalization
+  baseTileX = Math.floor(endGridX / patternTileSize);
+  baseTileY = Math.floor(endGridY / patternTileSize);
+} else {
+  // Normal case: use START's tile
+  baseTileX = Math.floor(startGridX / patternTileSize);
+  baseTileY = Math.floor(startGridY / patternTileSize);
+}
+
+// Normalize both points to the chosen base tile
+const normalizedStartX = startGridX - (baseTileX * patternTileSize);
+const normalizedEndX = endGridX - (baseTileX * patternTileSize);
+```
+
+**Examples (tileSize 10, 4×4 artboard):**
+
+1. **Vertical boundary line** (10,0) to (10,10):
+   - Both on x=10 boundary → runs along vertical boundary
+   - Repeats in X direction: 5 times (tiles 0,1,2,3 + left outer)
+   - Does NOT repeat in Y direction (stays at row positions)
+
+2. **Horizontal boundary line** (0,10) to (10,10):
+   - Both on y=10 boundary → runs along horizontal boundary
+   - Repeats in Y direction: 5 times (tiles 0,1,2,3 + top outer)
+   - Does NOT repeat in X direction
+
+3. **Crossing line** (5,5) to (11,5):
+   - Length = 6, end.x = 11 > 10 → crosses horizontally
+   - Repeats in X direction: 5 times
+   - Repeats in Y direction: 4 times normally
+
+4. **Corner crossing** (9,9) to (11,11):
+   - Length = 2.83, end.x = 11, end.y = 11 → crosses both
+   - Repeats in both directions: 5×5
+
+5. **Boundary touch inward** (10,2) to (9,2):
+   - Length = 1, lineLength ≤ 1.5 → just touching
+   - Normalizes to tile 0 (where x=9 is)
+   - Stored as (10,2) to (9,2) in tile 0 context
+   - Repeats normally: 4×4 (no outer tiles)
+
 **Effect**:
-- ✅ Lines running along boundaries repeat with crossing effect (appear in outer tiles)
-- ✅ Diagonal/crossing lines repeat with crossing effect
-- ✅ Lines touching boundaries but not running along them stay within artboard
+- ✅ Lines along boundaries repeat 5x in perpendicular direction on 4×4 board
+- ✅ Lines crossing boundaries repeat 5x in crossing direction(s)
+- ✅ Lines just touching boundaries repeat 4×4 normally
+- ✅ Boundary-touching lines normalize to correct tile for proper positioning
 - ✅ No unwanted duplication at tile boundaries
-
-**Example**: Line from (10,0) to (10,10) in tileSize 10 pattern
-- Treated as crossing between tiles (runs along vertical boundary)
-- Renders in artboard tiles AND outer tiles where it crosses
-- Creates visual "seam" effect showing the tile boundary
-
-**Example**: Line from (0,5) to (5,10) in tileSize 10 pattern
-- Touches boundary but doesn't run along it
-- Renders in artboard tiles: (0,5)→(5,10), (10,5)→(15,10), (20,5)→(25,10)...
-- Does NOT render in outer tiles (tileRow/Col -1 or >= tilesPerSide)
-- No duplication in margins
 
 ### Cross-Tile Lines (CRITICAL BEHAVIOR)
 
