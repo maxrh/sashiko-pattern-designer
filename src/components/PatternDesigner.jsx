@@ -3,6 +3,7 @@ import patternsData from '../data/patterns.json';
 import { CanvasViewport } from './CanvasViewport.jsx';
 import { Toolbar } from './Toolbar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
+import { HelpButton } from './HelpButton.jsx';
 import { Badge } from './ui/badge';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { Toaster } from './ui/sonner';
@@ -723,7 +724,7 @@ export default function PatternDesigner() {
       {/* Main Content Area */}
       <main className="flex h-screen flex-1 flex-col overflow-hidden bg-background text-foreground">
         <header className="flex-none border-b border-border bg-sidebar px-6 py-4 ">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-4">
             <Toolbar
               drawingMode={drawingState.mode}
               onModeChange={handleModeChange}
@@ -744,6 +745,7 @@ export default function PatternDesigner() {
               canUndo={historyIndex > 0}
               canRedo={historyIndex < history.length - 1}
             />
+            <HelpButton />
           </div>
         </header>
 
