@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
-import { ChevronRight, Info, Download, Upload, Check } from 'lucide-react';
+import { ChevronRight, Info, Download, Upload, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function CanvasSettings({
@@ -50,6 +50,8 @@ export function CanvasSettings({
   onExportPattern,
   onImportPattern,
   onExportImage,
+  currentPattern,
+  stitchColors,
 }) {
   const [isGridAppearanceOpen, setIsGridAppearanceOpen] = useState(false);
   const fileInputRef = useRef(null);
@@ -73,6 +75,46 @@ export function CanvasSettings({
       cancel: {
         label: 'Cancel',
       },
+    });
+  };
+
+  const handleCopyForPatternsJson = () => {
+    // Create pattern object in the format expected by patterns.json
+    const patternForJson = {
+      id: currentPattern.id,
+      name: currentPattern.name || 'Untitled Pattern',
+      description: currentPattern.description || '',
+      tileSize: currentPattern.tileSize,
+      gridSize: currentPattern.gridSize,
+      patternTiles: currentPattern.patternTiles,
+      stitches: currentPattern.stitches.map(stitch => ({
+        id: stitch.id,
+        start: { ...stitch.start },
+        end: { ...stitch.end },
+        color: stitchColors.get(stitch.id) || stitch.color || null,
+        stitchSize: stitch.stitchSize || 'small',
+        repeat: stitch.repeat !== false,
+      })),
+      uiState: {
+        backgroundColor,
+        gridColor,
+        gridOpacity,
+        tileOutlineColor,
+        tileOutlineOpacity,
+        artboardOutlineColor,
+        artboardOutlineOpacity,
+      },
+    };
+
+    const jsonString = JSON.stringify(patternForJson, null, 2);
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(jsonString).then(() => {
+      toast.success('Copied to clipboard!', {
+        description: 'Paste this into src/data/patterns.json',
+      });
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard');
     });
   };
 
@@ -333,6 +375,11 @@ export function CanvasSettings({
               <DropdownMenuItem disabled>
                 <Download className="mr-2 h-4 w-4" />
                 Export as SVG
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleCopyForPatternsJson}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy for patterns.json
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>

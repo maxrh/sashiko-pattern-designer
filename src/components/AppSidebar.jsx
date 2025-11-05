@@ -54,6 +54,8 @@ export function AppSidebar({
   onArtboardOutlineColorChange,
   artboardOutlineOpacity,
   onArtboardOutlineOpacityChange,
+  currentPattern,
+  stitchColors,
 }) {
   return (
       <Sidebar>
@@ -110,6 +112,8 @@ export function AppSidebar({
                     onExportPattern={onExportPattern}
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}
+                    currentPattern={currentPattern}
+                    stitchColors={stitchColors}
                   />
                 </SidebarGroupContent>
               </SidebarGroup>

@@ -13,7 +13,7 @@ export function PatternSelector({ patterns, activePatternId, onSelectPattern, on
     <div className="space-y-2">
       {/* Built-in Patterns */}
       <Collapsible defaultOpen className="group/collapsible">
-        <CollapsibleTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex  shrink-0 items-center justify-between w-full rounded-md px-3 py-3 text-sm font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 hover:bg-sidebar-accent">
+        <CollapsibleTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex shrink-0 items-center justify-between w-full rounded-md px-3 py-3 text-sm font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 hover:bg-sidebar-accent">
           <span>Starter Patterns</span>
           <div className="flex items-center gap-2">
             <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />

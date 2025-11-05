@@ -221,8 +221,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                                 tileCol < 0 || tileCol >= tilesPerSide;
             
             // BOUNDARY LINE HANDLING:
-            // A line that runs along a boundary (e.g., vertical line at x=10) should cross tiles
-            // Only skip outer tiles for lines that don't run along boundaries
+            // Lines running along boundaries should repeat in the perpendicular direction only
             if (isOuterTile) {
               const lineRunsAlongVerticalBoundary = 
                 stitch.start.x === stitch.end.x && 
@@ -232,15 +231,24 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 stitch.start.y === stitch.end.y && 
                 (stitch.start.y === 0 || stitch.start.y === patternTileSize);
               
-              // Lines along boundaries should be treated as crossing tiles (don't skip)
-              // All other boundary-touching lines should skip outer tiles
-              if (!lineRunsAlongVerticalBoundary && !lineRunsAlongHorizontalBoundary) {
-                if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
-                    stitch.start.y === 0 || stitch.start.y === patternTileSize ||
-                    stitch.end.x === 0 || stitch.end.x === patternTileSize ||
-                    stitch.end.y === 0 || stitch.end.y === patternTileSize) {
-                  continue;
+              // Vertical boundary line: only render in left/right outer tiles (tileCol -1 or tilesPerSide)
+              if (lineRunsAlongVerticalBoundary) {
+                if (tileRow < 0 || tileRow >= tilesPerSide) {
+                  continue; // Skip top/bottom outer tiles
                 }
+              }
+              // Horizontal boundary line: only render in top/bottom outer tiles (tileRow -1 or tilesPerSide)
+              else if (lineRunsAlongHorizontalBoundary) {
+                if (tileCol < 0 || tileCol >= tilesPerSide) {
+                  continue; // Skip left/right outer tiles
+                }
+              }
+              // Lines touching boundaries but not running along them: skip all outer tiles
+              else if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
+                       stitch.start.y === 0 || stitch.start.y === patternTileSize ||
+                       stitch.end.x === 0 || stitch.end.x === patternTileSize ||
+                       stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+                continue;
               }
             }
             
@@ -855,14 +863,24 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                   stitch.start.y === stitch.end.y && 
                   (stitch.start.y === 0 || stitch.start.y === patternTileSize);
                 
-                // Skip outer tiles for non-boundary-running lines
-                if (!lineRunsAlongVerticalBoundary && !lineRunsAlongHorizontalBoundary) {
-                  if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
-                      stitch.start.y === 0 || stitch.start.y === patternTileSize ||
-                      stitch.end.x === 0 || stitch.end.x === patternTileSize ||
-                      stitch.end.y === 0 || stitch.end.y === patternTileSize) {
-                    continue;
+                // Vertical boundary line: only clickable in left/right outer tiles
+                if (lineRunsAlongVerticalBoundary) {
+                  if (tileRow < 0 || tileRow >= tilesPerSide) {
+                    continue; // Skip top/bottom outer tiles
                   }
+                }
+                // Horizontal boundary line: only clickable in top/bottom outer tiles
+                else if (lineRunsAlongHorizontalBoundary) {
+                  if (tileCol < 0 || tileCol >= tilesPerSide) {
+                    continue; // Skip left/right outer tiles
+                  }
+                }
+                // Lines touching boundaries but not running along them: skip all outer tiles
+                else if (stitch.start.x === 0 || stitch.start.x === patternTileSize || 
+                         stitch.start.y === 0 || stitch.start.y === patternTileSize ||
+                         stitch.end.x === 0 || stitch.end.x === patternTileSize ||
+                         stitch.end.y === 0 || stitch.end.y === patternTileSize) {
+                  continue;
                 }
               }
               

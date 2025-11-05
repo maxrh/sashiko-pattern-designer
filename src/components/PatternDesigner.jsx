@@ -716,6 +716,8 @@ export default function PatternDesigner() {
         onArtboardOutlineColorChange={setArtboardOutlineColor}
         artboardOutlineOpacity={artboardOutlineOpacity}
         onArtboardOutlineOpacityChange={setArtboardOutlineOpacity}
+        currentPattern={currentPattern}
+        stitchColors={stitchColors}
       />
 
       {/* Main Content Area */}
