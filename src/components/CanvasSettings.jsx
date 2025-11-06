@@ -25,6 +25,8 @@ export function CanvasSettings({
   onBackgroundColorChange,
   patternName,
   onPatternNameChange,
+  patternDescription,
+  onPatternDescriptionChange,
   tileSize,
   onTileSizeChange,
   gridSize,
@@ -129,7 +131,7 @@ export function CanvasSettings({
     "description": "${patternForJson.description}",
     "tileSize": ${JSON.stringify(patternForJson.tileSize)},
     "gridSize": ${patternForJson.gridSize},
-    "patternTiles": ${patternForJson.patternTiles},
+    "patternTiles": ${JSON.stringify(patternForJson.patternTiles)},
     "stitches": ${stitchesJson},
     "uiState": {
       "backgroundColor": "${patternForJson.uiState.backgroundColor}",
@@ -171,6 +173,18 @@ export function CanvasSettings({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="pattern-description">Pattern Description</Label>
+          <textarea
+            id="pattern-description"
+            value={patternDescription}
+            onChange={(e) => onPatternDescriptionChange(e.target.value)}
+            placeholder="Describe your pattern..."
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="artboard-size">Pattern Size</Label>
           <input
             type="text"
@@ -183,25 +197,50 @@ export function CanvasSettings({
 
         <div className="space-y-2">
           <div className="flex items-center gap-1">
-            <Label htmlFor="pattern-tiles">Pattern Tiles: {patternTiles}×{patternTiles}</Label>
+            <Label htmlFor="pattern-tiles-x">Tiles Horizontally (X): {patternTiles.x}</Label>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Controls how many times the pattern repeats on the artboard</p>
+                  <p>Controls how many times the pattern repeats horizontally on the artboard</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <Slider
-            id="pattern-tiles"
+            id="pattern-tiles-x"
             min={1}
             max={10}
             step={1}
-            value={[patternTiles]}
-            onValueChange={(value) => onPatternTilesChange(value[0])}
+            value={[patternTiles.x]}
+            onValueChange={(value) => onPatternTilesChange('x', value[0])}
+            className="w-full"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="pattern-tiles-y">Tiles Vertically (Y): {patternTiles.y}</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Controls how many times the pattern repeats vertically on the artboard</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="pattern-tiles-y"
+            min={1}
+            max={10}
+            step={1}
+            value={[patternTiles.y]}
+            onValueChange={(value) => onPatternTilesChange('y', value[0])}
             className="w-full"
           />
         </div>

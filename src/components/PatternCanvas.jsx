@@ -133,10 +133,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const canvasGridHeight = useMemo(() => Math.round(canvasHeight / patternGridSize), [canvasHeight, patternGridSize]);
   const artboardGridWidth = useMemo(() => Math.round(artboardWidth / patternGridSize), [artboardWidth, patternGridSize]);
   const artboardGridHeight = useMemo(() => Math.round(artboardHeight / patternGridSize), [artboardHeight, patternGridSize]);
-  const tilesPerSide = useMemo(
-    () => Math.ceil(Math.max(artboardGridWidth / patternTileSize.x, artboardGridHeight / patternTileSize.y)),
-    [artboardGridWidth, artboardGridHeight, patternTileSize]
-  );
+  
+  // Calculate number of tiles in X and Y directions separately for non-square artboards
+  const tilesX = useMemo(() => Math.ceil(artboardGridWidth / patternTileSize.x), [artboardGridWidth, patternTileSize.x]);
+  const tilesY = useMemo(() => Math.ceil(artboardGridHeight / patternTileSize.y), [artboardGridHeight, patternTileSize.y]);
 
   useImperativeHandle(ref, () => ({
     exportAsImage: () => canvasRef.current?.toDataURL('image/png'),
@@ -180,8 +180,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         ctx.setLineDash([]);
         const patternTilePixelWidth = patternTileSize.x * patternGridSize;
         const patternTilePixelHeight = patternTileSize.y * patternGridSize;
-        for (let row = 0; row <= tilesPerSide; row += 1) {
-          for (let col = 0; col <= tilesPerSide; col += 1) {
+        for (let row = 0; row <= tilesY; row += 1) {
+          for (let col = 0; col <= tilesX; col += 1) {
             const x = artboardOffset + (col * patternTilePixelWidth);
             const y = artboardOffset + (row * patternTilePixelHeight);
             if (x <= artboardOffset + artboardWidth && y <= artboardOffset + artboardHeight) {
@@ -234,10 +234,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const startsAtBoundaryY = stitch.start.y === patternTileSize.y || stitch.start.y === 0;
       
       if (isPatternLine) {
-        // Pattern line with repeat ON - render in all artboard tiles (0 to tilesPerSide-1)
-        // Also render in outer tiles (-1 and tilesPerSide) for lines that cross into canvas padding
-        for (let tileRow = -1; tileRow < tilesPerSide + 1; tileRow++) {
-          for (let tileCol = -1; tileCol < tilesPerSide + 1; tileCol++) {
+        // Pattern line with repeat ON - render in all artboard tiles
+        // Also render in outer tiles (-1 and tilesX/tilesY) for lines that cross into canvas padding
+        for (let tileRow = -1; tileRow < tilesY + 1; tileRow++) {
+          for (let tileCol = -1; tileCol < tilesX + 1; tileCol++) {
             // CORNER-SPECIFIC FIX: Lines from corners with negative coords going backward
             // These should NOT appear in the first row/col or corresponding outer tiles
             // Example: corner (0,0)→(0,-5) is vertical going UP
@@ -267,8 +267,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             }
             
             // Check if this is an outer tile (beyond the artboard, in the canvas padding)
-            const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
-                                tileCol < 0 || tileCol >= tilesPerSide;
+            const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
+                                tileCol < 0 || tileCol >= tilesX;
             
             // BOUNDARY LINE HANDLING:
             // - Lines crossing boundaries OR running along boundaries: repeat in outer tiles in crossing/running direction
@@ -322,8 +322,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
               
               // Determine which outer tiles to render in
-              const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
-              const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+              const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesX;
+              const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesY;
               
               // Skip this outer tile if line shouldn't repeat in this direction
               if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
@@ -613,7 +613,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     selectedStitchIds,
     showGrid,
     stitchColors,
-    tilesPerSide,
+    tilesX,
+    tilesY,
     gridColor,
     gridOpacity,
     tileOutlineColor,
@@ -700,8 +701,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
         if (shouldRepeat) {
           // Check all possible tile offsets (including negative)
-          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
-            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
+          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
               const tileOffsetX = tileCol * patternTileSize.x;
               const tileOffsetY = tileRow * patternTileSize.y;
             
@@ -732,10 +733,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         }
       } else {
         const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
+        const tilesToCheckX = shouldRepeat ? tilesX : 1;
+        const tilesToCheckY = shouldRepeat ? tilesY : 1;
 
-        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
+        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
             const offsetX = tileCol * patternTileSize.x;
             const offsetY = tileRow * patternTileSize.y;
             
@@ -961,11 +963,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
         if (shouldRepeat) {
           // For repeat, check all tiles including negative offsets
-          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
-            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
+          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
               // Check if this is an outer tile
-              const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
-                                  tileCol < 0 || tileCol >= tilesPerSide;
+              const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
+                                  tileCol < 0 || tileCol >= tilesX;
               
               // Apply same filtering as rendering: skip outer tiles for boundary lines
               if (isOuterTile) {
@@ -993,8 +995,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
                 
                 // Determine which outer tiles to check
-                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
-                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesX;
+                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesY;
                 
                 // Skip this outer tile if line shouldn't be clickable in this direction
                 if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
@@ -1071,10 +1073,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       } else {
         // Old format: use wrapped coordinates with tiling
         const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
+        const tilesToCheckX = shouldRepeat ? tilesX : 1;
+        const tilesToCheckY = shouldRepeat ? tilesY : 1;
 
-        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
+        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
             const offsetX = tileCol * patternTileSize.x;
             const offsetY = tileRow * patternTileSize.y;
             // Add artboardOffset to stitch coordinates
