@@ -216,6 +216,34 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         // Also render in outer tiles (-1 and tilesPerSide) for lines that cross into canvas padding
         for (let tileRow = -1; tileRow < tilesPerSide + 1; tileRow++) {
           for (let tileCol = -1; tileCol < tilesPerSide + 1; tileCol++) {
+            // CORNER-SPECIFIC FIX: Lines from corners with negative coords going backward
+            // These should NOT appear in the first row/col or corresponding outer tiles
+            // Example: corner (0,0)→(0,-5) is vertical going UP
+            //          → should appear in rows 1,2,3... and bottom outer tiles
+            //          → should NOT appear in first row (0) or top outer tiles
+            const startOnLeftEdge = stitch.start.x === 0;
+            const startOnRightEdge = stitch.start.x === patternTileSize;
+            const startOnTopEdge = stitch.start.y === 0;
+            const startOnBottomEdge = stitch.start.y === patternTileSize;
+            const startsAtNormalizedCorner = (startOnLeftEdge || startOnRightEdge) && (startOnTopEdge || startOnBottomEdge);
+            
+            const hasNegativeX = stitch.end.x < 0;
+            const hasNegativeY = stitch.end.y < 0;
+            
+            const isInFirstRow = tileRow === 0;
+            const isInFirstCol = tileCol === 0;
+            const isInTopOuterTile = tileRow < 0;
+            const isInLeftOuterTile = tileCol < 0;
+            
+            // Vertical line from corner going UP (negative Y): skip in first row and top outer tiles
+            if (startsAtNormalizedCorner && startOnTopEdge && hasNegativeY && (isInFirstRow || isInTopOuterTile)) {
+              continue;
+            }
+            // Horizontal line from corner going LEFT (negative X): skip in first col and left outer tiles
+            if (startsAtNormalizedCorner && startOnLeftEdge && hasNegativeX && (isInFirstCol || isInLeftOuterTile)) {
+              continue;
+            }
+            
             // Check if this is an outer tile (beyond the artboard, in the canvas padding)
             const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
                                 tileCol < 0 || tileCol >= tilesPerSide;
@@ -225,6 +253,20 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             // - Lines crossing corners: repeat 5x5 (all outer tiles)
             // - Lines just touching boundaries: repeat 4x4 (skip outer tiles)
             if (isOuterTile) {
+              const startOnCorner = (startOnLeftEdge || startOnRightEdge) && (startOnTopEdge || startOnBottomEdge);
+              const extendsRightBeyond = stitch.end.x > patternTileSize;
+              const extendsBottomBeyond = stitch.end.y > patternTileSize;
+              const isInLeftOuterTile = tileCol < 0;
+              const isInTopOuterTile = tileRow < 0;
+              // CORNER-SPECIFIC: Line starting at corner extending right: skip in right outer tiles
+              if (startOnCorner && startOnRightEdge && extendsRightBeyond && isInRightOuterTile) {
+                continue;
+              }
+              // CORNER-SPECIFIC: Line starting at corner extending down: skip in bottom outer tiles
+              if (startOnCorner && startOnBottomEdge && extendsBottomBeyond && isInBottomOuterTile) {
+                continue;
+              }
+              
               // A line crosses if BOTH start and end are not within normal tile bounds
               // OR if end extends beyond bounds and start is not on the boundary it's leaving from
               const startOnLeftBoundary = stitch.start.x === 0;
