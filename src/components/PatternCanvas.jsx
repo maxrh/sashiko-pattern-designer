@@ -166,7 +166,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const artboardG = parseInt(artboardOutlineColor.slice(3, 5), 16);
       const artboardB = parseInt(artboardOutlineColor.slice(5, 7), 16);
       ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${artboardOutlineOpacity})`;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1;
       ctx.setLineDash([]);
       ctx.strokeRect(artboardOffset, artboardOffset, artboardWidth, artboardHeight);
 
@@ -203,11 +203,14 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const gridG = parseInt(gridColor.slice(3, 5), 16);
       const gridB = parseInt(gridColor.slice(5, 7), 16);
       ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${gridOpacity})`;
+      // Use 2×2 pixel dots for all grid sizes
+      const dotSize = 2;
+      const dotOffset = dotSize / 2;
       for (let x = 0; x <= canvasGridWidth; x += 1) {
         for (let y = 0; y <= canvasGridHeight; y += 1) {
           const centerX = x * patternGridSize;
           const centerY = y * patternGridSize;
-          ctx.fillRect(centerX - 1.5, centerY - 1.5, 3, 3);
+          ctx.fillRect(centerX - dotOffset, centerY - dotOffset, dotSize, dotSize);
         }
       }
     }
@@ -517,11 +520,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           const sizeForCalc = isLarge ? 'medium' : stitchSizeForLine;
           
           switch (sizeForCalc) {
-            case 'medium':
+            case 'small':
+              // Small: 2 dashes per 20px cell, scale to actual line length
               targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
               break;
-            case 'large':
+            case 'medium':
             default:
+              // Medium: 1 dash per 20px cell
               targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
               break;
           }

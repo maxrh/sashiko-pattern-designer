@@ -49,7 +49,7 @@ export function Toolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Select Tool</p>
+              <p>Select Tool (V)</p>
             </TooltipContent>
           </Tooltip>
           
@@ -64,7 +64,7 @@ export function Toolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Draw Tool</p>
+              <p>Pen Tool (P)</p>
             </TooltipContent>
           </Tooltip>
           
@@ -178,7 +178,7 @@ export function Toolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Repeat Pattern</p>
+              <p>Repeat Pattern (R)</p>
             </TooltipContent>
           </Tooltip>
           
@@ -235,7 +235,7 @@ export function Toolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Show/Hide Grid</p>
+              <p>Show/Hide Grid (H)</p>
             </TooltipContent>
           </Tooltip>
         </ButtonGroup>
