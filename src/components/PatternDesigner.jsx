@@ -33,6 +33,7 @@ const DEFAULT_PATTERN_TILES = 4;
 const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // 
 const DEFAULT_STITCH_COLOR = '#f5f5f5'; // default color for stitches
 const DEFAULT_STITCH_SIZE = 'medium';
+const DEFAULT_STITCH_WIDTH = 'normal';
 const DEFAULT_REPEAT_PATTERN = true;
 const DEFAULT_SHOW_GRID = true;
 const DEFAULT_GRID_COLOR = '#94a3b8';
@@ -182,6 +183,10 @@ export default function PatternDesigner() {
     const saved = loadCurrentPattern();
     return saved?.uiState?.stitchSize ?? DEFAULT_STITCH_SIZE;
   });
+  const [stitchWidth, setStitchWidth] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.stitchWidth ?? DEFAULT_STITCH_WIDTH;
+  });
   const [repeatPattern, setRepeatPattern] = useState(() => {
     const saved = loadCurrentPattern();
     return saved?.uiState?.repeatPattern ?? DEFAULT_REPEAT_PATTERN;
@@ -246,6 +251,13 @@ export default function PatternDesigner() {
       const uniqueSizes = [...new Set(stitchSizes)];
       if (uniqueSizes.length === 1 && uniqueSizes[0]) {
         setStitchSize(uniqueSizes[0]);
+      }
+      
+      // Update stitch width if all selected stitches have the same width
+      const stitchWidths = selectedStitches.map(s => s.stitchWidth || 'normal');
+      const uniqueWidths = [...new Set(stitchWidths)];
+      if (uniqueWidths.length === 1 && uniqueWidths[0]) {
+        setStitchWidth(uniqueWidths[0]);
       }
       
       // Update repeat pattern if all selected stitches have the same repeat setting
@@ -404,6 +416,7 @@ export default function PatternDesigner() {
       end,
       color: null,
       stitchSize: stitchSize || defaultSize,
+      stitchWidth: stitchWidth,
       repeat: repeat !== undefined ? repeat : true,
     };
     setCurrentPattern((prev) => ({
@@ -420,7 +433,7 @@ export default function PatternDesigner() {
     
     // Don't auto-select newly created stitches
     setSelectedStitchIds(new Set());
-  }, [selectedStitchColor]);
+  }, [selectedStitchColor, stitchWidth]);
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedStitchIds.size === 0) return;
@@ -451,6 +464,23 @@ export default function PatternDesigner() {
     } else {
       // Update default for draw tool
       setStitchSize(newSize);
+    }
+  }, [selectedStitchIds]);
+
+  const handleChangeSelectedStitchWidth = useCallback((newWidth) => {
+    if (selectedStitchIds.size > 0) {
+      // Update selected stitches
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, stitchWidth: newWidth }
+            : stitch
+        ),
+      }));
+    } else {
+      // Update default for draw tool
+      setStitchWidth(newWidth);
     }
   }, [selectedStitchIds]);
 
@@ -534,6 +564,7 @@ export default function PatternDesigner() {
     setBackgroundColor(DEFAULT_BACKGROUND_COLOR);
     setSelectedStitchColor(DEFAULT_STITCH_COLOR);
     setStitchSize(DEFAULT_STITCH_SIZE);
+    setStitchWidth(DEFAULT_STITCH_WIDTH);
     setRepeatPattern(DEFAULT_REPEAT_PATTERN);
     setShowGrid(DEFAULT_SHOW_GRID);
     setGridColor(DEFAULT_GRID_COLOR);
@@ -577,6 +608,11 @@ export default function PatternDesigner() {
         tileOutlineOpacity,
         artboardOutlineColor,
         artboardOutlineOpacity,
+        selectedStitchColor,
+        stitchSize,
+        stitchWidth,
+        repeatPattern,
+        showGrid,
       };
       const result = saveToPatternLibrary(currentPattern, stitchColors, uiState);
       if (result.success) {
@@ -601,7 +637,7 @@ export default function PatternDesigner() {
         alert(`Failed to save pattern: ${result.error}`);
       }
     }, 300);
-  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity, selectedStitchColor, stitchSize, stitchWidth, repeatPattern, showGrid]);
 
   const handleDeletePattern = useCallback((patternId) => {
     deletePattern(patternId);
@@ -657,6 +693,11 @@ export default function PatternDesigner() {
         tileOutlineOpacity,
         artboardOutlineColor,
         artboardOutlineOpacity,
+        selectedStitchColor,
+        stitchSize,
+        stitchWidth,
+        repeatPattern,
+        showGrid,
       },
     };
 
@@ -670,7 +711,7 @@ export default function PatternDesigner() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity, selectedStitchColor, stitchSize, stitchWidth, repeatPattern, showGrid]);
 
   const handleImportPattern = useCallback((file) => {
     const reader = new FileReader();
@@ -722,13 +763,14 @@ export default function PatternDesigner() {
     reader.readAsText(file);
   }, []);
 
-  const handleExportImage = useCallback(() => {
-    const dataUrl = canvasRef.current?.exportAsImage?.();
+  const handleExportImage = useCallback((resolutionMultiplier = 1) => {
+    const dataUrl = canvasRef.current?.exportAsImage?.(resolutionMultiplier);
     if (!dataUrl) return;
     const link = document.createElement('a');
     link.href = dataUrl;
     const slug = (currentPattern.name || 'pattern').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    link.download = `${slug || 'pattern'}.png`;
+    const suffix = resolutionMultiplier !== 1 ? `-${resolutionMultiplier}x` : '';
+    link.download = `${slug || 'pattern'}${suffix}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -853,6 +895,8 @@ export default function PatternDesigner() {
               colorPresets={COLOR_PRESETS}
               stitchSize={stitchSize}
               onStitchSizeChange={handleChangeSelectedStitchSize}
+              stitchWidth={stitchWidth}
+              onStitchWidthChange={handleChangeSelectedStitchWidth}
               showGrid={showGrid}
               onShowGridChange={setShowGrid}
               onUndo={handleUndo}

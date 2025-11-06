@@ -21,6 +21,8 @@ export function Toolbar({
   colorPresets,
   stitchSize,
   onStitchSizeChange,
+  stitchWidth,
+  onStitchWidthChange,
   showGrid,
   onShowGridChange,
   onUndo,
@@ -157,13 +159,31 @@ export function Toolbar({
                 </SelectTrigger>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Stitch Size</p>
+                <p>Stitch Length</p>
               </TooltipContent>
             </Tooltip>
             <SelectContent>
               <SelectItem value="small">Small (≈2mm)</SelectItem>
               <SelectItem value="medium">Medium (≈4mm)</SelectItem>
               <SelectItem value="large">Large (≈8mm)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={stitchWidth} onValueChange={onStitchWidthChange}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stitch Width</p>
+              </TooltipContent>
+            </Tooltip>
+            <SelectContent>
+              <SelectItem value="thin">Thin</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="bold">Bold</SelectItem>
             </SelectContent>
           </Select>
 

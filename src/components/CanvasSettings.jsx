@@ -12,6 +12,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
@@ -96,6 +99,7 @@ export function CanvasSettings({
         end: { ...stitch.end },
         color: stitchColors.get(stitch.id) || stitch.color || null,
         stitchSize: stitch.stitchSize || 'small',
+        stitchWidth: stitch.stitchWidth || 'normal',
         repeat: stitch.repeat !== false,
       })),
       uiState: {
@@ -117,6 +121,7 @@ export function CanvasSettings({
       parts.push(`"end": ${JSON.stringify(stitch.end)}`);
       parts.push(`"color": "${stitch.color}"`);
       parts.push(`"stitchSize": "${stitch.stitchSize}"`);
+      parts.push(`"stitchWidth": "${stitch.stitchWidth}"`);
       parts.push(`"repeat": ${stitch.repeat}`);
       return `{ ${parts.join(', ')} }`;
     };
@@ -466,10 +471,26 @@ export function CanvasSettings({
                 <Download className="mr-2 h-4 w-4" />
                 Export as JSON
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onExportImage}>
-                <Download className="mr-2 h-4 w-4" />
-                Export as PNG
-              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export as PNG
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => onExportImage(1)}>
+                    1x (Standard)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportImage(2)}>
+                    2x (High Quality)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportImage(3)}>
+                    3x (Print Quality)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportImage(4)}>
+                    4x (Ultra HD)
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuItem disabled>
                 <Download className="mr-2 h-4 w-4" />
                 Export as SVG
@@ -477,7 +498,7 @@ export function CanvasSettings({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleCopyForPatternsJson}>
                 <Copy className="mr-2 h-4 w-4" />
-                Copy for patterns.json
+                Copy JSON
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>

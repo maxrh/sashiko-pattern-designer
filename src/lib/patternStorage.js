@@ -34,6 +34,7 @@ export function saveCurrentPattern(pattern, stitchColors, uiState) {
         backgroundColor: uiState.backgroundColor,
         selectedStitchColor: uiState.selectedStitchColor,
         stitchSize: uiState.stitchSize,
+        stitchWidth: uiState.stitchWidth,
         repeatPattern: uiState.repeatPattern,
         gridColor: uiState.gridColor,
         gridOpacity: uiState.gridOpacity,

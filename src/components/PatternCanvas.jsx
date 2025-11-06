@@ -139,7 +139,49 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const tilesY = useMemo(() => Math.ceil(artboardGridHeight / patternTileSize.y), [artboardGridHeight, patternTileSize.y]);
 
   useImperativeHandle(ref, () => ({
-    exportAsImage: () => canvasRef.current?.toDataURL('image/png'),
+    exportAsImage: (resolutionMultiplier = 1) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      
+      // Calculate the extended area: artboard + 1 tile margin on all sides
+      // Extended area is where pattern stitches can repeat/extend
+      const tilePixelWidth = patternTileSize.x * patternGridSize;
+      const tilePixelHeight = patternTileSize.y * patternGridSize;
+      const extendedAreaWidth = artboardWidth + (2 * tilePixelWidth);
+      const extendedAreaHeight = artboardHeight + (2 * tilePixelHeight);
+      
+      // Extended area starts 1 tile before the artboard (inside the canvas margin)
+      const extendedAreaOffsetX = artboardOffset - tilePixelWidth;
+      const extendedAreaOffsetY = artboardOffset - tilePixelHeight;
+      
+      // Create a temporary canvas to hold only the artboard + extended area
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      const dpr = window.devicePixelRatio ?? 1;
+      
+      // Apply resolution multiplier for higher/lower quality exports
+      const exportScale = dpr * resolutionMultiplier;
+      
+      // Set dimensions to include extended area only (no canvas margin)
+      tempCanvas.width = extendedAreaWidth * exportScale;
+      tempCanvas.height = extendedAreaHeight * exportScale;
+      
+      // Scale for device pixel ratio and resolution multiplier
+      tempCtx.scale(exportScale, exportScale);
+      
+      // Draw the extended area portion from the main canvas
+      // Source: extended area region from main canvas
+      // Destination: entire temp canvas (scaled up/down by resolutionMultiplier)
+      tempCtx.drawImage(
+        canvas,
+        extendedAreaOffsetX * dpr, extendedAreaOffsetY * dpr, // Source x, y (scaled)
+        extendedAreaWidth * dpr, extendedAreaHeight * dpr,     // Source width, height (scaled)
+        0, 0,                                                   // Dest x, y
+        extendedAreaWidth, extendedAreaHeight                  // Dest width, height
+      );
+      
+      return tempCanvas.toDataURL('image/png');
+    },
     getCanvasElement: () => canvasRef.current,
   }));
 
@@ -218,7 +260,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     const stitches = pattern?.stitches ?? [];
 
     const stitchOffset = 4; // Start stitches 4px from grid point
-    const gapBetweenStitches = 8; // 8px gap between adjacent stitches
 
     ctx.lineCap = 'butt'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
@@ -381,6 +422,12 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
             const isSelected = selectedStitchIds.has(stitch.id);
 
+            // Calculate line width based on stitchWidth property
+            const stitchWidthValue = stitch.stitchWidth || 'normal';
+            let lineWidth = 3; // normal (default)
+            if (stitchWidthValue === 'thin') lineWidth = 2;
+            else if (stitchWidthValue === 'bold') lineWidth = 4;
+
             // Calculate the offset direction (unit vector from start to end)
             const dx = endX - startX;
             const dy = endY - startY;
@@ -401,6 +448,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
             // Get stitch size info from stitch metadata (or use default 'small')
             const stitchSizeForLine = stitch.stitchSize || 'small';
+            
+            // Calculate gap between stitches based on stitch size
+            // Large stitches get 2px extra gap (10px total)
+            const gapBetweenStitches = stitchSizeForLine === 'large' ? 10 : 8;
             
             // Determine target dash count based on stitch size and actual line length
             // Use the ACTUAL line length (before offsets) to determine stitch count
@@ -468,8 +519,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             ctx.save();
             ctx.beginPath();
             ctx.setLineDash([dashLength, gapLength]);
+            ctx.lineDashOffset = -1; // 1px gap at start and end for uniform connections
             ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
-            ctx.lineWidth = 3;
+            ctx.lineWidth = lineWidth;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.moveTo(offsetStartX, offsetStartY);
@@ -491,6 +543,12 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
           const isSelected = selectedStitchIds.has(stitch.id);
 
+          // Calculate line width based on stitchWidth property
+          const stitchWidthValue = stitch.stitchWidth || 'normal';
+          let lineWidth = 3; // normal (default)
+          if (stitchWidthValue === 'thin') lineWidth = 2;
+          else if (stitchWidthValue === 'bold') lineWidth = 4;
+
           // Calculate the offset direction (unit vector from start to end)
           const dx = endX - startX;
           const dy = endY - startY;
@@ -511,6 +569,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
           // Get stitch size info from stitch metadata (or use default 'small')
           const stitchSizeForLine = stitch.stitchSize || 'small';
+          
+          // Calculate gap between stitches based on stitch size
+          // Large stitches get 2px extra gap (10px total)
+          const gapBetweenStitches = stitchSizeForLine === 'large' ? 10 : 8;
           
           // Determine target dash count based on stitch size and actual line length
           let targetDashCount;
@@ -561,8 +623,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           ctx.save();
           ctx.beginPath();
           ctx.setLineDash([dashLength, gapLength]);
+          ctx.lineDashOffset = -1; // 1px gap at start and end for uniform connections
           ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
-          ctx.lineWidth = 3;
+          ctx.lineWidth = lineWidth;
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           ctx.moveTo(offsetStartX, offsetStartY);
@@ -588,7 +651,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ctx.save();
       ctx.strokeStyle = '#3b82f6';
       ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1;
       ctx.setLineDash([5, 5]);
       const x = Math.min(dragSelectRect.startX, dragSelectRect.endX);
       const y = Math.min(dragSelectRect.startY, dragSelectRect.endY);
