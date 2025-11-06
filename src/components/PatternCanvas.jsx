@@ -116,6 +116,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const isDraggingRef = useRef(false);
   const justFinishedDragRef = useRef(false);
   
+  // Store visible stitch instances (computed during rendering)
+  // Map: stitchId -> Array of {startX, startY, endX, endY} in canvas pixel coordinates
+  const visibleStitchInstancesRef = useRef(new Map());
+  
   // Normalize tileSize to {x, y} format (supports legacy number format)
   const patternTileSize = useMemo(() => {
     const ts = pattern?.tileSize;
@@ -258,6 +262,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
 
     const stitches = pattern?.stitches ?? [];
+
+    // Clear and rebuild visible stitch instances for selection
+    visibleStitchInstancesRef.current.clear();
 
     const stitchOffset = 4; // Start stitches 4px from grid point
 
@@ -516,6 +523,14 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             // Only draw if dash length is positive (line is long enough)
             if (dashLength <= 0) continue;
 
+            // Track this visible instance for selection
+            if (!visibleStitchInstancesRef.current.has(stitch.id)) {
+              visibleStitchInstancesRef.current.set(stitch.id, []);
+            }
+            visibleStitchInstancesRef.current.get(stitch.id).push({
+              startX, startY, endX, endY
+            });
+
             ctx.save();
             ctx.beginPath();
             ctx.setLineDash([dashLength, gapLength]);
@@ -619,6 +634,14 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           }
           
           if (dashLength <= 0) return;
+
+          // Track this visible instance for selection
+          if (!visibleStitchInstancesRef.current.has(stitch.id)) {
+            visibleStitchInstancesRef.current.set(stitch.id, []);
+          }
+          visibleStitchInstancesRef.current.get(stitch.id).push({
+            startX, startY, endX, endY
+          });
 
           ctx.save();
           ctx.beginPath();
@@ -755,72 +778,15 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
     
     // Find all stitches that intersect with the selection rectangle
-    const stitches = pattern?.stitches ?? [];
+    // Use the visible instances computed during rendering
     const selectedIds = new Set();
     
-    stitches.forEach((stitch) => {
-      const isAbsoluteCoords = stitch.start.x >= patternTileSize.x || stitch.start.y >= patternTileSize.y ||
-                               stitch.end.x >= patternTileSize.x || stitch.end.y >= patternTileSize.y ||
-                               stitch.start.x < 0 || stitch.start.y < 0 ||
-                               stitch.end.x < 0 || stitch.end.y < 0;
-
-      if (isAbsoluteCoords) {
-        const shouldRepeat = stitch.repeat !== false;
-
-        if (shouldRepeat) {
-          // Check all possible tile offsets (including negative)
-          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
-            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
-              const tileOffsetX = tileCol * patternTileSize.x;
-              const tileOffsetY = tileRow * patternTileSize.y;
-            
-              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
-              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
-              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
-              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
-
-              // Check if line intersects with selection rectangle
-              if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
-                selectedIds.add(stitch.id);
-                break;
-              }
-            }
-            if (selectedIds.has(stitch.id)) break;
-          }
-        } else {
-          // No repeat - just check the original position
-          const startX = artboardOffset + (stitch.start.x * patternGridSize);
-          const startY = artboardOffset + (stitch.start.y * patternGridSize);
-          const endX = artboardOffset + (stitch.end.x * patternGridSize);
-          const endY = artboardOffset + (stitch.end.y * patternGridSize);
-
-          // Check if line intersects with selection rectangle
-          if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
-            selectedIds.add(stitch.id);
-          }
-        }
-      } else {
-        const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheckX = shouldRepeat ? tilesX : 1;
-        const tilesToCheckY = shouldRepeat ? tilesY : 1;
-
-        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
-            const offsetX = tileCol * patternTileSize.x;
-            const offsetY = tileRow * patternTileSize.y;
-            
-            const startX = artboardOffset + ((stitch.start.x + offsetX) * patternGridSize);
-            const startY = artboardOffset + ((stitch.start.y + offsetY) * patternGridSize);
-            const endX = artboardOffset + ((stitch.end.x + offsetX) * patternGridSize);
-            const endY = artboardOffset + ((stitch.end.y + offsetY) * patternGridSize);
-
-            // Check if line intersects with selection rectangle
-            if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
-              selectedIds.add(stitch.id);
-              break;
-            }
-          }
-          if (selectedIds.has(stitch.id)) break;
+    visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
+      // Check if any visible instance of this stitch intersects with selection
+      for (const instance of instances) {
+        if (lineIntersectsRect(instance.startX, instance.startY, instance.endX, instance.endY, minX, minY, maxX, maxY)) {
+          selectedIds.add(stitchId);
+          break;
         }
       }
     });

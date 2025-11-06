@@ -162,7 +162,7 @@ export function Toolbar({
                 <p>Stitch Length</p>
               </TooltipContent>
             </Tooltip>
-            <SelectContent>
+            <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
               <SelectItem value="small">Small (≈2mm)</SelectItem>
               <SelectItem value="medium">Medium (≈4mm)</SelectItem>
               <SelectItem value="large">Large (≈8mm)</SelectItem>
@@ -180,7 +180,7 @@ export function Toolbar({
                 <p>Stitch Width</p>
               </TooltipContent>
             </Tooltip>
-            <SelectContent>
+            <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
               <SelectItem value="thin">Thin</SelectItem>
               <SelectItem value="normal">Normal</SelectItem>
               <SelectItem value="bold">Bold</SelectItem>
