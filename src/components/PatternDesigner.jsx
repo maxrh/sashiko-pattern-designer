@@ -748,6 +748,28 @@ export default function PatternDesigner() {
         handleRedo();
         return;
       }
+      // Tool shortcuts: V for select, P for pen/draw
+      if (event.key === 'v' || event.key === 'V') {
+        event.preventDefault();
+        setDrawingState((prev) => ({ ...prev, mode: 'select', firstPoint: null }));
+        return;
+      }
+      if (event.key === 'p' || event.key === 'P') {
+        event.preventDefault();
+        setDrawingState((prev) => ({ ...prev, mode: 'draw', firstPoint: null }));
+        return;
+      }
+      // View shortcuts: R for repeat pattern, H for hide/show grid
+      if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        setRepeatPattern((prev) => !prev);
+        return;
+      }
+      if (event.key === 'h' || event.key === 'H') {
+        event.preventDefault();
+        setShowGrid((prev) => !prev);
+        return;
+      }
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedStitchIds.size > 0) {
         event.preventDefault();
         handleDeleteSelected();

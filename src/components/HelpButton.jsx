@@ -31,11 +31,11 @@ export function HelpButton() {
             <h3 className="text-lg font-semibold mb-3">Drawing Tools</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-3">
-                <span className="font-medium min-w-24">Draw Mode:</span>
+                <span className="font-medium min-w-24">Pen Tool (P):</span>
                 <span className="text-muted-foreground">Click on grid points to add stitches. Click on existing stitches to remove them.</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="font-medium min-w-24">Select Mode:</span>
+                <span className="font-medium min-w-24">Select Tool (V):</span>
                 <span className="text-muted-foreground">Click on stitches to select/deselect them. Use toolbar buttons to select all or deselect all.</span>
               </div>
               <div className="flex items-start gap-3">
@@ -54,14 +54,6 @@ export function HelpButton() {
             <h3 className="text-lg font-semibold mb-3">Canvas Controls</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-3">
-                <span className="font-medium min-w-24">Pan:</span>
-                <span className="text-muted-foreground">Click and drag on the canvas to move around.</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="font-medium min-w-24">Zoom:</span>
-                <span className="text-muted-foreground">Use mouse wheel or pinch to zoom in/out.</span>
-              </div>
-              <div className="flex items-start gap-3">
                 <span className="font-medium min-w-24">Repeat Pattern:</span>
                 <span className="text-muted-foreground">Toggle to see your pattern repeated across multiple tiles.</span>
               </div>
@@ -76,6 +68,22 @@ export function HelpButton() {
           <section>
             <h3 className="text-lg font-semibold mb-3">Keyboard Shortcuts</h3>
             <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-3">
+                <kbd className="min-w-24 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">V</kbd>
+                <span className="text-muted-foreground">Switch to Select Tool</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <kbd className="min-w-24 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">P</kbd>
+                <span className="text-muted-foreground">Switch to Pen Tool</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <kbd className="min-w-24 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">R</kbd>
+                <span className="text-muted-foreground">Toggle Repeat Pattern</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <kbd className="min-w-24 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">H</kbd>
+                <span className="text-muted-foreground">Toggle Show/Hide Grid</span>
+              </div>
               <div className="flex items-start gap-3">
                 <kbd className="min-w-24 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">Ctrl + Z</kbd>
                 <span className="text-muted-foreground">Undo last action</span>
