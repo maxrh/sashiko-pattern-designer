@@ -3,6 +3,7 @@
     "id": "blank",
     "name": "Blank Canvas",
     "description": "Start with a clean canvas",
+    "isStarterPattern": true,
     "tileSize": 10,
     "gridSize": 20,
     "patternTiles": 4,
@@ -21,18 +22,27 @@
     "id": "asanoha",
     "name": "Asanoha",
     "description": "Hemp leaf pattern",
-    "tileSize": 10,
-    "gridSize": 20,
-    "patternTiles": 4,
+    "isStarterPattern": true,
+    "tileSize": {"x":12,"y":20},
+    "gridSize": 19,
+    "patternTiles": {"x":4,"y":2},
     "stitches": [
-      { "id": "asanoha-1", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-2", "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-3", "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 10 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-4", "start": { "x": 5, "y": 10 }, "end": { "x": 10, "y": 5 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-5", "start": { "x": 0, "y": 0 }, "end": { "x": 5, "y": 5 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-6", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 0 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-7", "start": { "x": 5, "y": 5 }, "end": { "x": 10, "y": 10 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
-      { "id": "asanoha-8", "start": { "x": 5, "y": 5 }, "end": { "x": 0, "y": 10 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true }
+      { "id": "stitch-1762402307986-389fab", "start": {"x":0,"y":0}, "end": {"x":0,"y":7}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402316070-aa338f", "start": {"x":6,"y":10}, "end": {"x":0,"y":7}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402322988-fd27f2", "start": {"x":6,"y":10}, "end": {"x":12,"y":7}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402341560-55c7fe", "start": {"x":6,"y":10}, "end": {"x":0,"y":13}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402345885-26ad3f", "start": {"x":6,"y":10}, "end": {"x":12,"y":13}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402354802-e666b9", "start": {"x":6,"y":3}, "end": {"x":12,"y":0}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402356951-2c464d", "start": {"x":6,"y":3}, "end": {"x":0,"y":0}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402379845-e03409", "start": {"x":6,"y":17}, "end": {"x":12,"y":20}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402381766-e7ce1c", "start": {"x":6,"y":17}, "end": {"x":0,"y":20}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402415296-5beece", "start": {"x":6,"y":3}, "end": {"x":6,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402425107-3a312f", "start": {"x":6,"y":17}, "end": {"x":6,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402430472-68571a", "start": {"x":0,"y":13}, "end": {"x":0,"y":20}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402447855-69489a", "start": {"x":6,"y":10}, "end": {"x":0,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402450311-46c862", "start": {"x":6,"y":10}, "end": {"x":12,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402455591-8a0b8d", "start": {"x":0,"y":0}, "end": {"x":12,"y":20}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
+      { "id": "stitch-1762402464723-40b97f", "start": {"x":0,"y":0}, "end": {"x":12,"y":-20}, "color": "#f5f5f5", "stitchSize": "small", "repeat": true }
     ],
     "uiState": {
       "backgroundColor": "#0f172a",
@@ -48,66 +58,15 @@
     "id": "simple-cross",
     "name": "Simple Cross",
     "description": "Cross stitches on an 6x6 grid",
+    "isStarterPattern": true,
     "tileSize": 6,
     "gridSize": 15,
     "patternTiles": 6,
     "stitches": [
-      {
-        "id": "stitch-1762366054266-501c00",
-        "start": {
-          "x": 1,
-          "y": 0
-        },
-        "end": {
-          "x": -1,
-          "y": 0
-        },
-        "color": "#f5f5f5",
-        "stitchSize": "large",
-        "repeat": true
-      },
-      {
-        "id": "stitch-1762366056332-314a90",
-        "start": {
-          "x": 0,
-          "y": 5
-        },
-        "end": {
-          "x": 0,
-          "y": 7
-        },
-        "color": "#f5f5f5",
-        "stitchSize": "large",
-        "repeat": true
-      },
-      {
-        "id": "stitch-1762366060743-64f8c4",
-        "start": {
-          "x": 2,
-          "y": 3
-        },
-        "end": {
-          "x": 4,
-          "y": 3
-        },
-        "color": "#f5f5f5",
-        "stitchSize": "large",
-        "repeat": true
-      },
-      {
-        "id": "stitch-1762366061588-f72ae1",
-        "start": {
-          "x": 3,
-          "y": 2
-        },
-        "end": {
-          "x": 3,
-          "y": 4
-        },
-        "color": "#f5f5f5",
-        "stitchSize": "large",
-        "repeat": true
-      }
+      { "id": "stitch-1762366054266-501c00", "start": { "x": 1, "y": 0 }, "end": { "x": -1, "y": 0 }, "color": "#f5f5f5", "stitchSize": "large", "repeat": true },
+      { "id": "stitch-1762366056332-314a90", "start": { "x": 0, "y": 5 }, "end": { "x": 0, "y": 7 }, "color": "#f5f5f5", "stitchSize": "large", "repeat": true },
+      { "id": "stitch-1762366060743-64f8c4", "start": { "x": 2, "y": 3 }, "end": { "x": 4, "y": 3 }, "color": "#f5f5f5", "stitchSize": "large", "repeat": true },
+      { "id": "stitch-1762366061588-f72ae1", "start": { "x": 3, "y": 2 }, "end": { "x": 3, "y": 4 }, "color": "#f5f5f5", "stitchSize": "large", "repeat": true }
     ],
     "uiState": {
       "backgroundColor": "#0f172a",
@@ -123,6 +82,7 @@
     "id": "diagonal-flow",
     "name": "Diagonal Flow",
     "description": "Flowing diagonal lines on a 6x6 grid",
+    "isStarterPattern": true,
     "tileSize": 6,
     "gridSize": 20,
     "patternTiles": 6,
@@ -130,6 +90,98 @@
       { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
       { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true },
       { "id": "diag-3", "start": { "x": 2, "y": 0 }, "end": { "x": 6, "y": 4 }, "color": "#f5f5f5", "stitchSize": "small", "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b8",
+      "gridOpacity": 0.25,
+      "tileOutlineColor": "#94a3b8",
+      "tileOutlineOpacity": 0.15,
+      "artboardOutlineColor": "#3b82f6",
+      "artboardOutlineOpacity": 0.5
+    }
+  },
+  {
+    "id": "hitomezashi-cross",
+    "name": "Hitomezashi Cross",
+    "description": "Interlocking cross pattern on non-square tiles",
+    "isStarterPattern": true,
+    "tileSize": { "x": 12, "y": 8 },
+    "gridSize": 20,
+    "patternTiles": 4,
+    "stitches": [
+      { "id": "stitch-1762398107451-26c870", "start": { "x": 5, "y": 1 }, "end": { "x": 3, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398108671-d6ece8", "start": { "x": 3, "y": 1 }, "end": { "x": 3, "y": 3 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398113163-7dec85", "start": { "x": 3, "y": 3 }, "end": { "x": 1, "y": 3 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398114291-8270e0", "start": { "x": 1, "y": 3 }, "end": { "x": 1, "y": 5 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398115165-c96792", "start": { "x": 1, "y": 5 }, "end": { "x": 3, "y": 5 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398117077-0c0214", "start": { "x": 3, "y": 5 }, "end": { "x": 3, "y": 7 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398117931-001b39", "start": { "x": 3, "y": 7 }, "end": { "x": 5, "y": 7 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398118765-701450", "start": { "x": 5, "y": 7 }, "end": { "x": 5, "y": 5 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398119765-f63027", "start": { "x": 5, "y": 5 }, "end": { "x": 7, "y": 5 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398120603-2fe04b", "start": { "x": 7, "y": 5 }, "end": { "x": 7, "y": 3 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398121573-45832f", "start": { "x": 7, "y": 3 }, "end": { "x": 5, "y": 3 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398122371-46aaf6", "start": { "x": 5, "y": 3 }, "end": { "x": 5, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398149191-3a0f55", "start": { "x": 9, "y": 3 }, "end": { "x": 9, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398151701-5fe2ac", "start": { "x": 9, "y": 3 }, "end": { "x": 11, "y": 3 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398153191-c16cfd", "start": { "x": 11, "y": 3 }, "end": { "x": 11, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398155833-137dad", "start": { "x": 9, "y": 1 }, "end": { "x": 7, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398159955-b005b9", "start": { "x": 9, "y": 5 }, "end": { "x": 11, "y": 5 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398160815-7aba83", "start": { "x": 11, "y": 5 }, "end": { "x": 11, "y": 7 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398169955-ecfeef", "start": { "x": 7, "y": 7 }, "end": { "x": 9, "y": 7 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398170869-7fe420", "start": { "x": 9, "y": 7 }, "end": { "x": 9, "y": 5 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398215715-cd0616", "start": { "x": 11, "y": 1 }, "end": { "x": 13, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398218909-efc6fe", "start": { "x": 11, "y": 7 }, "end": { "x": 13, "y": 7 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398219867-333070", "start": { "x": 1, "y": 7 }, "end": { "x": 1, "y": 9 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762398221531-34184d", "start": { "x": 7, "y": 7 }, "end": { "x": 7, "y": 9 }, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b8",
+      "gridOpacity": 0.25,
+      "tileOutlineColor": "#94a3b8",
+      "tileOutlineOpacity": 0.15,
+      "artboardOutlineColor": "#3b82f6",
+      "artboardOutlineOpacity": 0.5
+    }
+  },
+  {
+    "id": "hitomezashi-kuchi",
+    "name": "Hitomezashi Kuchi",
+    "description": "Interlocking cross pattern on non-square tiles",
+    "isStarterPattern": true,
+    "tileSize": {"x":12,"y":8},
+    "gridSize": 20,
+    "patternTiles": 4,
+    "stitches": [
+      { "id": "stitch-1762399697870-5a1ae3", "start": {"x":0,"y":1}, "end": {"x":0,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399699269-28dee1", "start": {"x":0,"y":3}, "end": {"x":2,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399700278-b5647d", "start": {"x":2,"y":3}, "end": {"x":2,"y":5}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399701144-4784bd", "start": {"x":2,"y":5}, "end": {"x":0,"y":5}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399701942-366dd1", "start": {"x":0,"y":5}, "end": {"x":0,"y":7}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399708792-739198", "start": {"x":4,"y":3}, "end": {"x":4,"y":5}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399710163-9ce3e7", "start": {"x":4,"y":5}, "end": {"x":6,"y":5}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399711036-90b4fe", "start": {"x":6,"y":5}, "end": {"x":6,"y":7}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399712324-0597aa", "start": {"x":4,"y":3}, "end": {"x":6,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399713198-55d537", "start": {"x":6,"y":3}, "end": {"x":6,"y":1}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399714254-656466", "start": {"x":6,"y":1}, "end": {"x":8,"y":1}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399736704-bac1df", "start": {"x":10,"y":1}, "end": {"x":12,"y":1}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399741006-8540bf", "start": {"x":6,"y":7}, "end": {"x":8,"y":7}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399742976-82ce25", "start": {"x":10,"y":7}, "end": {"x":12,"y":7}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399783666-b6f010", "start": {"x":2,"y":1}, "end": {"x":4,"y":1}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399785460-9dbcf3", "start": {"x":4,"y":7}, "end": {"x":2,"y":7}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399788540-3815a2", "start": {"x":8,"y":3}, "end": {"x":8,"y":5}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399789354-58b7a1", "start": {"x":8,"y":5}, "end": {"x":10,"y":5}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399794076-0f59b6", "start": {"x":8,"y":3}, "end": {"x":10,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399795924-db6699", "start": {"x":10,"y":5}, "end": {"x":10,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399835952-cf2978", "start": {"x":2,"y":1}, "end": {"x":2,"y":0}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399841502-e4fd25", "start": {"x":4,"y":1}, "end": {"x":4,"y":0}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399845022-e6aad9", "start": {"x":2,"y":7}, "end": {"x":2,"y":8}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399846040-736562", "start": {"x":4,"y":7}, "end": {"x":4,"y":8}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399855340-2545b3", "start": {"x":8,"y":1}, "end": {"x":8,"y":0}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399861852-ec8d37", "start": {"x":10,"y":1}, "end": {"x":10,"y":0}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399864566-3e403b", "start": {"x":8,"y":7}, "end": {"x":8,"y":8}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true },
+      { "id": "stitch-1762399865712-9d1688", "start": {"x":10,"y":7}, "end": {"x":10,"y":8}, "color": "#f5f5f5", "stitchSize": "medium", "repeat": true }
     ],
     "uiState": {
       "backgroundColor": "#0f172a",

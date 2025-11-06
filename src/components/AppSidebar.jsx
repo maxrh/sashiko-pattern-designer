@@ -25,11 +25,14 @@ export function AppSidebar({
   onBackgroundColorChange,
   patternName,
   onPatternNameChange,
+  patternDescription,
+  onPatternDescriptionChange,
   tileSize,
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
-  artboardSize,
+  artboardWidth,
+  artboardHeight,
   canvasInfo,
   onNewPattern,
   onSavePattern,
@@ -95,11 +98,14 @@ export function AppSidebar({
                     onBackgroundColorChange={onBackgroundColorChange}
                     patternName={patternName}
                     onPatternNameChange={onPatternNameChange}
+                    patternDescription={patternDescription}
+                    onPatternDescriptionChange={onPatternDescriptionChange}
                     tileSize={tileSize}
                     onTileSizeChange={onTileSizeChange}
                     gridSize={gridSize}
                     onGridSizeChange={onGridSizeChange}
-                    artboardSize={artboardSize}
+                    artboardWidth={artboardWidth}
+                    artboardHeight={artboardHeight}
                     canvasInfo={canvasInfo}
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}

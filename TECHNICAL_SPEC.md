@@ -245,29 +245,71 @@ const isPatternLine = stitch.repeat !== false &&
   - Grid point at coordinate 10 in tile 0 = grid point at coordinate 0 in tile 1
   - Physical location: absolute position 10
 
-#### Boundary Line Handling (UPDATED - Final):
+#### Boundary Line Handling (UPDATED - Final with Corner Fix):
 
-**The system distinguishes between three types of boundary-related lines:**
+**The system distinguishes between four types of boundary-related lines:**
 
-1. **Lines Running Along Boundaries**: Both start and end on the SAME boundary
+1. **Corner Lines Going Backward** (SPECIAL CASE): Start at corner with negative end coordinates
+   - Corner position: Both x AND y are 0 or patternTileSize (e.g., (0,0), (10,0), (0,10), (10,10))
+   - Going backward: End coordinate is negative (e.g., end.x < 0 or end.y < 0)
+   - Examples:
+     - Vertical from corner going UP: (0,0)→(0,-5) normalized to (0,0)→(0,-5)
+     - Horizontal from corner going LEFT: (0,0)→(-4,0) normalized to (0,0)→(-4,0)
+   - **CRITICAL FIX**: These lines were incorrectly appearing in first row/col due to boundary detection
+   - **Behavior**: Skip in first row/col and corresponding outer tiles
+     - Vertical (negative Y): Skip in tileRow === 0 and tileRow < 0
+     - Horizontal (negative X): Skip in tileCol === 0 and tileCol < 0
+     - Appear in all other tiles (rows 1,2,3... and bottom/right extended areas)
+   - **Why**: Lines going backward from corner wrap around to opposite edge, should not duplicate at origin
+
+2. **Lines Running Along Boundaries**: Both start and end on the SAME boundary
    - Vertical boundary line: `start.x === end.x && (x === 0 || x === patternTileSize)`
    - Horizontal boundary line: `start.y === end.y && (y === 0 || y === patternTileSize)`
    - **Behavior**: Repeat in perpendicular direction only
      - Vertical boundary → repeats in left/right outer tiles (5x in X direction on 4x4 board)
      - Horizontal boundary → repeats in top/bottom outer tiles (5x in Y direction on 4x4 board)
 
-2. **Lines Crossing Tile Boundaries**: Actually span into adjacent tile(s)
+3. **Lines Crossing Tile Boundaries**: Actually span into adjacent tile(s)
    - Detected by: Line length > 1.5 grid cells AND end coordinate outside tile bounds
    - Example: (5,5) to (11,5) - end.x exceeds patternTileSize
    - **Behavior**: Repeat in ALL outer tiles in the crossing direction (5x5 if crossing both X and Y)
 
-3. **Lines Touching Boundaries**: Start or end on boundary but don't run along or truly cross
+4. **Lines Touching Boundaries**: Start or end on boundary but don't run along or truly cross
    - Detected by: Line length ≤ 1.5 grid cells (just 1 cell apart, possibly diagonal)
    - Example: (10,2) to (9,2) - starts on boundary, goes inward
    - **Behavior**: Repeat normally 4x4 (skip all outer tiles)
 
 **Detection Logic:**
 ```javascript
+// BEFORE entering outer tile checks - applies to ALL tiles
+// CORNER-SPECIFIC FIX: Lines from corners with negative coords
+const startOnLeftEdge = stitch.start.x === 0;
+const startOnRightEdge = stitch.start.x === patternTileSize;
+const startOnTopEdge = stitch.start.y === 0;
+const startOnBottomEdge = stitch.start.y === patternTileSize;
+const startsAtNormalizedCorner = (startOnLeftEdge || startOnRightEdge) && 
+                                 (startOnTopEdge || startOnBottomEdge);
+
+const hasNegativeX = stitch.end.x < 0;
+const hasNegativeY = stitch.end.y < 0;
+
+const isInFirstRow = tileRow === 0;
+const isInFirstCol = tileCol === 0;
+const isInTopOuterTile = tileRow < 0;
+const isInLeftOuterTile = tileCol < 0;
+
+// Vertical line from corner going UP: skip in first row and top outer tiles
+if (startsAtNormalizedCorner && startOnTopEdge && hasNegativeY && 
+    (isInFirstRow || isInTopOuterTile)) {
+  continue;
+}
+// Horizontal line from corner going LEFT: skip in first col and left outer tiles
+if (startsAtNormalizedCorner && startOnLeftEdge && hasNegativeX && 
+    (isInFirstCol || isInLeftOuterTile)) {
+  continue;
+}
+
+// THEN for outer tiles only:
 if (isOuterTile) {
   // Detect lines running along boundaries (both endpoints on SAME boundary)
   const bothOnVerticalBoundary = 
@@ -305,21 +347,21 @@ if (isOuterTile) {
 }
 ```
 
-**Normalization Logic for Boundary-Touching Lines:**
+**Normalization Logic for Boundary-Touching Lines (UPDATED):**
 
-When storing a line that starts on a boundary and goes inward (e.g., x=10 to x=9), the system normalizes to the tile that contains the END point (the "inner" tile) to ensure correct repeat positioning:
+When storing a line that starts on a boundary and goes inward (regardless of length), the system normalizes to the tile that contains the END point (the "inner" tile) to ensure correct repeat positioning:
 
 ```javascript
-// Check if line just touches boundary (1 cell apart)
-const lineLength = Math.sqrt(dx * dx + dy * dy);
+// Detect if line is going from boundary inward
 const startOnBoundary = (startGridX % patternTileSize === 0) || 
                        (startGridY % patternTileSize === 0);
 const endOnBoundary = (endGridX % patternTileSize === 0) || 
                      (endGridY % patternTileSize === 0);
 
 let baseTileX, baseTileY;
-if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
+if (startOnBoundary && !endOnBoundary) {
   // Start on boundary, end inside - use END's tile for normalization
+  // This works regardless of line length (1 cell, 2 cells, 3 cells, etc.)
   baseTileX = Math.floor(endGridX / patternTileSize);
   baseTileY = Math.floor(endGridY / patternTileSize);
 } else {
@@ -333,39 +375,57 @@ const normalizedStartX = startGridX - (baseTileX * patternTileSize);
 const normalizedEndX = endGridX - (baseTileX * patternTileSize);
 ```
 
+**Key Fix**: Removed the `lineLength <= 1.5` restriction. The normalization now works for ANY line that starts on a boundary and ends inside a tile, regardless of how long the line is (1 cell, 2 cells, 3 cells, etc.).
+
 **Examples (tileSize 10, 4×4 artboard):**
 
-1. **Vertical boundary line** (10,0) to (10,10):
+1. **Corner line going UP** (0,0) to (0,-5):
+   - Starts at corner (0,0), end.y = -5 (negative) → corner going backward
+   - **FILTERED** from row 0 and top outer tiles (tileRow < 0)
+   - Appears in rows 1, 2, 3 and bottom outer tiles
+   - Wraps to bottom edge visually
+
+2. **Corner line going LEFT** (0,0) to (-4,0):
+   - Starts at corner (0,0), end.x = -4 (negative) → corner going backward
+   - **FILTERED** from col 0 and left outer tiles (tileCol < 0)
+   - Appears in cols 1, 2, 3 and right outer tiles
+   - Wraps to right edge visually
+
+3. **Vertical boundary line** (10,0) to (10,10):
    - Both on x=10 boundary → runs along vertical boundary
+   - NOT a corner backward case (end.y = 10, not negative)
    - Repeats in X direction: 5 times (tiles 0,1,2,3 + left outer)
    - Does NOT repeat in Y direction (stays at row positions)
 
-2. **Horizontal boundary line** (0,10) to (10,10):
+4. **Horizontal boundary line** (0,10) to (10,10):
    - Both on y=10 boundary → runs along horizontal boundary
+   - NOT a corner backward case (end.x = 10, not negative)
    - Repeats in Y direction: 5 times (tiles 0,1,2,3 + top outer)
    - Does NOT repeat in X direction
 
-3. **Crossing line** (5,5) to (11,5):
+5. **Crossing line** (5,5) to (11,5):
    - Length = 6, end.x = 11 > 10 → crosses horizontally
    - Repeats in X direction: 5 times
    - Repeats in Y direction: 4 times normally
 
-4. **Corner crossing** (9,9) to (11,11):
+6. **Corner crossing** (9,9) to (11,11):
    - Length = 2.83, end.x = 11, end.y = 11 → crosses both
    - Repeats in both directions: 5×5
 
-5. **Boundary touch inward** (10,2) to (9,2):
-   - Length = 1, lineLength ≤ 1.5 → just touching
-   - Normalizes to tile 0 (where x=9 is)
-   - Stored as (10,2) to (9,2) in tile 0 context
+7. **Boundary touch inward** (10,2) to (9,2) or (10,2) to (8,2):
+   - Start on boundary, end inside → normalizes to END's tile
+   - 1-cell: (10,2)→(9,2) normalizes to tile 0, stored as (10,2)→(9,2)
+   - 2-cell: (10,2)→(8,2) normalizes to tile 0, stored as (10,2)→(8,2)
+   - Works for ANY length as long as end is inside tile
    - Repeats normally: 4×4 (no outer tiles)
 
 **Effect**:
+- ✅ Corner lines going backward skip first row/col (no duplication at origin)
 - ✅ Lines along boundaries repeat 5x in perpendicular direction on 4×4 board
 - ✅ Lines crossing boundaries repeat 5x in crossing direction(s)
 - ✅ Lines just touching boundaries repeat 4×4 normally
 - ✅ Boundary-touching lines normalize to correct tile for proper positioning
-- ✅ No unwanted duplication at tile boundaries
+- ✅ No unwanted duplication at tile boundaries or corners
 
 ### Cross-Tile Lines (CRITICAL BEHAVIOR)
 

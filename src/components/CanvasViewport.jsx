@@ -34,13 +34,22 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  const patternTileSize = Math.max(1, pattern?.tileSize ?? 1);
+  // Normalize tileSize to {x, y} format (supports legacy number format)
+  const normalizeTileSize = (tileSize) => {
+    if (typeof tileSize === 'number') return { x: tileSize, y: tileSize };
+    if (tileSize && typeof tileSize === 'object') return { x: tileSize.x || 10, y: tileSize.y || 10 };
+    return { x: 10, y: 10 };
+  };
+  
+  const patternTileSize = normalizeTileSize(pattern?.tileSize);
   const patternGridSize = pattern?.gridSize ?? CELL_SIZE;
-  // Artboard = the total area containing all pattern tiles
-  const artboardSize = patternTiles * patternTileSize * patternGridSize;
+  // Artboard = the total area containing all pattern tiles (separate width and height for non-square tiles)
+  const artboardWidth = patternTiles.x * patternTileSize.x * patternGridSize;
+  const artboardHeight = patternTiles.y * patternTileSize.y * patternGridSize;
   // Canvas = artboard + 40 grid cells margin on all sides
   const canvasMarginPixels = CANVAS_MARGIN_CELLS * patternGridSize;
-  const canvasSize = artboardSize + (2 * canvasMarginPixels);
+  const canvasWidth = artboardWidth + (2 * canvasMarginPixels);
+  const canvasHeight = artboardHeight + (2 * canvasMarginPixels);
   // Artboard is centered in canvas (offset by margin)
   const artboardOffset = canvasMarginPixels;
 
@@ -61,13 +70,13 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
       const containerWidth = containerRef.current.clientWidth;
       const containerHeight = containerRef.current.clientHeight;
       
-      const scrollX = Math.max(0, (canvasSize - containerWidth) / 2);
-      const scrollY = Math.max(0, (canvasSize - containerHeight) / 2);
+      const scrollX = Math.max(0, (canvasWidth - containerWidth) / 2);
+      const scrollY = Math.max(0, (canvasHeight - containerHeight) / 2);
       
       containerRef.current.scrollLeft = scrollX;
       containerRef.current.scrollTop = scrollY;
     });
-  }, [canvasSize]);
+  }, [canvasWidth, canvasHeight]);
 
   const handleMouseDown = (e) => {
     // Don't interfere with canvas interactions in select or draw mode
@@ -191,17 +200,19 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
       <div
         ref={canvasWrapperRef}
         style={{
-          width: canvasSize,
-          height: canvasSize,
+          width: canvasWidth,
+          height: canvasHeight,
           position: 'relative',
         }}
       >
         <PatternCanvas
           ref={canvasRef}
-          canvasSize={canvasSize}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
           cellSize={patternGridSize}
           artboardOffset={artboardOffset}
-          artboardSize={artboardSize}
+          artboardWidth={artboardWidth}
+          artboardHeight={artboardHeight}
           pattern={pattern}
           stitchColors={stitchColors}
           selectedStitchIds={selectedStitchIds}

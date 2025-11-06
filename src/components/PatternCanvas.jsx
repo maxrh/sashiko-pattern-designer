@@ -53,11 +53,11 @@ function lineIntersectsRect(x1, y1, x2, y2, rectMinX, rectMinY, rectMaxX, rectMa
 // Check if a line segment intersects or is contained within the artboard area
 // Artboard = the total area containing all pattern tiles
 // Extended by extraMargin on all sides to allow drawing beyond artboard edges into canvas padding
-function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY, artboardSize, extraMargin = 0) {
+function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY, artboardWidth, artboardHeight, extraMargin = 0) {
   const minX = artboardX - extraMargin;
-  const maxX = artboardX + artboardSize + extraMargin;
+  const maxX = artboardX + artboardWidth + extraMargin;
   const minY = artboardY - extraMargin;
-  const maxY = artboardY + artboardSize + extraMargin;
+  const maxY = artboardY + artboardHeight + extraMargin;
   
   // Check if either endpoint is inside the artboard (with margin)
   const startInside = startX >= minX && startX <= maxX && startY >= minY && startY <= maxY;
@@ -85,10 +85,12 @@ function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY
 // - Canvas = the entire grid area (includes artboard + padding)
 // - Artboard = the total area containing all pattern tiles (inside the canvas)
 export const PatternCanvas = forwardRef(function PatternCanvas({
-  canvasSize,        // Size of entire canvas (grid area)
+  canvasWidth,       // Width of entire canvas (grid area)
+  canvasHeight,      // Height of entire canvas (grid area)
   cellSize,          // Size of each grid cell in pixels
   artboardOffset = 0, // Padding between canvas edge and artboard (typically 40px)
-  artboardSize,      // Size of artboard (total pattern tile area)
+  artboardWidth,     // Width of artboard (total pattern tile area)
+  artboardHeight,    // Height of artboard (total pattern tile area)
   pattern,
   stitchColors,
   selectedStitchIds,
@@ -113,14 +115,28 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const justFinishedDragRef = useRef(false);
-  const patternTileSize = Math.max(1, pattern?.tileSize ?? 1);
+  
+  // Normalize tileSize to {x, y} format (supports legacy number format)
+  const patternTileSize = useMemo(() => {
+    const ts = pattern?.tileSize;
+    if (typeof ts === 'number') {
+      return { x: Math.max(1, ts), y: Math.max(1, ts) };
+    }
+    if (ts && typeof ts === 'object') {
+      return { x: Math.max(1, ts.x ?? 1), y: Math.max(1, ts.y ?? 1) };
+    }
+    return { x: 1, y: 1 };
+  }, [pattern?.tileSize]);
+  
   const patternGridSize = cellSize; // Pixel size per grid cell
-  const canvasGridSize = useMemo(() => Math.round(canvasSize / patternGridSize), [canvasSize, patternGridSize]);
-  const artboardGridSize = useMemo(() => Math.round(artboardSize / patternGridSize), [artboardSize, patternGridSize]);
-  const tilesPerSide = useMemo(
-    () => Math.ceil(artboardGridSize / patternTileSize),
-    [artboardGridSize, patternTileSize]
-  );
+  const canvasGridWidth = useMemo(() => Math.round(canvasWidth / patternGridSize), [canvasWidth, patternGridSize]);
+  const canvasGridHeight = useMemo(() => Math.round(canvasHeight / patternGridSize), [canvasHeight, patternGridSize]);
+  const artboardGridWidth = useMemo(() => Math.round(artboardWidth / patternGridSize), [artboardWidth, patternGridSize]);
+  const artboardGridHeight = useMemo(() => Math.round(artboardHeight / patternGridSize), [artboardHeight, patternGridSize]);
+  
+  // Calculate number of tiles in X and Y directions separately for non-square artboards
+  const tilesX = useMemo(() => Math.ceil(artboardGridWidth / patternTileSize.x), [artboardGridWidth, patternTileSize.x]);
+  const tilesY = useMemo(() => Math.ceil(artboardGridHeight / patternTileSize.y), [artboardGridHeight, patternTileSize.y]);
 
   useImperativeHandle(ref, () => ({
     exportAsImage: () => canvasRef.current?.toDataURL('image/png'),
@@ -133,16 +149,16 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio ?? 1;
 
-    canvas.width = canvasSize * dpr;
-    canvas.height = canvasSize * dpr;
-    canvas.style.width = `${canvasSize}px`;
-    canvas.style.height = `${canvasSize}px`;
+    canvas.width = canvasWidth * dpr;
+    canvas.height = canvasHeight * dpr;
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
     // Fill entire canvas background
     ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, canvasSize, canvasSize);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     if (showGrid) {
       // Draw artboard boundary (the area where pattern tiles are drawn)
@@ -152,7 +168,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${artboardOutlineOpacity})`;
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
-      ctx.strokeRect(artboardOffset, artboardOffset, artboardSize, artboardSize);
+      ctx.strokeRect(artboardOffset, artboardOffset, artboardWidth, artboardHeight);
 
       // Draw pattern tile boundaries (only within artboard and when repeat pattern is enabled)
       if (repeatPattern) {
@@ -162,13 +178,19 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         ctx.strokeStyle = `rgba(${tileR}, ${tileG}, ${tileB}, ${tileOutlineOpacity})`;
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
-        const patternTilePixelSize = patternTileSize * patternGridSize;
-        for (let row = 0; row <= tilesPerSide; row += 1) {
-          for (let col = 0; col <= tilesPerSide; col += 1) {
-            const x = artboardOffset + (col * patternTilePixelSize);
-            const y = artboardOffset + (row * patternTilePixelSize);
-            if (x <= artboardOffset + artboardSize && y <= artboardOffset + artboardSize) {
-              ctx.strokeRect(x, y, Math.min(patternTilePixelSize, artboardSize - col * patternTilePixelSize), Math.min(patternTilePixelSize, artboardSize - row * patternTilePixelSize));
+        const patternTilePixelWidth = patternTileSize.x * patternGridSize;
+        const patternTilePixelHeight = patternTileSize.y * patternGridSize;
+        for (let row = 0; row <= tilesY; row += 1) {
+          for (let col = 0; col <= tilesX; col += 1) {
+            const x = artboardOffset + (col * patternTilePixelWidth);
+            const y = artboardOffset + (row * patternTilePixelHeight);
+            if (x <= artboardOffset + artboardWidth && y <= artboardOffset + artboardHeight) {
+              ctx.strokeRect(
+                x, 
+                y, 
+                Math.min(patternTilePixelWidth, artboardWidth - col * patternTilePixelWidth), 
+                Math.min(patternTilePixelHeight, artboardHeight - row * patternTilePixelHeight)
+              );
             }
           }
         }
@@ -181,8 +203,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const gridG = parseInt(gridColor.slice(3, 5), 16);
       const gridB = parseInt(gridColor.slice(5, 7), 16);
       ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${gridOpacity})`;
-      for (let x = 0; x <= canvasGridSize; x += 1) {
-        for (let y = 0; y <= canvasGridSize; y += 1) {
+      for (let x = 0; x <= canvasGridWidth; x += 1) {
+        for (let y = 0; y <= canvasGridHeight; y += 1) {
           const centerX = x * patternGridSize;
           const centerY = y * patternGridSize;
           ctx.fillRect(centerX - 1.5, centerY - 1.5, 3, 3);
@@ -200,55 +222,97 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultStitchColor;
       
       // Check if this is a repeatable pattern line vs absolute positioned line
-      // Pattern lines have start point WITHIN first tile (0 to tileSize)
+      // Pattern lines have start point WITHIN first tile (0 to tileSize.x/y)
       // tileSize represents cells per tile, valid pattern coords are 0 to tileSize (inclusive)
       // Note: Lines starting at tileSize boundary need special handling to avoid duplication
       const isPatternLine = stitch.repeat !== false &&
-                           stitch.start.x >= 0 && stitch.start.x <= patternTileSize &&
-                           stitch.start.y >= 0 && stitch.start.y <= patternTileSize;
+                           stitch.start.x >= 0 && stitch.start.x <= patternTileSize.x &&
+                           stitch.start.y >= 0 && stitch.start.y <= patternTileSize.y;
       
       // Check if this line starts exactly at a tile boundary
-      const startsAtBoundaryX = stitch.start.x === patternTileSize || stitch.start.x === 0;
-      const startsAtBoundaryY = stitch.start.y === patternTileSize || stitch.start.y === 0;
+      const startsAtBoundaryX = stitch.start.x === patternTileSize.x || stitch.start.x === 0;
+      const startsAtBoundaryY = stitch.start.y === patternTileSize.y || stitch.start.y === 0;
       
       if (isPatternLine) {
-        // Pattern line with repeat ON - render in all artboard tiles (0 to tilesPerSide-1)
-        // Also render in outer tiles (-1 and tilesPerSide) for lines that cross into canvas padding
-        for (let tileRow = -1; tileRow < tilesPerSide + 1; tileRow++) {
-          for (let tileCol = -1; tileCol < tilesPerSide + 1; tileCol++) {
+        // Pattern line with repeat ON - render in all artboard tiles
+        // Also render in outer tiles (-1 and tilesX/tilesY) for lines that cross into canvas padding
+        for (let tileRow = -1; tileRow < tilesY + 1; tileRow++) {
+          for (let tileCol = -1; tileCol < tilesX + 1; tileCol++) {
+            // CORNER-SPECIFIC FIX: Lines from corners with negative coords going backward
+            // These should NOT appear in the first row/col or corresponding outer tiles
+            // Example: corner (0,0)→(0,-5) is vertical going UP
+            //          → should appear in rows 1,2,3... and bottom outer tiles
+            //          → should NOT appear in first row (0) or top outer tiles
+            const startOnLeftEdge = stitch.start.x === 0;
+            const startOnRightEdge = stitch.start.x === patternTileSize.x;
+            const startOnTopEdge = stitch.start.y === 0;
+            const startOnBottomEdge = stitch.start.y === patternTileSize.y;
+            const startsAtNormalizedCorner = (startOnLeftEdge || startOnRightEdge) && (startOnTopEdge || startOnBottomEdge);
+            
+            const hasNegativeX = stitch.end.x < 0;
+            const hasNegativeY = stitch.end.y < 0;
+            
+            const isInFirstRow = tileRow === 0;
+            const isInFirstCol = tileCol === 0;
+            const isInTopOuterTile = tileRow < 0;
+            const isInLeftOuterTile = tileCol < 0;
+            
+            // Vertical line from corner going UP (negative Y): skip in first row and top outer tiles
+            if (startsAtNormalizedCorner && startOnTopEdge && hasNegativeY && (isInFirstRow || isInTopOuterTile)) {
+              continue;
+            }
+            // Horizontal line from corner going LEFT (negative X): skip in first col and left outer tiles
+            if (startsAtNormalizedCorner && startOnLeftEdge && hasNegativeX && (isInFirstCol || isInLeftOuterTile)) {
+              continue;
+            }
+            
             // Check if this is an outer tile (beyond the artboard, in the canvas padding)
-            const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
-                                tileCol < 0 || tileCol >= tilesPerSide;
+            const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
+                                tileCol < 0 || tileCol >= tilesX;
             
             // BOUNDARY LINE HANDLING:
             // - Lines crossing boundaries OR running along boundaries: repeat in outer tiles in crossing/running direction
             // - Lines crossing corners: repeat 5x5 (all outer tiles)
             // - Lines just touching boundaries: repeat 4x4 (skip outer tiles)
             if (isOuterTile) {
+              const startOnCorner = (startOnLeftEdge || startOnRightEdge) && (startOnTopEdge || startOnBottomEdge);
+              const extendsRightBeyond = stitch.end.x > patternTileSize.x;
+              const extendsBottomBeyond = stitch.end.y > patternTileSize.y;
+              const isInLeftOuterTile = tileCol < 0;
+              const isInTopOuterTile = tileRow < 0;
+              // CORNER-SPECIFIC: Line starting at corner extending right: skip in right outer tiles
+              if (startOnCorner && startOnRightEdge && extendsRightBeyond && isInRightOuterTile) {
+                continue;
+              }
+              // CORNER-SPECIFIC: Line starting at corner extending down: skip in bottom outer tiles
+              if (startOnCorner && startOnBottomEdge && extendsBottomBeyond && isInBottomOuterTile) {
+                continue;
+              }
+              
               // A line crosses if BOTH start and end are not within normal tile bounds
               // OR if end extends beyond bounds and start is not on the boundary it's leaving from
               const startOnLeftBoundary = stitch.start.x === 0;
-              const startOnRightBoundary = stitch.start.x === patternTileSize;
+              const startOnRightBoundary = stitch.start.x === patternTileSize.x;
               const startOnTopBoundary = stitch.start.y === 0;
-              const startOnBottomBoundary = stitch.start.y === patternTileSize;
+              const startOnBottomBoundary = stitch.start.y === patternTileSize.y;
               
               // If line goes slightly outside bounds (by 1), it's just touching boundary, not crossing
               // True crossing: goes outside by more than 1 grid cell
               const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
               const justTouchingBoundary = lineLength <= 1.5; // Allow for diagonal (sqrt(2) ≈ 1.41)
               
-              const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize);
-              const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize);
+              const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize.x);
+              const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
               
               // A line runs along a boundary if BOTH endpoints are on the SAME boundary
               const bothOnVerticalBoundary = 
-                (stitch.start.x === 0 || stitch.start.x === patternTileSize) &&
-                (stitch.end.x === 0 || stitch.end.x === patternTileSize) &&
+                (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
+                (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
                 stitch.start.x === stitch.end.x;
               
               const bothOnHorizontalBoundary = 
-                (stitch.start.y === 0 || stitch.start.y === patternTileSize) &&
-                (stitch.end.y === 0 || stitch.end.y === patternTileSize) &&
+                (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
+                (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
                 stitch.start.y === stitch.end.y;
               
               // Lines crossing horizontally OR running along vertical boundary: repeat in X direction (left/right outer tiles)
@@ -258,8 +322,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
               
               // Determine which outer tiles to render in
-              const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
-              const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+              const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesX;
+              const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesY;
               
               // Skip this outer tile if line shouldn't repeat in this direction
               if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
@@ -271,8 +335,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             }
             
             // Calculate position within this specific tile
-            const tileBaseX = tileCol * patternTileSize;
-            const tileBaseY = tileRow * patternTileSize;
+            const tileBaseX = tileCol * patternTileSize.x;
+            const tileBaseY = tileRow * patternTileSize.y;
             
             // Pattern-relative coordinates + tile base = absolute position in this tile
             const startX = artboardOffset + ((stitch.start.x + tileBaseX) * patternGridSize);
@@ -281,15 +345,17 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             const endY = artboardOffset + ((stitch.end.y + tileBaseY) * patternGridSize);
 
             // Skip if line is completely outside canvas bounds
-            if (startX > canvasSize + patternGridSize || startY > canvasSize + patternGridSize) {
+            if (startX > canvasWidth + patternGridSize || startY > canvasHeight + patternGridSize) {
               continue;
             }
             
             // For outer tiles (in canvas padding), only render if the line actually crosses into the artboard
             if (isOuterTile) {
               // Calculate the artboard boundaries in canvas pixels
-              const artboardStartPixel = artboardOffset;
-              const artboardEndPixel = artboardOffset + artboardSize;
+              const artboardStartPixelX = artboardOffset;
+              const artboardEndPixelX = artboardOffset + artboardWidth;
+              const artboardStartPixelY = artboardOffset;
+              const artboardEndPixelY = artboardOffset + artboardHeight;
               
               // Check if this line segment intersects with the artboard area
               // A line intersects if any part of it is within [artboardStart, artboardEnd] for both x and y
@@ -299,10 +365,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const lineMaxY = Math.max(startY, endY);
               
               const intersectsArtboard = !(
-                lineMaxX < artboardStartPixel ||
-                lineMinX > artboardEndPixel ||
-                lineMaxY < artboardStartPixel ||
-                lineMinY > artboardEndPixel
+                lineMaxX < artboardStartPixelX ||
+                lineMinX > artboardEndPixelX ||
+                lineMaxY < artboardStartPixelY ||
+                lineMinY > artboardEndPixelY
               );
               
               if (!intersectsArtboard) {
@@ -416,7 +482,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           const endX = artboardOffset + (stitch.end.x * patternGridSize);
           const endY = artboardOffset + (stitch.end.y * patternGridSize);
 
-          if (startX > canvasSize + patternGridSize || startY > canvasSize + patternGridSize) {
+          if (startX > canvasWidth + patternGridSize || startY > canvasHeight + patternGridSize) {
             return;
           }
 
@@ -529,10 +595,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
   }, [
     artboardOffset,
-    artboardSize,
+    artboardWidth,
+    artboardHeight,
     backgroundColor,
-    canvasGridSize,
-    canvasSize,
+    canvasGridWidth,
+    canvasGridHeight,
+    canvasWidth,
+    canvasHeight,
     patternGridSize,
     defaultStitchColor,
     dragSelectRect,
@@ -544,7 +613,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     selectedStitchIds,
     showGrid,
     stitchColors,
-    tilesPerSide,
+    tilesX,
+    tilesY,
     gridColor,
     gridOpacity,
     tileOutlineColor,
@@ -621,8 +691,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     const selectedIds = new Set();
     
     stitches.forEach((stitch) => {
-      const isAbsoluteCoords = stitch.start.x >= patternTileSize || stitch.start.y >= patternTileSize ||
-                               stitch.end.x >= patternTileSize || stitch.end.y >= patternTileSize ||
+      const isAbsoluteCoords = stitch.start.x >= patternTileSize.x || stitch.start.y >= patternTileSize.y ||
+                               stitch.end.x >= patternTileSize.x || stitch.end.y >= patternTileSize.y ||
                                stitch.start.x < 0 || stitch.start.y < 0 ||
                                stitch.end.x < 0 || stitch.end.y < 0;
 
@@ -631,10 +701,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
         if (shouldRepeat) {
           // Check all possible tile offsets (including negative)
-          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
-            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
-              const tileOffsetX = tileCol * patternTileSize;
-              const tileOffsetY = tileRow * patternTileSize;
+          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
+              const tileOffsetX = tileCol * patternTileSize.x;
+              const tileOffsetY = tileRow * patternTileSize.y;
             
               const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
               const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
@@ -663,12 +733,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         }
       } else {
         const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
+        const tilesToCheckX = shouldRepeat ? tilesX : 1;
+        const tilesToCheckY = shouldRepeat ? tilesY : 1;
 
-        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
-            const offsetX = tileCol * patternTileSize;
-            const offsetY = tileRow * patternTileSize;
+        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
+            const offsetX = tileCol * patternTileSize.x;
+            const offsetY = tileRow * patternTileSize.y;
             
             const startX = artboardOffset + ((stitch.start.x + offsetX) * patternGridSize);
             const startY = artboardOffset + ((stitch.start.y + offsetY) * patternGridSize);
@@ -738,8 +809,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const endPixelX = point.gridX * patternGridSize;
       const endPixelY = point.gridY * patternGridSize;
       
-      const tileSize = patternTileSize * patternGridSize;
-      if (!lineIntersectsArtboard(startPixelX, startPixelY, endPixelX, endPixelY, artboardOffset, artboardOffset, artboardSize, tileSize)) {
+      const tileSizeX = patternTileSize.x * patternGridSize;
+      const tileSizeY = patternTileSize.y * patternGridSize;
+      const maxTileSize = Math.max(tileSizeX, tileSizeY);
+      if (!lineIntersectsArtboard(startPixelX, startPixelY, endPixelX, endPixelY, artboardOffset, artboardOffset, artboardWidth, artboardHeight, maxTileSize)) {
         // Line doesn't intersect drawable area, don't add it
         onDrawingStateChange({ ...drawingState, firstPoint: null });
         return;
@@ -753,12 +826,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const endGridY = point.gridY - artboardGridOffset;
 
       // Check if the line intersects the actual artboard (not just the drawable area)
-      const artboardGridSize = Math.round(artboardSize / patternGridSize);
       const lineIntersectsArtboardArea = !(
         (startGridX < 0 && endGridX < 0) ||
         (startGridY < 0 && endGridY < 0) ||
-        (startGridX > artboardGridSize && endGridX > artboardGridSize) ||
-        (startGridY > artboardGridSize && endGridY > artboardGridSize)
+        (startGridX > artboardGridWidth && endGridX > artboardGridWidth) ||
+        (startGridY > artboardGridHeight && endGridY > artboardGridHeight)
       );
 
       // When repeat is ON and line touches artboard, reduce coordinates to first tile pattern
@@ -768,21 +840,28 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       
       if (repeatPattern && lineIntersectsArtboardArea) {
         // Reduce coordinates to the first tile while preserving cross-tile relationships
-        // We want lines to stay within the pattern space (0 to patternTileSize) for their "base" position
+        // We want lines to stay within the pattern space (0 to patternTileSize.x/y) for their "base" position
         // But they can extend beyond that to represent cross-tile lines
         
         // Check if this is a boundary line (runs exactly along a tile edge)
-        const isVerticalBoundaryLine = startGridX === endGridX && (startGridX % patternTileSize === 0);
-        const isHorizontalBoundaryLine = startGridY === endGridY && (startGridY % patternTileSize === 0);
+        const isVerticalBoundaryLine = startGridX === endGridX && (startGridX % patternTileSize.x === 0);
+        const isHorizontalBoundaryLine = startGridY === endGridY && (startGridY % patternTileSize.y === 0);
         
         if (isVerticalBoundaryLine || isHorizontalBoundaryLine) {
           // Boundary lines need special handling
-          // Lines at tile multiples (x=10,20,30 with tileSize=10) should all map to the SAME boundary
+          // Lines at tile multiples (x=10,20,30 with tileSizeX=10) should all map to the SAME boundary
           // We use modulo, but when result is 0 for non-zero input, we treat it as the boundary
           
-          const normalizeBoundaryCoord = (coord) => {
-            const mod = coord % patternTileSize;
-            // coord=0 -> 0 (left/top edge)
+          const normalizeBoundaryCoordX = (coord) => {
+            const mod = coord % patternTileSize.x;
+            // coord=0 -> 0 (left edge)
+            // coord=10,20,30... -> 0 (these are all the same repeating boundary)
+            return mod;
+          };
+          
+          const normalizeBoundaryCoordY = (coord) => {
+            const mod = coord % patternTileSize.y;
+            // coord=0 -> 0 (top edge)
             // coord=10,20,30... -> 0 (these are all the same repeating boundary)
             return mod;
           };
@@ -793,8 +872,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           
           // Normalize the start point
           finalStart = {
-            x: normalizeBoundaryCoord(startGridX),
-            y: normalizeBoundaryCoord(startGridY),
+            x: normalizeBoundaryCoordX(startGridX),
+            y: normalizeBoundaryCoordY(startGridY),
           };
           
           // Apply the offset to get the end point
@@ -805,25 +884,23 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         } else {
           // Non-boundary lines: use floor-based normalization
           // Find which tile the START and END points are in
-          const startTileX = Math.floor(startGridX / patternTileSize);
-          const startTileY = Math.floor(startGridY / patternTileSize);
-          const endTileX = Math.floor(endGridX / patternTileSize);
-          const endTileY = Math.floor(endGridY / patternTileSize);
+          const startTileX = Math.floor(startGridX / patternTileSize.x);
+          const startTileY = Math.floor(startGridY / patternTileSize.y);
+          const endTileX = Math.floor(endGridX / patternTileSize.x);
+          const endTileY = Math.floor(endGridY / patternTileSize.y);
           
           // If start and end are in adjacent tiles (line just touches boundary),
           // normalize to the tile that contains the majority of the line
           // For lines going from boundary into tile, use the "inner" tile
-          const dx = endGridX - startGridX;
-          const dy = endGridY - startGridY;
-          const lineLength = Math.sqrt(dx * dx + dy * dy);
           
           // Use the tile of whichever point is NOT on a boundary, or use end tile for ties
-          const startOnBoundary = (startGridX % patternTileSize === 0) || (startGridY % patternTileSize === 0);
-          const endOnBoundary = (endGridX % patternTileSize === 0) || (endGridY % patternTileSize === 0);
+          const startOnBoundary = (startGridX % patternTileSize.x === 0) || (startGridY % patternTileSize.y === 0);
+          const endOnBoundary = (endGridX % patternTileSize.x === 0) || (endGridY % patternTileSize.y === 0);
           
           let baseTileX, baseTileY;
-          if (startOnBoundary && !endOnBoundary && lineLength <= 1.5) {
-            // Start on boundary, end inside - use end's tile
+          if (startOnBoundary && !endOnBoundary) {
+            // Start on boundary, end inside - use end's tile (regardless of line length)
+            // This ensures lines drawn from boundary inward normalize to the correct tile
             baseTileX = endTileX;
             baseTileY = endTileY;
           } else {
@@ -833,10 +910,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           }
           
           // Normalize both points to the base tile
-          const normalizedStartX = startGridX - (baseTileX * patternTileSize);
-          const normalizedStartY = startGridY - (baseTileY * patternTileSize);
-          const normalizedEndX = endGridX - (baseTileX * patternTileSize);
-          const normalizedEndY = endGridY - (baseTileY * patternTileSize);
+          const normalizedStartX = startGridX - (baseTileX * patternTileSize.x);
+          const normalizedStartY = startGridY - (baseTileY * patternTileSize.y);
+          const normalizedEndX = endGridX - (baseTileX * patternTileSize.x);
+          const normalizedEndY = endGridY - (baseTileY * patternTileSize.y);
           
           finalStart = {
             x: normalizedStartX,
@@ -874,8 +951,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     stitches.forEach((stitch) => {
       // Check if coordinates are absolute (new format) or wrapped (old format)
-      const isAbsoluteCoords = stitch.start.x >= patternTileSize || stitch.start.y >= patternTileSize ||
-                               stitch.end.x >= patternTileSize || stitch.end.y >= patternTileSize ||
+      const isAbsoluteCoords = stitch.start.x >= patternTileSize.x || stitch.start.y >= patternTileSize.y ||
+                               stitch.end.x >= patternTileSize.x || stitch.end.y >= patternTileSize.y ||
                                stitch.start.x < 0 || stitch.start.y < 0 ||
                                stitch.end.x < 0 || stitch.end.y < 0;
 
@@ -886,29 +963,29 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
         if (shouldRepeat) {
           // For repeat, check all tiles including negative offsets
-          for (let tileRow = -1; tileRow <= tilesPerSide; tileRow += 1) {
-            for (let tileCol = -1; tileCol <= tilesPerSide; tileCol += 1) {
+          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
               // Check if this is an outer tile
-              const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
-                                  tileCol < 0 || tileCol >= tilesPerSide;
+              const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
+                                  tileCol < 0 || tileCol >= tilesX;
               
               // Apply same filtering as rendering: skip outer tiles for boundary lines
               if (isOuterTile) {
                 const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
                 const justTouchingBoundary = lineLength <= 1.5;
                 
-                const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize);
-                const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize);
+                const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize.x);
+                const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
                 
                 // A line runs along a boundary if BOTH endpoints are on the SAME boundary
                 const bothOnVerticalBoundary = 
-                  (stitch.start.x === 0 || stitch.start.x === patternTileSize) &&
-                  (stitch.end.x === 0 || stitch.end.x === patternTileSize) &&
+                  (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
+                  (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
                   stitch.start.x === stitch.end.x;
                 
                 const bothOnHorizontalBoundary = 
-                  (stitch.start.y === 0 || stitch.start.y === patternTileSize) &&
-                  (stitch.end.y === 0 || stitch.end.y === patternTileSize) &&
+                  (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
+                  (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
                   stitch.start.y === stitch.end.y;
                 
                 // Lines crossing horizontally OR running along vertical boundary: clickable in X direction (left/right outer tiles)
@@ -918,8 +995,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
                 
                 // Determine which outer tiles to check
-                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesPerSide;
-                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesPerSide;
+                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesX;
+                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesY;
                 
                 // Skip this outer tile if line shouldn't be clickable in this direction
                 if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
@@ -930,22 +1007,24 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 }
               }
               
-              const tileOffsetX = tileCol * patternTileSize;
-              const tileOffsetY = tileRow * patternTileSize;
+              const tileOffsetX = tileCol * patternTileSize.x;
+              const tileOffsetY = tileRow * patternTileSize.y;
             
               const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
               const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
               const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
               const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
 
-              if (startX > canvasSize || startY > canvasSize) {
+              if (startX > canvasWidth || startY > canvasHeight) {
                 continue;
               }
               
               // For outer tiles, only check if line intersects artboard
               if (isOuterTile) {
-                const artboardStartPixel = artboardOffset;
-                const artboardEndPixel = artboardOffset + artboardSize;
+                const artboardStartPixelX = artboardOffset;
+                const artboardEndPixelX = artboardOffset + artboardWidth;
+                const artboardStartPixelY = artboardOffset;
+                const artboardEndPixelY = artboardOffset + artboardHeight;
                 
                 const lineMinX = Math.min(startX, endX);
                 const lineMaxX = Math.max(startX, endX);
@@ -953,10 +1032,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 const lineMaxY = Math.max(startY, endY);
                 
                 const intersectsArtboard = !(
-                  lineMaxX < artboardStartPixel ||
-                  lineMinX > artboardEndPixel ||
-                  lineMaxY < artboardStartPixel ||
-                  lineMinY > artboardEndPixel
+                  lineMaxX < artboardStartPixelX ||
+                  lineMinX > artboardEndPixelX ||
+                  lineMaxY < artboardStartPixelY ||
+                  lineMinY > artboardEndPixelY
                 );
                 
                 if (!intersectsArtboard) {
@@ -981,7 +1060,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
           const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
 
-          if (startX > canvasSize || startY > canvasSize) {
+          if (startX > canvasWidth || startY > canvasHeight) {
             // Skip this stitch if it's outside canvas
           } else {
             const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
@@ -994,19 +1073,20 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       } else {
         // Old format: use wrapped coordinates with tiling
         const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheck = shouldRepeat ? tilesPerSide : 1;
+        const tilesToCheckX = shouldRepeat ? tilesX : 1;
+        const tilesToCheckY = shouldRepeat ? tilesY : 1;
 
-        for (let tileRow = 0; tileRow < tilesToCheck; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheck; tileCol += 1) {
-            const offsetX = tileCol * patternTileSize;
-            const offsetY = tileRow * patternTileSize;
+        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
+            const offsetX = tileCol * patternTileSize.x;
+            const offsetY = tileRow * patternTileSize.y;
             // Add artboardOffset to stitch coordinates
             const startX = artboardOffset + (stitch.start.x + offsetX) * patternGridSize;
             const startY = artboardOffset + (stitch.start.y + offsetY) * patternGridSize;
             const endX = artboardOffset + (stitch.end.x + offsetX) * patternGridSize;
             const endY = artboardOffset + (stitch.end.y + offsetY) * patternGridSize;
 
-            if (startX > canvasSize || startY > canvasSize) {
+            if (startX > canvasWidth || startY > canvasHeight) {
               continue;
             }
 
@@ -1047,8 +1127,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   return (
     <canvas
       ref={canvasRef}
-      width={canvasSize}
-      height={canvasSize}
+      width={canvasWidth}
+      height={canvasHeight}
       className={`mx-auto ${getCursorClass()}`}
       onClick={handleCanvasClick}
       onMouseDown={handleMouseDown}

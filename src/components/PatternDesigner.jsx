@@ -42,21 +42,50 @@ const DEFAULT_TILE_OUTLINE_OPACITY = 0.15;
 const DEFAULT_ARTBOARD_OUTLINE_COLOR = '#3b82f6';
 const DEFAULT_ARTBOARD_OUTLINE_OPACITY = 0.5;
 
-function clonePattern(pattern) {
-  if (!pattern) {
-    return {
-      id: 'pattern-blank',
-      name: 'Untitled Pattern',
-      description: '',
-      tileSize: 10,
-      gridSize: 20,
-      patternTiles: 4,
-      stitches: [],
-    };
+// Helper to normalize tileSize (supports both number and {x, y} object)
+function normalizeTileSize(tileSize) {
+  if (typeof tileSize === 'number') {
+    return { x: tileSize, y: tileSize };
   }
+  if (tileSize && typeof tileSize === 'object' && typeof tileSize.x === 'number' && typeof tileSize.y === 'number') {
+    return { x: tileSize.x, y: tileSize.y };
+  }
+  return { x: 10, y: 10 }; // Default
+}
+
+function normalizePatternTiles(patternTiles) {
+  if (typeof patternTiles === 'number') {
+    return { x: patternTiles, y: patternTiles };
+  }
+  if (patternTiles && typeof patternTiles === 'object' && typeof patternTiles.x === 'number' && typeof patternTiles.y === 'number') {
+    return { x: patternTiles.x, y: patternTiles.y };
+  }
+  return { x: 4, y: 4 }; // Default
+}
+
+function clonePattern(pattern) {
+  const defaultPattern = {
+    id: 'pattern-blank',
+    name: 'Untitled Pattern',
+    description: '',
+    tileSize: { x: 10, y: 10 },
+    gridSize: 20,
+    patternTiles: { x: 4, y: 4 },
+    stitches: [],
+  };
+
+  if (!pattern) {
+    return defaultPattern;
+  }
+
+  // Normalize tileSize to object format
+  const normalizedTileSize = normalizeTileSize(pattern.tileSize);
 
   return {
     ...pattern,
+    tileSize: normalizedTileSize,
+    gridSize: pattern.gridSize ?? 20,
+    patternTiles: normalizePatternTiles(pattern.patternTiles ?? 4),
     stitches: (pattern.stitches ?? []).map((stitch) => ({
       ...stitch,
       start: { ...stitch.start },
@@ -76,10 +105,15 @@ function deriveColorMap(pattern) {
 }
 
 function isValidPattern(data) {
+  // Support both old number format and new {x, y} object format for tileSize
+  const validTileSize = typeof data.tileSize === 'number' || 
+    (data.tileSize && typeof data.tileSize === 'object' && 
+     typeof data.tileSize.x === 'number' && typeof data.tileSize.y === 'number');
+  
   return (
     data &&
     typeof data === 'object' &&
-    typeof data.tileSize === 'number' &&
+    validTileSize &&
     typeof data.gridSize === 'number' &&
     typeof data.patternTiles === 'number' &&
     Array.isArray(data.stitches)
@@ -101,7 +135,7 @@ export default function PatternDesigner() {
       // Ensure the loaded pattern has required fields (migration for old data)
       const migratedPattern = {
         ...saved.pattern,
-        tileSize: saved.pattern.tileSize ?? 10, // Add missing tileSize
+        tileSize: normalizeTileSize(saved.pattern.tileSize), // Normalize tileSize to {x, y} format
         gridSize: saved.pattern.gridSize ?? CELL_SIZE, // Ensure gridSize exists
         patternTiles: saved.pattern.patternTiles ?? DEFAULT_PATTERN_TILES, // Add missing patternTiles
       };
@@ -132,7 +166,7 @@ export default function PatternDesigner() {
 
   // Load pattern tiles from the pattern itself, not UI state
   const [patternTiles, setPatternTiles] = useState(() => {
-    return currentPattern.patternTiles ?? DEFAULT_PATTERN_TILES;
+    return normalizePatternTiles(currentPattern.patternTiles ?? DEFAULT_PATTERN_TILES);
   });
   // Use constant for default stitch color (fallback for rendering)
   const defaultStitchColor = DEFAULT_STITCH_COLOR;
@@ -194,10 +228,11 @@ export default function PatternDesigner() {
 
   // Sync pattern tiles with current pattern
   useEffect(() => {
-    if (currentPattern.patternTiles && currentPattern.patternTiles !== patternTiles) {
-      setPatternTiles(currentPattern.patternTiles);
+    const normalized = normalizePatternTiles(currentPattern.patternTiles);
+    if (normalized.x !== patternTiles.x || normalized.y !== patternTiles.y) {
+      setPatternTiles(normalized);
     }
-  }, [currentPattern.patternTiles, patternTiles]);
+  }, [currentPattern.patternTiles, patternTiles.x, patternTiles.y]);
 
   // Update sidebar options when selection changes
   useEffect(() => {
@@ -295,15 +330,25 @@ export default function PatternDesigner() {
 
   // Artboard = the total area containing all pattern tiles
   // (not to be confused with canvas which includes padding around the artboard)
-  const artboardSize = useMemo(() => {
-    const tileSize = Math.max(1, currentPattern.tileSize ?? 1);
+  const artboardWidth = useMemo(() => {
+    const tileSize = normalizeTileSize(currentPattern.tileSize);
     const gridSize = currentPattern.gridSize ?? CELL_SIZE;
-    return patternTiles * tileSize * gridSize;
-  }, [patternTiles, currentPattern.tileSize, currentPattern.gridSize]);
+    const tilesX = patternTiles.x || 4;
+    const width = tilesX * (tileSize.x || 10) * gridSize;
+    return isNaN(width) ? 800 : width; // Fallback to 800 if calculation fails
+  }, [patternTiles.x, currentPattern.tileSize, currentPattern.gridSize]);
+
+  const artboardHeight = useMemo(() => {
+    const tileSize = normalizeTileSize(currentPattern.tileSize);
+    const gridSize = currentPattern.gridSize ?? CELL_SIZE;
+    const tilesY = patternTiles.y || 4;
+    const height = tilesY * (tileSize.y || 10) * gridSize;
+    return isNaN(height) ? 800 : height; // Fallback to 800 if calculation fails
+  }, [patternTiles.y, currentPattern.tileSize, currentPattern.gridSize]);
 
   const patternInfo = useMemo(() => {
-    const tileSize = Math.max(1, currentPattern.tileSize ?? 1);
-    return `${patternTiles}×${patternTiles} pattern tiles (${tileSize}×${tileSize} grid each)`;
+    const tileSize = normalizeTileSize(currentPattern.tileSize);
+    return `${patternTiles}×${patternTiles} pattern tiles (${tileSize.x}×${tileSize.y} grid each)`;
   }, [patternTiles, currentPattern.tileSize]);
 
   const handleModeChange = useCallback((mode) => {
@@ -427,7 +472,7 @@ export default function PatternDesigner() {
   }, [selectedStitchIds]);
 
   const handleNewPattern = useCallback(() => {
-    const tileSize = currentPattern.tileSize || 10;
+    const tileSize = normalizeTileSize(currentPattern.tileSize);
     const gridSize = currentPattern.gridSize || 20;
     const freshPattern = {
       id: `pattern-${Date.now()}`,
@@ -448,22 +493,44 @@ export default function PatternDesigner() {
     setCurrentPattern((prev) => ({ ...prev, name }));
   }, []);
 
-  const handleTileSizeChange = useCallback((tileSize) => {
-    setCurrentPattern((prev) => ({ ...prev, tileSize }));
+  const handlePatternDescriptionChange = useCallback((description) => {
+    setCurrentPattern((prev) => ({ ...prev, description }));
+  }, []);
+
+  const handleTileSizeChange = useCallback((axis, value) => {
+    setCurrentPattern((prev) => {
+      const normalized = normalizeTileSize(prev.tileSize);
+      return {
+        ...prev,
+        tileSize: {
+          ...normalized,
+          [axis]: value
+        }
+      };
+    });
   }, []);
 
   const handleGridSizeChange = useCallback((gridSize) => {
     setCurrentPattern((prev) => ({ ...prev, gridSize }));
   }, []);
 
-  const handlePatternTilesChange = useCallback((tiles) => {
-    setPatternTiles(tiles);
-    setCurrentPattern((prev) => ({ ...prev, patternTiles: tiles }));
+  const handlePatternTilesChange = useCallback((axis, value) => {
+    setPatternTiles(prev => ({
+      ...prev,
+      [axis]: value
+    }));
+    setCurrentPattern((prev) => ({
+      ...prev,
+      patternTiles: {
+        ...normalizePatternTiles(prev.patternTiles),
+        [axis]: value
+      }
+    }));
   }, []);
 
   const handleResetSettings = useCallback(() => {
     // Reset all settings to their default values
-    setPatternTiles(DEFAULT_PATTERN_TILES);
+    setPatternTiles(normalizePatternTiles(DEFAULT_PATTERN_TILES));
     setBackgroundColor(DEFAULT_BACKGROUND_COLOR);
     setSelectedStitchColor(DEFAULT_STITCH_COLOR);
     setStitchSize(DEFAULT_STITCH_SIZE);
@@ -582,6 +649,15 @@ export default function PatternDesigner() {
         ...stitch,
         color: stitchColors.get(stitch.id) ?? stitch.color ?? null,
       })),
+      uiState: {
+        backgroundColor,
+        gridColor,
+        gridOpacity,
+        tileOutlineColor,
+        tileOutlineOpacity,
+        artboardOutlineColor,
+        artboardOutlineOpacity,
+      },
     };
 
     const blob = new Blob([JSON.stringify(exportPattern, null, 2)], { type: 'application/json' });
@@ -594,7 +670,7 @@ export default function PatternDesigner() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [currentPattern, stitchColors]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
 
   const handleImportPattern = useCallback((file) => {
     const reader = new FileReader();
@@ -628,6 +704,17 @@ export default function PatternDesigner() {
         setStitchColors(deriveColorMap(normalized));
         setSelectedStitchIds(new Set());
         setDrawingState((prev) => ({ ...prev, firstPoint: null }));
+        
+        // Restore UI state if included in the imported pattern
+        if (parsed.uiState) {
+          if (parsed.uiState.backgroundColor) setBackgroundColor(parsed.uiState.backgroundColor);
+          if (parsed.uiState.gridColor) setGridColor(parsed.uiState.gridColor);
+          if (parsed.uiState.gridOpacity !== undefined) setGridOpacity(parsed.uiState.gridOpacity);
+          if (parsed.uiState.tileOutlineColor) setTileOutlineColor(parsed.uiState.tileOutlineColor);
+          if (parsed.uiState.tileOutlineOpacity !== undefined) setTileOutlineOpacity(parsed.uiState.tileOutlineOpacity);
+          if (parsed.uiState.artboardOutlineColor) setArtboardOutlineColor(parsed.uiState.artboardOutlineColor);
+          if (parsed.uiState.artboardOutlineOpacity !== undefined) setArtboardOutlineOpacity(parsed.uiState.artboardOutlineOpacity);
+        }
       } catch (error) {
         console.error('Failed to import pattern:', error);
       }
@@ -686,12 +773,18 @@ export default function PatternDesigner() {
         onBackgroundColorChange={setBackgroundColor}
         patternName={currentPattern.name}
         onPatternNameChange={handlePatternNameChange}
-        tileSize={currentPattern.tileSize || 10}
+        patternDescription={currentPattern.description || ''}
+        onPatternDescriptionChange={handlePatternDescriptionChange}
+        tileSize={normalizeTileSize(currentPattern.tileSize)}
         onTileSizeChange={handleTileSizeChange}
         gridSize={currentPattern.gridSize || CELL_SIZE}
         onGridSizeChange={handleGridSizeChange}
-        artboardSize={artboardSize}
-        canvasInfo={`Artboard: ${artboardSize}×${artboardSize}px · Tiles: ${patternTiles}×${patternTiles} · Tile grid: ${currentPattern.tileSize || 10}×${currentPattern.tileSize || 10} · Grid size: ${currentPattern.gridSize || CELL_SIZE}px`}
+        artboardWidth={artboardWidth}
+        artboardHeight={artboardHeight}
+        canvasInfo={(() => {
+          const ts = normalizeTileSize(currentPattern.tileSize);
+          return `Artboard: ${artboardWidth}×${artboardHeight}px · Tiles: ${patternTiles.x}×${patternTiles.y} · Tile grid: ${ts.x}×${ts.y} · Grid size: ${currentPattern.gridSize || CELL_SIZE}px`;
+        })()}
         onNewPattern={handleNewPattern}
         onSavePattern={handleSavePattern}
         saveState={saveState}
