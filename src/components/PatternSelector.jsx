@@ -5,9 +5,8 @@ import { PatternCard } from './PatternCard';
 
 export function PatternSelector({ patterns, activePatternId, onSelectPattern, onDeletePattern }) {
   // Separate built-in patterns from user-saved patterns
-  const builtInIds = ['blank', 'asanoha', 'simple-cross', 'diagonal-flow'];
-  const builtInPatterns = patterns.filter(p => builtInIds.includes(p.id));
-  const userPatterns = patterns.filter(p => !builtInIds.includes(p.id));
+  const builtInPatterns = patterns.filter(p => p.isStarterPattern === true);
+  const userPatterns = patterns.filter(p => !p.isStarterPattern);
 
   return (
     <div className="space-y-2">

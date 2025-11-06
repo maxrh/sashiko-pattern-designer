@@ -29,7 +29,8 @@ export function AppSidebar({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
-  artboardSize,
+  artboardWidth,
+  artboardHeight,
   canvasInfo,
   onNewPattern,
   onSavePattern,
@@ -99,7 +100,8 @@ export function AppSidebar({
                     onTileSizeChange={onTileSizeChange}
                     gridSize={gridSize}
                     onGridSizeChange={onGridSizeChange}
-                    artboardSize={artboardSize}
+                    artboardWidth={artboardWidth}
+                    artboardHeight={artboardHeight}
                     canvasInfo={canvasInfo}
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}

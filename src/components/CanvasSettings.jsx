@@ -29,7 +29,8 @@ export function CanvasSettings({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
-  artboardSize,
+  artboardWidth,
+  artboardHeight,
   canvasInfo,
   onNewPattern,
   onSavePattern,
@@ -106,7 +107,40 @@ export function CanvasSettings({
       },
     };
 
-    const jsonString = JSON.stringify(patternForJson, null, 2);
+    // Custom compact JSON formatting - stitches on single lines
+    const formatStitch = (stitch) => {
+      const parts = [];
+      parts.push(`"id": "${stitch.id}"`);
+      parts.push(`"start": ${JSON.stringify(stitch.start)}`);
+      parts.push(`"end": ${JSON.stringify(stitch.end)}`);
+      parts.push(`"color": "${stitch.color}"`);
+      parts.push(`"stitchSize": "${stitch.stitchSize}"`);
+      parts.push(`"repeat": ${stitch.repeat}`);
+      return `{ ${parts.join(', ')} }`;
+    };
+
+    const stitchesJson = patternForJson.stitches.length === 0 
+      ? '[]'
+      : '[\n      ' + patternForJson.stitches.map(formatStitch).join(',\n      ') + '\n    ]';
+
+    const jsonString = `{
+    "id": "${patternForJson.id}",
+    "name": "${patternForJson.name}",
+    "description": "${patternForJson.description}",
+    "tileSize": ${JSON.stringify(patternForJson.tileSize)},
+    "gridSize": ${patternForJson.gridSize},
+    "patternTiles": ${patternForJson.patternTiles},
+    "stitches": ${stitchesJson},
+    "uiState": {
+      "backgroundColor": "${patternForJson.uiState.backgroundColor}",
+      "gridColor": "${patternForJson.uiState.gridColor}",
+      "gridOpacity": ${patternForJson.uiState.gridOpacity},
+      "tileOutlineColor": "${patternForJson.uiState.tileOutlineColor}",
+      "tileOutlineOpacity": ${patternForJson.uiState.tileOutlineOpacity},
+      "artboardOutlineColor": "${patternForJson.uiState.artboardOutlineColor}",
+      "artboardOutlineOpacity": ${patternForJson.uiState.artboardOutlineOpacity}
+    }
+  }`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(jsonString).then(() => {
@@ -141,7 +175,7 @@ export function CanvasSettings({
           <input
             type="text"
             id="artboard-size"
-            value={`${artboardSize}×${artboardSize}px`}
+            value={`${artboardWidth}×${artboardHeight}px`}
             disabled
             className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
           />
@@ -174,25 +208,50 @@ export function CanvasSettings({
 
         <div className="space-y-2">
           <div className="flex items-center gap-1">
-            <Label htmlFor="tile-size">Tile Size: {tileSize}×{tileSize} grid</Label>
+            <Label htmlFor="tile-size-x">Tile Width: {tileSize.x} cells</Label>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Number of grid cells per pattern tile</p>
+                  <p>Number of grid cells horizontally per pattern tile</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <Slider
-            id="tile-size"
+            id="tile-size-x"
             min={5}
             max={20}
             step={1}
-            value={[tileSize]}
-            onValueChange={(value) => onTileSizeChange(value[0])}
+            value={[tileSize.x]}
+            onValueChange={(value) => onTileSizeChange('x', value[0])}
+            className="w-full"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="tile-size-y">Tile Height: {tileSize.y} cells</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Number of grid cells vertically per pattern tile</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="tile-size-y"
+            min={5}
+            max={20}
+            step={1}
+            value={[tileSize.y]}
+            onValueChange={(value) => onTileSizeChange('y', value[0])}
             className="w-full"
           />
         </div>
