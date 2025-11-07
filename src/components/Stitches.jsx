@@ -11,9 +11,9 @@ export const MIN_DASH_LENGTHS = {
 
 // Stitch size ratios (dashes per grid cell)
 export const STITCH_SIZE_RATIOS = {
-  small: 2,   // 2 dashes per grid cell
-  medium: 1,  // 1 dash per grid cell
-  large: 1    // Uses medium calculation, then merges pairs into super dashes
+  small: 2,    // 2 dashes per grid cell
+  medium: 1.5, // 1.5 dashes per grid cell (between small and large)
+  large: 1     // Uses medium calculation, then merges pairs into super dashes
 };
 
 // Stitch line widths (in pixels)
@@ -102,60 +102,25 @@ export function calculateStitchDashPattern(drawableLength, lineLength, stitchSiz
     dashLength = totalDashSpace / superDashCount;
     gapLength = gapBetweenStitches;
   } else if (stitchSize === 'medium') {
-    // Medium: check if we need to act like large (merge pairs)
+    // Medium: uses 1.5 cells per gap ratio
     
-    // First, try regular medium calculation
-    let gapCount = targetDashCount - 1;
-    let totalGapSpace = gapCount * gapBetweenStitches;
-    let totalDashSpace = drawableLength - totalGapSpace;
-    let testDashLength = totalDashSpace / targetDashCount;
-    
-    // If medium dashes would be below minimum, act like large (merge pairs)
-    if (testDashLength < MIN_DASH_LENGTHS.medium && targetDashCount > 1) {
-      // Ensure even count for pairing
-      if (targetDashCount % 2 !== 0) {
-        targetDashCount += 1;
-      }
+    // Reduce dash count if dashes would be too small
+    while (targetDashCount > 1) {
+      const gapCount = targetDashCount - 1;
+      const totalGapSpace = gapCount * gapBetweenStitches;
+      const totalDashSpace = drawableLength - totalGapSpace;
+      const testDashLength = totalDashSpace / targetDashCount;
       
-      let superDashCount = targetDashCount / 2;
+      if (testDashLength >= MIN_DASH_LENGTHS.medium) break;
       
-      // Reduce dash count if super dashes would still be too small
-      while (superDashCount > 1) {
-        gapCount = superDashCount - 1;
-        totalGapSpace = gapCount * gapBetweenStitches;
-        totalDashSpace = drawableLength - totalGapSpace;
-        testDashLength = totalDashSpace / superDashCount;
-        
-        if (testDashLength >= MIN_DASH_LENGTHS.medium) break;
-        
-        superDashCount -= 1;
-        targetDashCount = superDashCount * 2;
-      }
-      
-      gapCount = superDashCount - 1;
-      totalGapSpace = gapCount * gapBetweenStitches;
-      totalDashSpace = drawableLength - totalGapSpace;
-      dashLength = totalDashSpace / superDashCount;
-      gapLength = gapBetweenStitches;
-    } else {
-      // Regular medium calculation - reduce dash count if needed
-      while (targetDashCount > 1) {
-        gapCount = targetDashCount - 1;
-        totalGapSpace = gapCount * gapBetweenStitches;
-        totalDashSpace = drawableLength - totalGapSpace;
-        testDashLength = totalDashSpace / targetDashCount;
-        
-        if (testDashLength >= MIN_DASH_LENGTHS.medium) break;
-        
-        targetDashCount -= 1;
-      }
-      
-      gapCount = targetDashCount - 1;
-      totalGapSpace = gapCount * gapBetweenStitches;
-      totalDashSpace = drawableLength - totalGapSpace;
-      dashLength = totalDashSpace / targetDashCount;
-      gapLength = gapBetweenStitches;
+      targetDashCount -= 1;
     }
+    
+    const gapCount = targetDashCount - 1;
+    const totalGapSpace = gapCount * gapBetweenStitches;
+    const totalDashSpace = drawableLength - totalGapSpace;
+    dashLength = totalDashSpace / targetDashCount;
+    gapLength = gapBetweenStitches;
   } else {
     // Small: use minimum from config
     

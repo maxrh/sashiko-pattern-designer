@@ -1,5 +1,4 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { renderStitch, DEFAULT_GAP_SIZE, calculateStitchOffset } from './Stitches';
 
 const SNAP_THRESHOLD = 15;
 const SELECT_THRESHOLD = 10;
@@ -117,10 +116,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const isDraggingRef = useRef(false);
   const justFinishedDragRef = useRef(false);
   
-  // Store visible stitch instances (computed during rendering)
-  // Map: stitchId -> Array of {startX, startY, endX, endY} in canvas pixel coordinates
-  const visibleStitchInstancesRef = useRef(new Map());
-  
   // Normalize tileSize to {x, y} format (supports legacy number format)
   const patternTileSize = useMemo(() => {
     const ts = pattern?.tileSize;
@@ -144,49 +139,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const tilesY = useMemo(() => Math.ceil(artboardGridHeight / patternTileSize.y), [artboardGridHeight, patternTileSize.y]);
 
   useImperativeHandle(ref, () => ({
-    exportAsImage: (resolutionMultiplier = 1) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      
-      // Calculate the extended area: artboard + 1 tile margin on all sides
-      // Extended area is where pattern stitches can repeat/extend
-      const tilePixelWidth = patternTileSize.x * patternGridSize;
-      const tilePixelHeight = patternTileSize.y * patternGridSize;
-      const extendedAreaWidth = artboardWidth + (2 * tilePixelWidth);
-      const extendedAreaHeight = artboardHeight + (2 * tilePixelHeight);
-      
-      // Extended area starts 1 tile before the artboard (inside the canvas margin)
-      const extendedAreaOffsetX = artboardOffset - tilePixelWidth;
-      const extendedAreaOffsetY = artboardOffset - tilePixelHeight;
-      
-      // Create a temporary canvas to hold only the artboard + extended area
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      const dpr = window.devicePixelRatio ?? 1;
-      
-      // Apply resolution multiplier for higher/lower quality exports
-      const exportScale = dpr * resolutionMultiplier;
-      
-      // Set dimensions to include extended area only (no canvas margin)
-      tempCanvas.width = extendedAreaWidth * exportScale;
-      tempCanvas.height = extendedAreaHeight * exportScale;
-      
-      // Scale for device pixel ratio and resolution multiplier
-      tempCtx.scale(exportScale, exportScale);
-      
-      // Draw the extended area portion from the main canvas
-      // Source: extended area region from main canvas
-      // Destination: entire temp canvas (scaled up/down by resolutionMultiplier)
-      tempCtx.drawImage(
-        canvas,
-        extendedAreaOffsetX * dpr, extendedAreaOffsetY * dpr, // Source x, y (scaled)
-        extendedAreaWidth * dpr, extendedAreaHeight * dpr,     // Source width, height (scaled)
-        0, 0,                                                   // Dest x, y
-        extendedAreaWidth, extendedAreaHeight                  // Dest width, height
-      );
-      
-      return tempCanvas.toDataURL('image/png');
-    },
+    exportAsImage: () => canvasRef.current?.toDataURL('image/png'),
     getCanvasElement: () => canvasRef.current,
   }));
 
@@ -264,10 +217,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     const stitches = pattern?.stitches ?? [];
 
-    // Clear and rebuild visible stitch instances for selection
-    visibleStitchInstancesRef.current.clear();
+    const stitchOffset = 4; // Start stitches 4px from grid point
+    const gapBetweenStitches = 8; // 8px gap between adjacent stitches
 
-    ctx.lineCap = 'round'; // Use butt to get precise pixel alignment
+    ctx.lineCap = 'butt'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
       const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultStitchColor;
       
@@ -307,14 +260,12 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             const isInTopOuterTile = tileRow < 0;
             const isInLeftOuterTile = tileCol < 0;
             
-            // Lines starting at top edge (y=0) going UP (negative Y): skip in first row and top outer tiles
-            // These lines belong to the row below, so shift rendering down
-            if (startOnTopEdge && hasNegativeY && (isInFirstRow || isInTopOuterTile)) {
+            // Vertical line from corner going UP (negative Y): skip in first row and top outer tiles
+            if (startsAtNormalizedCorner && startOnTopEdge && hasNegativeY && (isInFirstRow || isInTopOuterTile)) {
               continue;
             }
-            // Lines starting at left edge (x=0) going LEFT (negative X): skip in first col and left outer tiles  
-            // These lines belong to the column to the right, so shift rendering right
-            if (startOnLeftEdge && hasNegativeX && (isInFirstCol || isInLeftOuterTile)) {
+            // Horizontal line from corner going LEFT (negative X): skip in first col and left outer tiles
+            if (startsAtNormalizedCorner && startOnLeftEdge && hasNegativeX && (isInFirstCol || isInLeftOuterTile)) {
               continue;
             }
             
@@ -357,18 +308,15 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
               
               // A line runs along a boundary if BOTH endpoints are on the SAME boundary
-              // AND the line doesn't move in that direction (vertical line has same X, horizontal line has same Y)
               const bothOnVerticalBoundary = 
                 (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
                 (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
-                stitch.start.x === stitch.end.x &&
-                stitch.start.y !== stitch.end.y; // Must move in Y direction (vertical line)
+                stitch.start.x === stitch.end.x;
               
               const bothOnHorizontalBoundary = 
                 (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
                 (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
-                stitch.start.y === stitch.end.y &&
-                stitch.start.x !== stitch.end.x; // Must move in X direction (horizontal line)
+                stitch.start.y === stitch.end.y;
               
               // Lines crossing horizontally OR running along vertical boundary: repeat in X direction (left/right outer tiles)
               const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
@@ -432,80 +380,195 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             }
 
             const isSelected = selectedStitchIds.has(stitch.id);
+
+            // Calculate the offset direction (unit vector from start to end)
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.hypot(dx, dy);
+            if (length === 0) continue;
+
+            const unitX = dx / length;
+            const unitY = dy / length;
+
+            // Offset start and end by 4px along the line
+            const offsetStartX = startX + unitX * stitchOffset;
+            const offsetStartY = startY + unitY * stitchOffset;
+            const offsetEndX = endX - unitX * stitchOffset;
+            const offsetEndY = endY - unitY * stitchOffset;
+
+            // Calculate the drawable length (after removing offsets)
+            const drawableLength = length - (2 * stitchOffset);
+
+            // Get stitch size info from stitch metadata (or use default 'small')
             const stitchSizeForLine = stitch.stitchSize || 'small';
-            const stitchWidthValue = stitch.stitchWidth || 'normal';
-            const stitchGapSize = stitch.gapSize;
-            const stitchGapOffset = calculateStitchOffset(stitchGapSize);
-
-            // Render the stitch using shared rendering function
-            const rendered = renderStitch(
-              ctx,
-              startX,
-              startY,
-              endX,
-              endY,
-              stitchGapOffset,
-              stitchGapSize,
-              stitchSizeForLine,
-              stitchWidthValue,
-              colorOverride ?? defaultStitchColor,
-              isSelected,
-              patternGridSize
-            );
-
-            // Track this visible instance for selection (if rendered successfully)
-            if (rendered) {
-              if (!visibleStitchInstancesRef.current.has(stitch.id)) {
-                visibleStitchInstancesRef.current.set(stitch.id, []);
-              }
-              visibleStitchInstancesRef.current.get(stitch.id).push({
-                startX, startY, endX, endY
-              });
+            
+            // Determine target dash count based on stitch size and actual line length
+            // Use the ACTUAL line length (before offsets) to determine stitch count
+            let targetDashCount;
+            const actualCellsInLine = length / 20; // How many 20px cells in the actual line
+            const cellsInLine = drawableLength / 20; // Drawable length for calculations
+            
+            // For large, we use medium calculation as base
+            const isLarge = stitchSizeForLine === 'large';
+            const sizeForCalc = isLarge ? 'medium' : stitchSizeForLine;
+            
+            switch (sizeForCalc) {
+              case 'small':
+                // Small: 2 dashes per 20px cell, scale to actual line length
+                targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
+                break;
+              case 'medium':
+              default:
+                // Medium: 1 dash per 20px cell
+                // For exactly 1 cell (20px), we want 1 dash total (not 2)
+                targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
+                break;
             }
+            
+            // Calculate dash and gap lengths based on drawable length
+            let dashLength, gapLength;
+            
+            if (targetDashCount === 1) {
+              // Single dash: use entire drawable length, no gaps
+              dashLength = drawableLength;
+              gapLength = 0;
+            } else if (isLarge) {
+              // Large: ensure even count for pairing
+              if (targetDashCount % 2 !== 0) {
+                targetDashCount += 1;
+              }
+              // Large: merge pairs of dashes
+              // Each "super dash" = 2 dashes + 1 gap between them
+              const superDashCount = targetDashCount / 2;
+              const gapCount = superDashCount - 1; // gaps between super dashes
+              
+              // Calculate space
+              const totalGapSpace = gapCount * gapBetweenStitches;
+              const totalDashSpace = drawableLength - totalGapSpace;
+              
+              // Each super dash gets equal space
+              const superDashLength = totalDashSpace / superDashCount;
+              
+              // Set pattern: long dash, then gap
+              dashLength = superDashLength;
+              gapLength = gapBetweenStitches;
+            } else {
+              // Regular calculation (medium/large with multiple dashes)
+              const gapCount = targetDashCount - 1;
+              const totalGapSpace = gapCount * gapBetweenStitches;
+              const totalDashSpace = drawableLength - totalGapSpace;
+              
+              dashLength = totalDashSpace / targetDashCount;
+              gapLength = gapBetweenStitches;
+            }
+            
+            // Only draw if dash length is positive (line is long enough)
+            if (dashLength <= 0) continue;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([dashLength, gapLength]);
+            ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(offsetStartX, offsetStartY);
+            ctx.lineTo(offsetEndX, offsetEndY);
+            ctx.stroke();
+            ctx.restore();
           }
         }
       } else {
         // Absolute coordinates - non-repeating line at specific position
         const startX = artboardOffset + (stitch.start.x * patternGridSize);
-        const startY = artboardOffset + (stitch.start.y * patternGridSize);
-        const endX = artboardOffset + (stitch.end.x * patternGridSize);
-        const endY = artboardOffset + (stitch.end.y * patternGridSize);
+          const startY = artboardOffset + (stitch.start.y * patternGridSize);
+          const endX = artboardOffset + (stitch.end.x * patternGridSize);
+          const endY = artboardOffset + (stitch.end.y * patternGridSize);
 
-        if (startX > canvasWidth + patternGridSize || startY > canvasHeight + patternGridSize) {
-          return;
-        }
-
-        const isSelected = selectedStitchIds.has(stitch.id);
-        const stitchSizeForLine = stitch.stitchSize || 'small';
-        const stitchWidthValue = stitch.stitchWidth || 'normal';
-        const stitchGapSize = stitch.gapSize;
-        const stitchGapOffset = calculateStitchOffset(stitchGapSize);
-
-        // Render the stitch using shared rendering function
-        const rendered = renderStitch(
-          ctx,
-          startX,
-          startY,
-          endX,
-          endY,
-          stitchGapOffset,
-          stitchGapSize,
-          stitchSizeForLine,
-          stitchWidthValue,
-          colorOverride ?? defaultStitchColor,
-          isSelected,
-          patternGridSize
-        );
-
-        // Track this visible instance for selection (if rendered successfully)
-        if (rendered) {
-          if (!visibleStitchInstancesRef.current.has(stitch.id)) {
-            visibleStitchInstancesRef.current.set(stitch.id, []);
+          if (startX > canvasWidth + patternGridSize || startY > canvasHeight + patternGridSize) {
+            return;
           }
-          visibleStitchInstancesRef.current.get(stitch.id).push({
-            startX, startY, endX, endY
-          });
-        }
+
+          const isSelected = selectedStitchIds.has(stitch.id);
+
+          // Calculate the offset direction (unit vector from start to end)
+          const dx = endX - startX;
+          const dy = endY - startY;
+          const length = Math.hypot(dx, dy);
+          if (length === 0) return;
+
+          const unitX = dx / length;
+          const unitY = dy / length;
+
+          // Offset start and end by 4px along the line
+          const offsetStartX = startX + unitX * stitchOffset;
+          const offsetStartY = startY + unitY * stitchOffset;
+          const offsetEndX = endX - unitX * stitchOffset;
+          const offsetEndY = endY - unitY * stitchOffset;
+
+          // Calculate the drawable length (after removing offsets)
+          const drawableLength = length - (2 * stitchOffset);
+
+          // Get stitch size info from stitch metadata (or use default 'small')
+          const stitchSizeForLine = stitch.stitchSize || 'small';
+          
+          // Determine target dash count based on stitch size and actual line length
+          let targetDashCount;
+          const actualCellsInLine = length / 20;
+          
+          const isLarge = stitchSizeForLine === 'large';
+          const sizeForCalc = isLarge ? 'medium' : stitchSizeForLine;
+          
+          switch (sizeForCalc) {
+            case 'small':
+              // Small: 2 dashes per 20px cell, scale to actual line length
+              targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
+              break;
+            case 'medium':
+            default:
+              // Medium: 1 dash per 20px cell
+              targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
+              break;
+          }
+          
+          // Calculate dash and gap lengths
+          let dashLength, gapLength;
+          
+          if (targetDashCount === 1) {
+            dashLength = drawableLength;
+            gapLength = 0;
+          } else if (isLarge) {
+            if (targetDashCount % 2 !== 0) {
+              targetDashCount += 1;
+            }
+            const superDashCount = targetDashCount / 2;
+            const gapCount = superDashCount - 1;
+            const totalGapSpace = gapCount * gapBetweenStitches;
+            const totalDashSpace = drawableLength - totalGapSpace;
+            const superDashLength = totalDashSpace / superDashCount;
+            dashLength = superDashLength;
+            gapLength = gapBetweenStitches;
+          } else {
+            const gapCount = targetDashCount - 1;
+            const totalGapSpace = gapCount * gapBetweenStitches;
+            const totalDashSpace = drawableLength - totalGapSpace;
+            dashLength = totalDashSpace / targetDashCount;
+            gapLength = gapBetweenStitches;
+          }
+          
+          if (dashLength <= 0) return;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([dashLength, gapLength]);
+          ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.moveTo(offsetStartX, offsetStartY);
+          ctx.lineTo(offsetEndX, offsetEndY);
+          ctx.stroke();
+          ctx.restore();
         }
     });
 
@@ -525,7 +588,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       ctx.save();
       ctx.strokeStyle = '#3b82f6';
       ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
       const x = Math.min(dragSelectRect.startX, dragSelectRect.endX);
       const y = Math.min(dragSelectRect.startY, dragSelectRect.endY);
@@ -629,15 +692,72 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
     
     // Find all stitches that intersect with the selection rectangle
-    // Use the visible instances computed during rendering
+    const stitches = pattern?.stitches ?? [];
     const selectedIds = new Set();
     
-    visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
-      // Check if any visible instance of this stitch intersects with selection
-      for (const instance of instances) {
-        if (lineIntersectsRect(instance.startX, instance.startY, instance.endX, instance.endY, minX, minY, maxX, maxY)) {
-          selectedIds.add(stitchId);
-          break;
+    stitches.forEach((stitch) => {
+      const isAbsoluteCoords = stitch.start.x >= patternTileSize.x || stitch.start.y >= patternTileSize.y ||
+                               stitch.end.x >= patternTileSize.x || stitch.end.y >= patternTileSize.y ||
+                               stitch.start.x < 0 || stitch.start.y < 0 ||
+                               stitch.end.x < 0 || stitch.end.y < 0;
+
+      if (isAbsoluteCoords) {
+        const shouldRepeat = stitch.repeat !== false;
+
+        if (shouldRepeat) {
+          // Check all possible tile offsets (including negative)
+          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
+              const tileOffsetX = tileCol * patternTileSize.x;
+              const tileOffsetY = tileRow * patternTileSize.y;
+            
+              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
+              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
+              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
+              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
+
+              // Check if line intersects with selection rectangle
+              if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
+                selectedIds.add(stitch.id);
+                break;
+              }
+            }
+            if (selectedIds.has(stitch.id)) break;
+          }
+        } else {
+          // No repeat - just check the original position
+          const startX = artboardOffset + (stitch.start.x * patternGridSize);
+          const startY = artboardOffset + (stitch.start.y * patternGridSize);
+          const endX = artboardOffset + (stitch.end.x * patternGridSize);
+          const endY = artboardOffset + (stitch.end.y * patternGridSize);
+
+          // Check if line intersects with selection rectangle
+          if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
+            selectedIds.add(stitch.id);
+          }
+        }
+      } else {
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToCheckX = shouldRepeat ? tilesX : 1;
+        const tilesToCheckY = shouldRepeat ? tilesY : 1;
+
+        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
+            const offsetX = tileCol * patternTileSize.x;
+            const offsetY = tileRow * patternTileSize.y;
+            
+            const startX = artboardOffset + ((stitch.start.x + offsetX) * patternGridSize);
+            const startY = artboardOffset + ((stitch.start.y + offsetY) * patternGridSize);
+            const endX = artboardOffset + ((stitch.end.x + offsetX) * patternGridSize);
+            const endY = artboardOffset + ((stitch.end.y + offsetY) * patternGridSize);
+
+            // Check if line intersects with selection rectangle
+            if (lineIntersectsRect(startX, startY, endX, endY, minX, minY, maxX, maxY)) {
+              selectedIds.add(stitch.id);
+              break;
+            }
+          }
+          if (selectedIds.has(stitch.id)) break;
         }
       }
     });
@@ -830,27 +950,160 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       return;
     }
 
-    // Use visible stitch instances from rendering for click selection
-    // This ensures selection matches exactly what's visible on screen
+    const stitches = pattern?.stitches ?? [];
     let closest = null;
     let closestDistance = SELECT_THRESHOLD;
 
-    visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
-      // Check each visible instance of this stitch for proximity to click
-      for (const instance of instances) {
-        const distance = distancePointToSegment(
-          clickX, clickY, 
-          instance.startX, instance.startY, 
-          instance.endX, instance.endY
-        );
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closest = stitchId;
+    stitches.forEach((stitch) => {
+      // Check if coordinates are absolute (new format) or wrapped (old format)
+      const isAbsoluteCoords = stitch.start.x >= patternTileSize.x || stitch.start.y >= patternTileSize.y ||
+                               stitch.end.x >= patternTileSize.x || stitch.end.y >= patternTileSize.y ||
+                               stitch.start.x < 0 || stitch.start.y < 0 ||
+                               stitch.end.x < 0 || stitch.end.y < 0;
+
+      if (isAbsoluteCoords) {
+        // New format: use absolute coordinates
+        // Check all tile positions if repeat is on
+        const shouldRepeat = stitch.repeat !== false;
+
+        if (shouldRepeat) {
+          // For repeat, check all tiles including negative offsets
+          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
+            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
+              // Check if this is an outer tile
+              const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
+                                  tileCol < 0 || tileCol >= tilesX;
+              
+              // Apply same filtering as rendering: skip outer tiles for boundary lines
+              if (isOuterTile) {
+                const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
+                const justTouchingBoundary = lineLength <= 1.5;
+                
+                const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize.x);
+                const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
+                
+                // A line runs along a boundary if BOTH endpoints are on the SAME boundary
+                const bothOnVerticalBoundary = 
+                  (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
+                  (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
+                  stitch.start.x === stitch.end.x;
+                
+                const bothOnHorizontalBoundary = 
+                  (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
+                  (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
+                  stitch.start.y === stitch.end.y;
+                
+                // Lines crossing horizontally OR running along vertical boundary: clickable in X direction (left/right outer tiles)
+                const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
+                
+                // Lines crossing vertically OR running along horizontal boundary: clickable in Y direction (top/bottom outer tiles)
+                const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
+                
+                // Determine which outer tiles to check
+                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesX;
+                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesY;
+                
+                // Skip this outer tile if line shouldn't be clickable in this direction
+                if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
+                  continue;
+                }
+                if (isTopBottomOuterTile && !shouldRepeatInYDirection) {
+                  continue;
+                }
+              }
+              
+              const tileOffsetX = tileCol * patternTileSize.x;
+              const tileOffsetY = tileRow * patternTileSize.y;
+            
+              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
+              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
+              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
+              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
+
+              if (startX > canvasWidth || startY > canvasHeight) {
+                continue;
+              }
+              
+              // For outer tiles, only check if line intersects artboard
+              if (isOuterTile) {
+                const artboardStartPixelX = artboardOffset;
+                const artboardEndPixelX = artboardOffset + artboardWidth;
+                const artboardStartPixelY = artboardOffset;
+                const artboardEndPixelY = artboardOffset + artboardHeight;
+                
+                const lineMinX = Math.min(startX, endX);
+                const lineMaxX = Math.max(startX, endX);
+                const lineMinY = Math.min(startY, endY);
+                const lineMaxY = Math.max(startY, endY);
+                
+                const intersectsArtboard = !(
+                  lineMaxX < artboardStartPixelX ||
+                  lineMinX > artboardEndPixelX ||
+                  lineMaxY < artboardStartPixelY ||
+                  lineMinY > artboardEndPixelY
+                );
+                
+                if (!intersectsArtboard) {
+                  continue;
+                }
+              }
+
+              const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
+              if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = stitch.id;
+              }
+            }
+          }
+        } else {
+          // For non-repeat, check single position at origin
+          const tileOffsetX = 0;
+          const tileOffsetY = 0;
+          
+          const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
+          const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
+          const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
+          const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
+
+          if (startX > canvasWidth || startY > canvasHeight) {
+            // Skip this stitch if it's outside canvas
+          } else {
+            const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closest = stitch.id;
+            }
+          }
+        }
+      } else {
+        // Old format: use wrapped coordinates with tiling
+        const shouldRepeat = stitch.repeat !== false;
+        const tilesToCheckX = shouldRepeat ? tilesX : 1;
+        const tilesToCheckY = shouldRepeat ? tilesY : 1;
+
+        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
+          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
+            const offsetX = tileCol * patternTileSize.x;
+            const offsetY = tileRow * patternTileSize.y;
+            // Add artboardOffset to stitch coordinates
+            const startX = artboardOffset + (stitch.start.x + offsetX) * patternGridSize;
+            const startY = artboardOffset + (stitch.start.y + offsetY) * patternGridSize;
+            const endX = artboardOffset + (stitch.end.x + offsetX) * patternGridSize;
+            const endY = artboardOffset + (stitch.end.y + offsetY) * patternGridSize;
+
+            if (startX > canvasWidth || startY > canvasHeight) {
+              continue;
+            }
+
+            const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closest = stitch.id;
+            }
+          }
         }
       }
     });
-
-
 
     if (closest) {
       const next = new Set(selectedStitchIds);
