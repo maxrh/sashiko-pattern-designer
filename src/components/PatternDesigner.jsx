@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
+import { DEFAULT_GAP_SIZE } from './Stitches.jsx';
 import { 
   saveCurrentPattern, 
   loadCurrentPattern, 
@@ -33,6 +34,7 @@ const DEFAULT_PATTERN_TILES = 4;
 const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // 
 const DEFAULT_STITCH_COLOR = '#f5f5f5'; // default color for stitches
 const DEFAULT_STITCH_SIZE = 'medium';
+const DEFAULT_STITCH_WIDTH = 'normal';
 const DEFAULT_REPEAT_PATTERN = true;
 const DEFAULT_SHOW_GRID = true;
 const DEFAULT_GRID_COLOR = '#94a3b8';
@@ -90,6 +92,7 @@ function clonePattern(pattern) {
       ...stitch,
       start: { ...stitch.start },
       end: { ...stitch.end },
+      gapSize: stitch.gapSize ?? DEFAULT_GAP_SIZE, // Ensure all stitches have gapSize
     })),
   };
 }
@@ -138,6 +141,10 @@ export default function PatternDesigner() {
         tileSize: normalizeTileSize(saved.pattern.tileSize), // Normalize tileSize to {x, y} format
         gridSize: saved.pattern.gridSize ?? CELL_SIZE, // Ensure gridSize exists
         patternTiles: saved.pattern.patternTiles ?? DEFAULT_PATTERN_TILES, // Add missing patternTiles
+        stitches: (saved.pattern.stitches || []).map(stitch => ({
+          ...stitch,
+          gapSize: stitch.gapSize ?? DEFAULT_GAP_SIZE, // Ensure all stitches have gapSize
+        })),
       };
       return migratedPattern;
     }
@@ -181,6 +188,14 @@ export default function PatternDesigner() {
   const [stitchSize, setStitchSize] = useState(() => {
     const saved = loadCurrentPattern();
     return saved?.uiState?.stitchSize ?? DEFAULT_STITCH_SIZE;
+  });
+  const [stitchWidth, setStitchWidth] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.stitchWidth ?? DEFAULT_STITCH_WIDTH;
+  });
+  const [gapSize, setGapSize] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.gapSize ?? DEFAULT_GAP_SIZE;
   });
   const [repeatPattern, setRepeatPattern] = useState(() => {
     const saved = loadCurrentPattern();
@@ -248,6 +263,13 @@ export default function PatternDesigner() {
         setStitchSize(uniqueSizes[0]);
       }
       
+      // Update stitch width if all selected stitches have the same width
+      const stitchWidths = selectedStitches.map(s => s.stitchWidth || 'normal');
+      const uniqueWidths = [...new Set(stitchWidths)];
+      if (uniqueWidths.length === 1 && uniqueWidths[0]) {
+        setStitchWidth(uniqueWidths[0]);
+      }
+      
       // Update repeat pattern if all selected stitches have the same repeat setting
       const repeatSettings = selectedStitches.map(s => s.repeat !== false);
       const uniqueRepeats = [...new Set(repeatSettings)];
@@ -260,6 +282,13 @@ export default function PatternDesigner() {
       const uniqueColors = [...new Set(colors)];
       if (uniqueColors.length === 1 && uniqueColors[0]) {
         setSelectedStitchColor(uniqueColors[0]);
+      }
+      
+      // Update gap size if all selected stitches have the same gap size
+      const gapSizes = selectedStitches.map(s => s.gapSize ?? DEFAULT_GAP_SIZE);
+      const uniqueGapSizes = [...new Set(gapSizes)];
+      if (uniqueGapSizes.length === 1 && uniqueGapSizes[0] !== undefined) {
+        setGapSize(uniqueGapSizes[0]);
       }
     }
     // When nothing selected, preserve the current selectedStitchColor for drawing
@@ -404,6 +433,8 @@ export default function PatternDesigner() {
       end,
       color: null,
       stitchSize: stitchSize || defaultSize,
+      stitchWidth: stitchWidth,
+      gapSize: gapSize,
       repeat: repeat !== undefined ? repeat : true,
     };
     setCurrentPattern((prev) => ({
@@ -420,7 +451,7 @@ export default function PatternDesigner() {
     
     // Don't auto-select newly created stitches
     setSelectedStitchIds(new Set());
-  }, [selectedStitchColor]);
+  }, [selectedStitchColor, stitchWidth, gapSize]);
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedStitchIds.size === 0) return;
@@ -451,6 +482,42 @@ export default function PatternDesigner() {
     } else {
       // Update default for draw tool
       setStitchSize(newSize);
+    }
+  }, [selectedStitchIds]);
+
+  const handleChangeSelectedStitchWidth = useCallback((newWidth) => {
+    if (selectedStitchIds.size > 0) {
+      // Update selected stitches
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, stitchWidth: newWidth }
+            : stitch
+        ),
+      }));
+    } else {
+      // Update default for draw tool
+      setStitchWidth(newWidth);
+    }
+  }, [selectedStitchIds]);
+
+  const handleChangeSelectedGapSize = useCallback((newGapSize) => {
+    if (selectedStitchIds.size > 0) {
+      // Update selected stitches
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, gapSize: newGapSize }
+            : stitch
+        ),
+      }));
+      // Also update the UI state so slider stays in sync
+      setGapSize(newGapSize);
+    } else {
+      // Update default for draw tool
+      setGapSize(newGapSize);
     }
   }, [selectedStitchIds]);
 
@@ -534,6 +601,7 @@ export default function PatternDesigner() {
     setBackgroundColor(DEFAULT_BACKGROUND_COLOR);
     setSelectedStitchColor(DEFAULT_STITCH_COLOR);
     setStitchSize(DEFAULT_STITCH_SIZE);
+    setStitchWidth(DEFAULT_STITCH_WIDTH);
     setRepeatPattern(DEFAULT_REPEAT_PATTERN);
     setShowGrid(DEFAULT_SHOW_GRID);
     setGridColor(DEFAULT_GRID_COLOR);
@@ -577,6 +645,11 @@ export default function PatternDesigner() {
         tileOutlineOpacity,
         artboardOutlineColor,
         artboardOutlineOpacity,
+        selectedStitchColor,
+        stitchSize,
+        stitchWidth,
+        repeatPattern,
+        showGrid,
       };
       const result = saveToPatternLibrary(currentPattern, stitchColors, uiState);
       if (result.success) {
@@ -601,7 +674,7 @@ export default function PatternDesigner() {
         alert(`Failed to save pattern: ${result.error}`);
       }
     }, 300);
-  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity, selectedStitchColor, stitchSize, stitchWidth, repeatPattern, showGrid]);
 
   const handleDeletePattern = useCallback((patternId) => {
     deletePattern(patternId);
@@ -657,6 +730,12 @@ export default function PatternDesigner() {
         tileOutlineOpacity,
         artboardOutlineColor,
         artboardOutlineOpacity,
+        selectedStitchColor,
+        stitchSize,
+        stitchWidth,
+        gapSize,
+        repeatPattern,
+        showGrid,
       },
     };
 
@@ -670,7 +749,7 @@ export default function PatternDesigner() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity, selectedStitchColor, stitchSize, stitchWidth, gapSize, repeatPattern, showGrid]);
 
   const handleImportPattern = useCallback((file) => {
     const reader = new FileReader();
@@ -722,13 +801,14 @@ export default function PatternDesigner() {
     reader.readAsText(file);
   }, []);
 
-  const handleExportImage = useCallback(() => {
-    const dataUrl = canvasRef.current?.exportAsImage?.();
+  const handleExportImage = useCallback((resolutionMultiplier = 1) => {
+    const dataUrl = canvasRef.current?.exportAsImage?.(resolutionMultiplier);
     if (!dataUrl) return;
     const link = document.createElement('a');
     link.href = dataUrl;
     const slug = (currentPattern.name || 'pattern').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    link.download = `${slug || 'pattern'}.png`;
+    const suffix = resolutionMultiplier !== 1 ? `-${resolutionMultiplier}x` : '';
+    link.download = `${slug || 'pattern'}${suffix}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -853,6 +933,10 @@ export default function PatternDesigner() {
               colorPresets={COLOR_PRESETS}
               stitchSize={stitchSize}
               onStitchSizeChange={handleChangeSelectedStitchSize}
+              stitchWidth={stitchWidth}
+              onStitchWidthChange={handleChangeSelectedStitchWidth}
+              gapSize={gapSize}
+              onGapSizeChange={handleChangeSelectedGapSize}
               showGrid={showGrid}
               onShowGridChange={setShowGrid}
               onUndo={handleUndo}

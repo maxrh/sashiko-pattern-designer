@@ -7,6 +7,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Slider } from './ui/slider';
+import { STITCH_WIDTHS } from './Stitches.jsx';
 
 export function Toolbar({
   drawingMode,
@@ -21,6 +23,10 @@ export function Toolbar({
   colorPresets,
   stitchSize,
   onStitchSizeChange,
+  stitchWidth,
+  onStitchWidthChange,
+  gapSize,
+  onGapSizeChange,
   showGrid,
   onShowGridChange,
   onUndo,
@@ -157,15 +163,86 @@ export function Toolbar({
                 </SelectTrigger>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Stitch Size</p>
+                <p>Stitch Length</p>
               </TooltipContent>
             </Tooltip>
-            <SelectContent>
+            <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
               <SelectItem value="small">Small (≈2mm)</SelectItem>
               <SelectItem value="medium">Medium (≈4mm)</SelectItem>
               <SelectItem value="large">Large (≈8mm)</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={stitchWidth} onValueChange={onStitchWidthChange}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SelectTrigger >
+                  <SelectValue>
+                    {stitchWidth === 'thin' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />}
+                    {stitchWidth === 'normal' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />}
+                    {stitchWidth === 'bold' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />}
+                  </SelectValue>
+                </SelectTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stitch Width</p>
+              </TooltipContent>
+            </Tooltip>
+            <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
+              <SelectItem value="thin">
+                <div className="flex items-center gap-2">
+                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
+                  <span>Thin</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="normal">
+                <div className="flex items-center gap-2">
+                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
+                  <span>Normal</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="bold">
+                <div className="flex items-center gap-2">
+                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />
+                  <span>Bold</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-20 font-normal">
+                    {gapSize}px
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Gap Size</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gap-size-slider">Gap Size: {gapSize}px</Label>
+                  <Slider
+                    id="gap-size-slider"
+                    min={1}
+                    max={30}
+                    step={1}
+                    value={[gapSize]}
+                    onValueChange={(value) => onGapSizeChange(value[0])}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>1px</span>
+                    <span>30px</span>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Tooltip>
             <TooltipTrigger asChild>

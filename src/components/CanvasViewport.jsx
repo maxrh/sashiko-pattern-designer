@@ -54,7 +54,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   const artboardOffset = canvasMarginPixels;
 
   useImperativeHandle(ref, () => ({
-    exportAsImage: () => canvasRef.current?.exportAsImage(),
+    exportAsImage: (resolutionMultiplier) => canvasRef.current?.exportAsImage(resolutionMultiplier),
     getCanvasElement: () => canvasRef.current?.getCanvasElement(),
   }));
 
