@@ -198,7 +198,7 @@ export function Toolbar({
               <SelectItem value="normal">
                 <div className="flex items-center gap-2">
                   <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
-                  <span>Normal</span>
+                  <span>Medium</span>
                 </div>
               </SelectItem>
               <SelectItem value="bold">

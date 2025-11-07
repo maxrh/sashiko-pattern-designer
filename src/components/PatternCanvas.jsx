@@ -142,6 +142,18 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   // Calculate number of tiles in X and Y directions separately for non-square artboards
   const tilesX = useMemo(() => Math.ceil(artboardGridWidth / patternTileSize.x), [artboardGridWidth, patternTileSize.x]);
   const tilesY = useMemo(() => Math.ceil(artboardGridHeight / patternTileSize.y), [artboardGridHeight, patternTileSize.y]);
+  
+  // Memoize tile pixel dimensions to avoid repeated calculations
+  const tilePixelWidth = useMemo(() => patternTileSize.x * patternGridSize, [patternTileSize.x, patternGridSize]);
+  const tilePixelHeight = useMemo(() => patternTileSize.y * patternGridSize, [patternTileSize.y, patternGridSize]);
+  
+  // Memoize artboard boundaries for intersection checks
+  const artboardBounds = useMemo(() => ({
+    startPixelX: artboardOffset,
+    endPixelX: artboardOffset + artboardWidth,
+    startPixelY: artboardOffset,
+    endPixelY: artboardOffset + artboardHeight,
+  }), [artboardOffset, artboardWidth, artboardHeight]);
 
   useImperativeHandle(ref, () => ({
     exportAsImage: (resolutionMultiplier = 1) => {
@@ -150,8 +162,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       
       // Calculate the extended area: artboard + 1 tile margin on all sides
       // Extended area is where pattern stitches can repeat/extend
-      const tilePixelWidth = patternTileSize.x * patternGridSize;
-      const tilePixelHeight = patternTileSize.y * patternGridSize;
+      // Use memoized tile dimensions
       const extendedAreaWidth = artboardWidth + (2 * tilePixelWidth);
       const extendedAreaHeight = artboardHeight + (2 * tilePixelHeight);
       
@@ -190,9 +201,24 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     getCanvasElement: () => canvasRef.current,
   }));
 
+  // Memoize visual settings to prevent unnecessary re-renders
+  const visualSettings = useMemo(() => ({
+    backgroundColor,
+    gridColor,
+    gridOpacity,
+    tileOutlineColor,
+    tileOutlineOpacity,
+    artboardOutlineColor,
+    artboardOutlineOpacity,
+  }), [backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
+    // Clear visible stitch instances FIRST to prevent memory accumulation
+    visibleStitchInstancesRef.current.clear();
+    
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio ?? 1;
 
@@ -204,39 +230,38 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     ctx.scale(dpr, dpr);
 
     // Fill entire canvas background
-    ctx.fillStyle = backgroundColor;
+    ctx.fillStyle = visualSettings.backgroundColor;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     if (showGrid) {
       // Draw artboard boundary (the area where pattern tiles are drawn)
-      const artboardR = parseInt(artboardOutlineColor.slice(1, 3), 16);
-      const artboardG = parseInt(artboardOutlineColor.slice(3, 5), 16);
-      const artboardB = parseInt(artboardOutlineColor.slice(5, 7), 16);
-      ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${artboardOutlineOpacity})`;
+      const artboardR = parseInt(visualSettings.artboardOutlineColor.slice(1, 3), 16);
+      const artboardG = parseInt(visualSettings.artboardOutlineColor.slice(3, 5), 16);
+      const artboardB = parseInt(visualSettings.artboardOutlineColor.slice(5, 7), 16);
+      ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${visualSettings.artboardOutlineOpacity})`;
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
       ctx.strokeRect(artboardOffset, artboardOffset, artboardWidth, artboardHeight);
 
       // Draw pattern tile boundaries (only within artboard and when repeat pattern is enabled)
       if (repeatPattern) {
-        const tileR = parseInt(tileOutlineColor.slice(1, 3), 16);
-        const tileG = parseInt(tileOutlineColor.slice(3, 5), 16);
-        const tileB = parseInt(tileOutlineColor.slice(5, 7), 16);
-        ctx.strokeStyle = `rgba(${tileR}, ${tileG}, ${tileB}, ${tileOutlineOpacity})`;
+        const tileR = parseInt(visualSettings.tileOutlineColor.slice(1, 3), 16);
+        const tileG = parseInt(visualSettings.tileOutlineColor.slice(3, 5), 16);
+        const tileB = parseInt(visualSettings.tileOutlineColor.slice(5, 7), 16);
+        ctx.strokeStyle = `rgba(${tileR}, ${tileG}, ${tileB}, ${visualSettings.tileOutlineOpacity})`;
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
-        const patternTilePixelWidth = patternTileSize.x * patternGridSize;
-        const patternTilePixelHeight = patternTileSize.y * patternGridSize;
+        // Use memoized tile dimensions
         for (let row = 0; row <= tilesY; row += 1) {
           for (let col = 0; col <= tilesX; col += 1) {
-            const x = artboardOffset + (col * patternTilePixelWidth);
-            const y = artboardOffset + (row * patternTilePixelHeight);
+            const x = artboardOffset + (col * tilePixelWidth);
+            const y = artboardOffset + (row * tilePixelHeight);
             if (x <= artboardOffset + artboardWidth && y <= artboardOffset + artboardHeight) {
               ctx.strokeRect(
                 x, 
                 y, 
-                Math.min(patternTilePixelWidth, artboardWidth - col * patternTilePixelWidth), 
-                Math.min(patternTilePixelHeight, artboardHeight - row * patternTilePixelHeight)
+                Math.min(tilePixelWidth, artboardWidth - col * tilePixelWidth), 
+                Math.min(tilePixelHeight, artboardHeight - row * tilePixelHeight)
               );
             }
           }
@@ -246,10 +271,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     // Draw grid dots across entire canvas (not just artboard)
     if (showGrid) {
-      const gridR = parseInt(gridColor.slice(1, 3), 16);
-      const gridG = parseInt(gridColor.slice(3, 5), 16);
-      const gridB = parseInt(gridColor.slice(5, 7), 16);
-      ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${gridOpacity})`;
+      const gridR = parseInt(visualSettings.gridColor.slice(1, 3), 16);
+      const gridG = parseInt(visualSettings.gridColor.slice(3, 5), 16);
+      const gridB = parseInt(visualSettings.gridColor.slice(5, 7), 16);
+      ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${visualSettings.gridOpacity})`;
       // Use 2×2 pixel dots for all grid sizes
       const dotSize = 2;
       const dotOffset = dotSize / 2;
@@ -263,9 +288,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     }
 
     const stitches = pattern?.stitches ?? [];
-
-    // Clear and rebuild visible stitch instances for selection
-    visibleStitchInstancesRef.current.clear();
 
     ctx.lineCap = 'round'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
@@ -406,12 +428,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             
             // For outer tiles (in canvas padding), only render if the line actually crosses into the artboard
             if (isOuterTile) {
-              // Calculate the artboard boundaries in canvas pixels
-              const artboardStartPixelX = artboardOffset;
-              const artboardEndPixelX = artboardOffset + artboardWidth;
-              const artboardStartPixelY = artboardOffset;
-              const artboardEndPixelY = artboardOffset + artboardHeight;
-              
+              // Use memoized artboard boundaries
               // Check if this line segment intersects with the artboard area
               // A line intersects if any part of it is within [artboardStart, artboardEnd] for both x and y
               const lineMinX = Math.min(startX, endX);
@@ -420,10 +437,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const lineMaxY = Math.max(startY, endY);
               
               const intersectsArtboard = !(
-                lineMaxX < artboardStartPixelX ||
-                lineMinX > artboardEndPixelX ||
-                lineMaxY < artboardStartPixelY ||
-                lineMinY > artboardEndPixelY
+                lineMaxX < artboardBounds.startPixelX ||
+                lineMinX > artboardBounds.endPixelX ||
+                lineMaxY < artboardBounds.startPixelY ||
+                lineMinY > artboardBounds.endPixelY
               );
               
               if (!intersectsArtboard) {
@@ -458,9 +475,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               if (!visibleStitchInstancesRef.current.has(stitch.id)) {
                 visibleStitchInstancesRef.current.set(stitch.id, []);
               }
-              visibleStitchInstancesRef.current.get(stitch.id).push({
-                startX, startY, endX, endY
-              });
+              // Use array instead of object to reduce memory overhead
+              visibleStitchInstancesRef.current.get(stitch.id).push([startX, startY, endX, endY]);
             }
           }
         }
@@ -502,9 +518,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           if (!visibleStitchInstancesRef.current.has(stitch.id)) {
             visibleStitchInstancesRef.current.set(stitch.id, []);
           }
-          visibleStitchInstancesRef.current.get(stitch.id).push({
-            startX, startY, endX, endY
-          });
+          // Use array instead of object to reduce memory overhead
+          visibleStitchInstancesRef.current.get(stitch.id).push([startX, startY, endX, endY]);
         }
         }
     });
@@ -539,7 +554,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     artboardOffset,
     artboardWidth,
     artboardHeight,
-    backgroundColor,
+    artboardBounds,
     canvasGridWidth,
     canvasGridHeight,
     canvasWidth,
@@ -557,12 +572,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     stitchColors,
     tilesX,
     tilesY,
-    gridColor,
-    gridOpacity,
-    tileOutlineColor,
-    tileOutlineOpacity,
-    artboardOutlineColor,
-    artboardOutlineOpacity,
+    tilePixelWidth,
+    tilePixelHeight,
+    visualSettings, // Single memoized object instead of 6 separate dependencies
   ]);
 
   const handleMouseDown = (event) => {
@@ -635,7 +647,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
       // Check if any visible instance of this stitch intersects with selection
       for (const instance of instances) {
-        if (lineIntersectsRect(instance.startX, instance.startY, instance.endX, instance.endY, minX, minY, maxX, maxY)) {
+        // instance is [startX, startY, endX, endY]
+        if (lineIntersectsRect(instance[0], instance[1], instance[2], instance[3], minX, minY, maxX, maxY)) {
           selectedIds.add(stitchId);
           break;
         }
@@ -694,9 +707,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       const endPixelX = point.gridX * patternGridSize;
       const endPixelY = point.gridY * patternGridSize;
       
-      const tileSizeX = patternTileSize.x * patternGridSize;
-      const tileSizeY = patternTileSize.y * patternGridSize;
-      const maxTileSize = Math.max(tileSizeX, tileSizeY);
+      // Use memoized tile dimensions
+      const maxTileSize = Math.max(tilePixelWidth, tilePixelHeight);
       if (!lineIntersectsArtboard(startPixelX, startPixelY, endPixelX, endPixelY, artboardOffset, artboardOffset, artboardWidth, artboardHeight, maxTileSize)) {
         // Line doesn't intersect drawable area, don't add it
         onDrawingStateChange({ ...drawingState, firstPoint: null });
@@ -838,10 +850,11 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
       // Check each visible instance of this stitch for proximity to click
       for (const instance of instances) {
+        // instance is [startX, startY, endX, endY]
         const distance = distancePointToSegment(
           clickX, clickY, 
-          instance.startX, instance.startY, 
-          instance.endX, instance.endY
+          instance[0], instance[1], 
+          instance[2], instance[3]
         );
         if (distance < closestDistance) {
           closestDistance = distance;

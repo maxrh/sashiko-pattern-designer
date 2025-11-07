@@ -41,6 +41,16 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 		
 		<!-- Theme Color -->
 		<meta name="theme-color" content="#09090b" />
+		
+		<!-- Prevent spacebar scroll globally for the app -->
+		<script is:inline>
+			window.addEventListener('keydown', function(e) {
+				if (e.code === 'Space' || e.key === ' ') {
+					// Prevent default scroll behavior
+					e.preventDefault();
+				}
+			}, { capture: true, passive: false });
+		</script>
 	</head>
 	<body class="min-h-screen bg-baground text-foreground antialiased">
 		<slot />

@@ -124,11 +124,13 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   // Handle spacebar hotkey for pan mode
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' && !e.repeat) {
+      if (e.code === 'Space') {
+        // Always prevent default scroll behavior for spacebar
         e.preventDefault();
         e.stopPropagation();
-        // Toggle to pan mode when spacebar is pressed
-        if (drawingState.mode !== 'pan') {
+        
+        // Only change mode on first press (not on repeat)
+        if (!e.repeat && drawingState.mode !== 'pan') {
           onDrawingStateChange({ ...drawingState, mode: 'pan', previousMode: drawingState.mode });
         }
       }
@@ -148,23 +150,14 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
       }
     };
 
-    const handleScroll = (e) => {
-      // Prevent any scroll triggered by spacebar
-      if (drawingState.mode === 'pan') {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
     // Use capture phase to catch events before they trigger default scroll
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-    window.addEventListener('keyup', handleKeyUp, { capture: true });
-    document.addEventListener('scroll', handleScroll, { passive: false, capture: true });
+    // This ensures we catch the spacebar before browser scroll
+    window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+    window.addEventListener('keyup', handleKeyUp, { capture: true, passive: false });
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
       window.removeEventListener('keyup', handleKeyUp, { capture: true });
-      document.removeEventListener('scroll', handleScroll, { capture: true });
     };
   }, [drawingState, onDrawingStateChange]);
 
@@ -178,21 +171,27 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
         WebkitUserSelect: 'none',
         touchAction: 'none',
         outline: 'none',
+        // Prevent spacebar from scrolling when in pan mode
+        overflowAnchor: 'none',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onKeyDown={(e) => {
-        if (e.code === 'Space') {
+        // Prevent spacebar scroll at the container level
+        if (e.code === 'Space' || e.key === ' ') {
           e.preventDefault();
           e.stopPropagation();
+          return false;
         }
       }}
       onKeyUp={(e) => {
-        if (e.code === 'Space') {
+        // Prevent spacebar scroll at the container level
+        if (e.code === 'Space' || e.key === ' ') {
           e.preventDefault();
           e.stopPropagation();
+          return false;
         }
       }}
       tabIndex={-1}

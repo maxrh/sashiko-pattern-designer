@@ -111,12 +111,26 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
   
   try {
     const savedPatterns = loadSavedPatterns();
-    const builtInIds = ['blank', 'asanoha', 'simple-cross', 'diagonal-flow'];
+    const builtInIds = ['blank', 'asanoha', 'simple-cross', 'diagonal-flow', 'hitomezashi-cross', 'hitomezashi-kuchi'];
     
-    // Generate new ID if pattern is based on a built-in or doesn't have a user-generated ID
+    // Check if this is an existing saved pattern
+    const existingPattern = savedPatterns.find(p => p.id === pattern.id);
+    
+    // Generate new ID if:
+    // 1. Pattern is based on a built-in, OR
+    // 2. Pattern doesn't have a user-generated ID, OR
+    // 3. Pattern name has changed (indicating a "Save As" operation)
     let patternId = pattern.id;
+    let isNewPattern = false;
+    
     if (!patternId || builtInIds.includes(patternId) || patternId.startsWith('pattern-blank')) {
+      // Always create new ID for built-in or blank patterns
       patternId = `pattern-${Date.now()}`;
+      isNewPattern = true;
+    } else if (existingPattern && existingPattern.name !== pattern.name) {
+      // Name changed - create a new pattern (Save As behavior)
+      patternId = `pattern-${Date.now()}`;
+      isNewPattern = true;
     }
     
     // Create a clean pattern object with color overrides baked in
@@ -133,6 +147,8 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
         end: { ...stitch.end },
         color: stitchColors.get(stitch.id) || stitch.color || null,
         stitchSize: stitch.stitchSize || 'small',
+        stitchWidth: stitch.stitchWidth || 'normal',
+        gapSize: stitch.gapSize ?? 9,
         repeat: stitch.repeat !== false,
       })),
       uiState: uiState ? {
@@ -150,8 +166,8 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
     // Check if pattern already exists (by id)
     const existingIndex = savedPatterns.findIndex(p => p.id === patternToSave.id);
     
-    if (existingIndex >= 0) {
-      // Update existing pattern
+    if (existingIndex >= 0 && !isNewPattern) {
+      // Update existing pattern (only if we're not creating a new one)
       savedPatterns[existingIndex] = patternToSave;
     } else {
       // Add new pattern
@@ -159,7 +175,7 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
     }
 
     localStorage.setItem(STORAGE_KEYS.SAVED_PATTERNS, JSON.stringify(savedPatterns));
-    return { success: true, pattern: patternToSave };
+    return { success: true, pattern: patternToSave, isNewPattern };
   } catch (error) {
     console.error('Failed to save pattern to library:', error);
     return { success: false, error: error.message };
@@ -222,6 +238,8 @@ export function exportPatternAsJSON(pattern, stitchColors) {
       end: { ...stitch.end },
       color: stitchColors.get(stitch.id) || stitch.color || null,
       stitchSize: stitch.stitchSize || 'small',
+      stitchWidth: stitch.stitchWidth || 'normal',
+      gapSize: stitch.gapSize ?? 9,
       repeat: stitch.repeat !== false,
     })),
     exportedAt: new Date().toISOString(),
