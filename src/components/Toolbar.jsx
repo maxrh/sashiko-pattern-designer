@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
+import { STITCH_WIDTHS } from './Stitches.jsx';
 
 export function Toolbar({
   drawingMode,
@@ -175,8 +176,12 @@ export function Toolbar({
           <Select value={stitchWidth} onValueChange={onStitchWidthChange}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
+                <SelectTrigger >
+                  <SelectValue>
+                    {stitchWidth === 'thin' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />}
+                    {stitchWidth === 'normal' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />}
+                    {stitchWidth === 'bold' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />}
+                  </SelectValue>
                 </SelectTrigger>
               </TooltipTrigger>
               <TooltipContent>
@@ -184,9 +189,24 @@ export function Toolbar({
               </TooltipContent>
             </Tooltip>
             <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
-              <SelectItem value="thin">Thin</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="bold">Bold</SelectItem>
+              <SelectItem value="thin">
+                <div className="flex items-center gap-2">
+                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
+                  <span>Thin</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="normal">
+                <div className="flex items-center gap-2">
+                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
+                  <span>Normal</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="bold">
+                <div className="flex items-center gap-2">
+                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />
+                  <span>Bold</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
 
