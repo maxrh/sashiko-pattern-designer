@@ -123,12 +123,14 @@ function isValidPattern(data) {
   );
 }
 
+// Memoize built-in patterns to prevent repeated cloning
+const BUILT_IN_PATTERNS = patternsData.map(clonePattern);
+
 export default function PatternDesigner() {
   // Load saved patterns from local storage + built-in patterns
   const [savedPatterns, setSavedPatterns] = useState(() => {
     const userPatterns = loadSavedPatterns();
-    const builtInPatterns = patternsData.map(clonePattern);
-    return [...builtInPatterns, ...userPatterns];
+    return [...BUILT_IN_PATTERNS, ...userPatterns];
   });
 
   // Initialize state from local storage or defaults
@@ -303,8 +305,13 @@ export default function PatternDesigner() {
       return;
     }
 
+    // Use shallow copy with structural sharing instead of deep clone
+    // Only clone the stitches array, reuse stitch objects (they're immutable in our usage)
     const newState = {
-      pattern: clonePattern(currentPattern),
+      pattern: {
+        ...currentPattern,
+        stitches: [...currentPattern.stitches], // Shallow copy of array
+      },
       stitchColors: new Map(stitchColors),
       timestamp: Date.now(),
     };
@@ -397,7 +404,11 @@ export default function PatternDesigner() {
     if (historyIndex > 0) {
       const prevState = history[historyIndex - 1];
       isUndoRedoAction.current = true;
-      setCurrentPattern(clonePattern(prevState.pattern));
+      // Use shallow copy instead of deep clone - stitches are immutable
+      setCurrentPattern({
+        ...prevState.pattern,
+        stitches: [...prevState.pattern.stitches],
+      });
       setStitchColors(new Map(prevState.stitchColors));
       setHistoryIndex(historyIndex - 1);
       setSelectedStitchIds(new Set()); // Clear selection on undo
@@ -408,7 +419,11 @@ export default function PatternDesigner() {
     if (historyIndex < history.length - 1) {
       const nextState = history[historyIndex + 1];
       isUndoRedoAction.current = true;
-      setCurrentPattern(clonePattern(nextState.pattern));
+      // Use shallow copy instead of deep clone - stitches are immutable
+      setCurrentPattern({
+        ...nextState.pattern,
+        stitches: [...nextState.pattern.stitches],
+      });
       setStitchColors(new Map(nextState.stitchColors));
       setHistoryIndex(historyIndex + 1);
       setSelectedStitchIds(new Set()); // Clear selection on redo
@@ -655,12 +670,14 @@ export default function PatternDesigner() {
       if (result.success) {
         // Reload saved patterns to include the newly saved one
         const userPatterns = loadSavedPatterns();
-        const builtInPatterns = patternsData.map(clonePattern);
-        setSavedPatterns([...builtInPatterns, ...userPatterns]);
+        setSavedPatterns([...BUILT_IN_PATTERNS, ...userPatterns]);
         
-        // Update current pattern ID if it was a new pattern
+        // Update current pattern ID if it changed (new pattern or renamed)
         if (result.pattern.id !== currentPattern.id) {
-          setCurrentPattern(result.pattern);
+          setCurrentPattern({
+            ...currentPattern,
+            id: result.pattern.id,
+          });
         }
         
         setSaveState('saved');
@@ -681,8 +698,7 @@ export default function PatternDesigner() {
     
     // Reload saved patterns
     const userPatterns = loadSavedPatterns();
-    const builtInPatterns = patternsData.map(clonePattern);
-    setSavedPatterns([...builtInPatterns, ...userPatterns]);
+    setSavedPatterns([...BUILT_IN_PATTERNS, ...userPatterns]);
     
     // If the deleted pattern was currently loaded, switch to blank
     if (currentPattern.id === patternId) {
@@ -828,24 +844,24 @@ export default function PatternDesigner() {
         handleRedo();
         return;
       }
-      // Tool shortcuts: V for select, P for pen/draw
-      if (event.key === 'v' || event.key === 'V') {
+      // Tool shortcuts: V for select, P for pen/draw (no modifiers)
+      if ((event.key === 'v' || event.key === 'V') && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
         event.preventDefault();
         setDrawingState((prev) => ({ ...prev, mode: 'select', firstPoint: null }));
         return;
       }
-      if (event.key === 'p' || event.key === 'P') {
+      if ((event.key === 'p' || event.key === 'P') && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
         event.preventDefault();
         setDrawingState((prev) => ({ ...prev, mode: 'draw', firstPoint: null }));
         return;
       }
-      // View shortcuts: R for repeat pattern, H for hide/show grid
-      if (event.key === 'r' || event.key === 'R') {
+      // View shortcuts: R for repeat pattern, H for hide/show grid (no modifiers)
+      if ((event.key === 'r' || event.key === 'R') && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
         event.preventDefault();
         setRepeatPattern((prev) => !prev);
         return;
       }
-      if (event.key === 'h' || event.key === 'H') {
+      if ((event.key === 'h' || event.key === 'H') && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
         event.preventDefault();
         setShowGrid((prev) => !prev);
         return;
