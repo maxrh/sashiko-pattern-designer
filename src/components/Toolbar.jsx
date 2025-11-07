@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Slider } from './ui/slider';
 
 export function Toolbar({
   drawingMode,
@@ -23,6 +24,8 @@ export function Toolbar({
   onStitchSizeChange,
   stitchWidth,
   onStitchWidthChange,
+  gapSize,
+  onGapSizeChange,
   showGrid,
   onShowGridChange,
   onUndo,
@@ -186,6 +189,40 @@ export function Toolbar({
               <SelectItem value="bold">Bold</SelectItem>
             </SelectContent>
           </Select>
+
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-20 font-normal">
+                    {gapSize}px
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Gap Size</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gap-size-slider">Gap Size: {gapSize}px</Label>
+                  <Slider
+                    id="gap-size-slider"
+                    min={1}
+                    max={30}
+                    step={1}
+                    value={[gapSize]}
+                    onValueChange={(value) => onGapSizeChange(value[0])}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>1px</span>
+                    <span>30px</span>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Tooltip>
             <TooltipTrigger asChild>

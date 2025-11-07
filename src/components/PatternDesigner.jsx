@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
+import { DEFAULT_GAP_SIZE } from './Stitches.jsx';
 import { 
   saveCurrentPattern, 
   loadCurrentPattern, 
@@ -186,6 +187,10 @@ export default function PatternDesigner() {
   const [stitchWidth, setStitchWidth] = useState(() => {
     const saved = loadCurrentPattern();
     return saved?.uiState?.stitchWidth ?? DEFAULT_STITCH_WIDTH;
+  });
+  const [gapSize, setGapSize] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.gapSize ?? DEFAULT_GAP_SIZE;
   });
   const [repeatPattern, setRepeatPattern] = useState(() => {
     const saved = loadCurrentPattern();
@@ -696,6 +701,7 @@ export default function PatternDesigner() {
         selectedStitchColor,
         stitchSize,
         stitchWidth,
+        gapSize,
         repeatPattern,
         showGrid,
       },
@@ -711,7 +717,7 @@ export default function PatternDesigner() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity, selectedStitchColor, stitchSize, stitchWidth, repeatPattern, showGrid]);
+  }, [currentPattern, stitchColors, backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity, selectedStitchColor, stitchSize, stitchWidth, gapSize, repeatPattern, showGrid]);
 
   const handleImportPattern = useCallback((file) => {
     const reader = new FileReader();
@@ -897,6 +903,8 @@ export default function PatternDesigner() {
               onStitchSizeChange={handleChangeSelectedStitchSize}
               stitchWidth={stitchWidth}
               onStitchWidthChange={handleChangeSelectedStitchWidth}
+              gapSize={gapSize}
+              onGapSizeChange={setGapSize}
               showGrid={showGrid}
               onShowGridChange={setShowGrid}
               onUndo={handleUndo}
@@ -924,6 +932,7 @@ export default function PatternDesigner() {
             defaultStitchColor={defaultStitchColor}
             backgroundColor={backgroundColor}
             stitchSize={stitchSize}
+            gapSize={gapSize}
             repeatPattern={repeatPattern}
             showGrid={showGrid}
             gridColor={gridColor}

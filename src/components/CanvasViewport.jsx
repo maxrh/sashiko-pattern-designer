@@ -19,6 +19,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   defaultStitchColor,
   backgroundColor,
   stitchSize,
+  gapSize,
   repeatPattern,
   showGrid,
   gridColor,
@@ -223,6 +224,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           defaultStitchColor={defaultStitchColor}
           backgroundColor={backgroundColor}
           stitchSize={stitchSize}
+          gapSize={gapSize}
           repeatPattern={repeatPattern}
           showGrid={showGrid}
           gridColor={gridColor}

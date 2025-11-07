@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { renderStitch, DEFAULT_GAP_SIZE, calculateStitchOffset } from './Stitches';
 
 const SNAP_THRESHOLD = 15;
 const SELECT_THRESHOLD = 10;
@@ -101,6 +102,7 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   defaultStitchColor,
   backgroundColor,
   stitchSize,
+  gapSize,
   repeatPattern = true,
   showGrid = true,
   gridColor = '#94a3b8',
@@ -266,11 +268,8 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     // Clear and rebuild visible stitch instances for selection
     visibleStitchInstancesRef.current.clear();
 
-    const gapBetweenStitches = 9; // 9px gap between adjacent stitches
-    const stitchOffset = gapBetweenStitches / 2; // Start stitches 4.5px from grid point
-    
-
-
+    const gapBetweenStitches = gapSize; // Gap between adjacent stitches (from user setting)
+    const stitchOffset = calculateStitchOffset(gapBetweenStitches); // Offset from grid points to center gaps
 
     ctx.lineCap = 'round'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
@@ -437,223 +436,76 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             }
 
             const isSelected = selectedStitchIds.has(stitch.id);
-
-            // Calculate line width based on stitchWidth property
-            const stitchWidthValue = stitch.stitchWidth || 'normal';
-            let lineWidth = 3; // normal (default)
-            if (stitchWidthValue === 'thin') lineWidth = 2;
-            else if (stitchWidthValue === 'bold') lineWidth = 4;
-
-            // Calculate the offset direction (unit vector from start to end)
-            const dx = endX - startX;
-            const dy = endY - startY;
-            const length = Math.hypot(dx, dy);
-            if (length === 0) continue;
-
-            const unitX = dx / length;
-            const unitY = dy / length;
-
-            // Offset start and end by 4px along the line
-            const offsetStartX = startX + unitX * stitchOffset;
-            const offsetStartY = startY + unitY * stitchOffset;
-            const offsetEndX = endX - unitX * stitchOffset;
-            const offsetEndY = endY - unitY * stitchOffset;
-
-            // Calculate the drawable length (after removing offsets)
-            const drawableLength = length - (2 * stitchOffset);
-
-            // Get stitch size info from stitch metadata (or use default 'small')
             const stitchSizeForLine = stitch.stitchSize || 'small';
-            
-            // Determine target dash count based on stitch size and actual line length
-            // Use the ACTUAL line length (before offsets) to determine stitch count
-            let targetDashCount;
-            const actualCellsInLine = length / 20; // How many 20px cells in the actual line
-            const cellsInLine = drawableLength / 20; // Drawable length for calculations
-            
-            // For large, we use medium calculation as base
-            const isLarge = stitchSizeForLine === 'large';
-            const sizeForCalc = isLarge ? 'medium' : stitchSizeForLine;
-            
-            switch (sizeForCalc) {
-              case 'small':
-                // Small: 2 dashes per 20px cell, scale to actual line length
-                targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
-                break;
-              case 'medium':
-              default:
-                // Medium: 1 dash per 20px cell
-                // For exactly 1 cell (20px), we want 1 dash total (not 2)
-                targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
-                break;
-            }
-            
-            // Calculate dash and gap lengths based on drawable length
-            let dashLength, gapLength;
-            
-            if (targetDashCount === 1) {
-              // Single dash: use entire drawable length, no gaps
-              dashLength = drawableLength;
-              gapLength = 0;
-            } else if (isLarge) {
-              // Large: ensure even count for pairing
-              if (targetDashCount % 2 !== 0) {
-                targetDashCount += 1;
+            const stitchWidthValue = stitch.stitchWidth || 'normal';
+
+            // Render the stitch using shared rendering function
+            const rendered = renderStitch(
+              ctx,
+              startX,
+              startY,
+              endX,
+              endY,
+              stitchOffset,
+              gapBetweenStitches,
+              stitchSizeForLine,
+              stitchWidthValue,
+              colorOverride ?? defaultStitchColor,
+              isSelected,
+              patternGridSize
+            );
+
+            // Track this visible instance for selection (if rendered successfully)
+            if (rendered) {
+              if (!visibleStitchInstancesRef.current.has(stitch.id)) {
+                visibleStitchInstancesRef.current.set(stitch.id, []);
               }
-              // Large: merge pairs of dashes
-              // Each "super dash" = 2 dashes + 1 gap between them
-              const superDashCount = targetDashCount / 2;
-              const gapCount = superDashCount - 1; // gaps between super dashes
-              
-              // Calculate space
-              const totalGapSpace = gapCount * gapBetweenStitches;
-              const totalDashSpace = drawableLength - totalGapSpace;
-              
-              // Each super dash gets equal space
-              const superDashLength = totalDashSpace / superDashCount;
-              
-              // Set pattern: long dash, then gap
-              dashLength = superDashLength;
-              gapLength = gapBetweenStitches;
-            } else {
-              // Regular calculation (medium/large with multiple dashes)
-              const gapCount = targetDashCount - 1;
-              const totalGapSpace = gapCount * gapBetweenStitches;
-              const totalDashSpace = drawableLength - totalGapSpace;
-              
-              dashLength = totalDashSpace / targetDashCount;
-              gapLength = gapBetweenStitches;
+              visibleStitchInstancesRef.current.get(stitch.id).push({
+                startX, startY, endX, endY
+              });
             }
-            
-            // Only draw if dash length is positive (line is long enough)
-            if (dashLength <= 0) continue;
-
-            // Track this visible instance for selection
-            if (!visibleStitchInstancesRef.current.has(stitch.id)) {
-              visibleStitchInstancesRef.current.set(stitch.id, []);
-            }
-            visibleStitchInstancesRef.current.get(stitch.id).push({
-              startX, startY, endX, endY
-            });
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.setLineDash([dashLength, gapLength]);
-            ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
-            ctx.lineWidth = lineWidth;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.moveTo(offsetStartX, offsetStartY);
-            ctx.lineTo(offsetEndX, offsetEndY);
-            ctx.stroke();
-            ctx.restore();
           }
         }
       } else {
         // Absolute coordinates - non-repeating line at specific position
         const startX = artboardOffset + (stitch.start.x * patternGridSize);
-          const startY = artboardOffset + (stitch.start.y * patternGridSize);
-          const endX = artboardOffset + (stitch.end.x * patternGridSize);
-          const endY = artboardOffset + (stitch.end.y * patternGridSize);
+        const startY = artboardOffset + (stitch.start.y * patternGridSize);
+        const endX = artboardOffset + (stitch.end.x * patternGridSize);
+        const endY = artboardOffset + (stitch.end.y * patternGridSize);
 
-          if (startX > canvasWidth + patternGridSize || startY > canvasHeight + patternGridSize) {
-            return;
-          }
+        if (startX > canvasWidth + patternGridSize || startY > canvasHeight + patternGridSize) {
+          return;
+        }
 
-          const isSelected = selectedStitchIds.has(stitch.id);
+        const isSelected = selectedStitchIds.has(stitch.id);
+        const stitchSizeForLine = stitch.stitchSize || 'small';
+        const stitchWidthValue = stitch.stitchWidth || 'normal';
 
-          // Calculate line width based on stitchWidth property
-          const stitchWidthValue = stitch.stitchWidth || 'normal';
-          let lineWidth = 3; // normal (default)
-          if (stitchWidthValue === 'thin') lineWidth = 2;
-          else if (stitchWidthValue === 'bold') lineWidth = 4;
+        // Render the stitch using shared rendering function
+        const rendered = renderStitch(
+          ctx,
+          startX,
+          startY,
+          endX,
+          endY,
+          stitchOffset,
+          gapBetweenStitches,
+          stitchSizeForLine,
+          stitchWidthValue,
+          colorOverride ?? defaultStitchColor,
+          isSelected,
+          patternGridSize
+        );
 
-          // Calculate the offset direction (unit vector from start to end)
-          const dx = endX - startX;
-          const dy = endY - startY;
-          const length = Math.hypot(dx, dy);
-          if (length === 0) return;
-
-          const unitX = dx / length;
-          const unitY = dy / length;
-
-          // Offset start and end by 4px along the line
-          const offsetStartX = startX + unitX * stitchOffset;
-          const offsetStartY = startY + unitY * stitchOffset;
-          const offsetEndX = endX - unitX * stitchOffset;
-          const offsetEndY = endY - unitY * stitchOffset;
-
-          // Calculate the drawable length (after removing offsets)
-          const drawableLength = length - (2 * stitchOffset);
-
-          // Get stitch size info from stitch metadata (or use default 'small')
-          const stitchSizeForLine = stitch.stitchSize || 'small';
-          
-          // Determine target dash count based on stitch size and actual line length
-          let targetDashCount;
-          const actualCellsInLine = length / 20;
-          
-          const isLarge = stitchSizeForLine === 'large';
-          const sizeForCalc = isLarge ? 'medium' : stitchSizeForLine;
-          
-          switch (sizeForCalc) {
-            case 'small':
-              // Small: 2 dashes per 20px cell, scale to actual line length
-              targetDashCount = Math.max(2, Math.round(actualCellsInLine * 2));
-              break;
-            case 'medium':
-            default:
-              // Medium: 1 dash per 20px cell
-              targetDashCount = Math.max(1, Math.round(actualCellsInLine * 1));
-              break;
-          }
-          
-          // Calculate dash and gap lengths
-          let dashLength, gapLength;
-          
-          if (targetDashCount === 1) {
-            dashLength = drawableLength;
-            gapLength = 0;
-          } else if (isLarge) {
-            if (targetDashCount % 2 !== 0) {
-              targetDashCount += 1;
-            }
-            const superDashCount = targetDashCount / 2;
-            const gapCount = superDashCount - 1;
-            const totalGapSpace = gapCount * gapBetweenStitches;
-            const totalDashSpace = drawableLength - totalGapSpace;
-            const superDashLength = totalDashSpace / superDashCount;
-            dashLength = superDashLength;
-            gapLength = gapBetweenStitches;
-          } else {
-            const gapCount = targetDashCount - 1;
-            const totalGapSpace = gapCount * gapBetweenStitches;
-            const totalDashSpace = drawableLength - totalGapSpace;
-            dashLength = totalDashSpace / targetDashCount;
-            gapLength = gapBetweenStitches;
-          }
-          
-          if (dashLength <= 0) return;
-
-          // Track this visible instance for selection
+        // Track this visible instance for selection (if rendered successfully)
+        if (rendered) {
           if (!visibleStitchInstancesRef.current.has(stitch.id)) {
             visibleStitchInstancesRef.current.set(stitch.id, []);
           }
           visibleStitchInstancesRef.current.get(stitch.id).push({
             startX, startY, endX, endY
           });
-
-          ctx.save();
-          ctx.beginPath();
-          ctx.setLineDash([dashLength, gapLength]);
-          ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
-          ctx.lineWidth = lineWidth;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.moveTo(offsetStartX, offsetStartY);
-          ctx.lineTo(offsetEndX, offsetEndY);
-          ctx.stroke();
-          ctx.restore();
+        }
         }
     });
 
