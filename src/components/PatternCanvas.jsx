@@ -266,9 +266,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     // Clear and rebuild visible stitch instances for selection
     visibleStitchInstancesRef.current.clear();
 
-    const stitchOffset = 4; // Start stitches 4px from grid point
+    const gapBetweenStitches = 9; // 9px gap between adjacent stitches
+    const stitchOffset = gapBetweenStitches / 2; // Start stitches 4.5px from grid point
+    
 
-    ctx.lineCap = 'butt'; // Use butt to get precise pixel alignment
+
+
+    ctx.lineCap = 'round'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
       const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultStitchColor;
       
@@ -461,10 +465,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             // Get stitch size info from stitch metadata (or use default 'small')
             const stitchSizeForLine = stitch.stitchSize || 'small';
             
-            // Calculate gap between stitches based on stitch size
-            // Large stitches get 2px extra gap (10px total)
-            const gapBetweenStitches = stitchSizeForLine === 'large' ? 10 : 8;
-            
             // Determine target dash count based on stitch size and actual line length
             // Use the ACTUAL line length (before offsets) to determine stitch count
             let targetDashCount;
@@ -539,7 +539,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             ctx.save();
             ctx.beginPath();
             ctx.setLineDash([dashLength, gapLength]);
-            ctx.lineDashOffset = -1; // 1px gap at start and end for uniform connections
             ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
             ctx.lineWidth = lineWidth;
             ctx.lineCap = 'round';
@@ -589,10 +588,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
           // Get stitch size info from stitch metadata (or use default 'small')
           const stitchSizeForLine = stitch.stitchSize || 'small';
-          
-          // Calculate gap between stitches based on stitch size
-          // Large stitches get 2px extra gap (10px total)
-          const gapBetweenStitches = stitchSizeForLine === 'large' ? 10 : 8;
           
           // Determine target dash count based on stitch size and actual line length
           let targetDashCount;
@@ -651,7 +646,6 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           ctx.save();
           ctx.beginPath();
           ctx.setLineDash([dashLength, gapLength]);
-          ctx.lineDashOffset = -1; // 1px gap at start and end for uniform connections
           ctx.strokeStyle = isSelected ? '#0000FF' : (colorOverride ?? defaultStitchColor);
           ctx.lineWidth = lineWidth;
           ctx.lineCap = 'round';
