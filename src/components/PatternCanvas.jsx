@@ -984,160 +984,27 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       return;
     }
 
-    const stitches = pattern?.stitches ?? [];
+    // Use visible stitch instances from rendering for click selection
+    // This ensures selection matches exactly what's visible on screen
     let closest = null;
     let closestDistance = SELECT_THRESHOLD;
 
-    stitches.forEach((stitch) => {
-      // Check if coordinates are absolute (new format) or wrapped (old format)
-      const isAbsoluteCoords = stitch.start.x >= patternTileSize.x || stitch.start.y >= patternTileSize.y ||
-                               stitch.end.x >= patternTileSize.x || stitch.end.y >= patternTileSize.y ||
-                               stitch.start.x < 0 || stitch.start.y < 0 ||
-                               stitch.end.x < 0 || stitch.end.y < 0;
-
-      if (isAbsoluteCoords) {
-        // New format: use absolute coordinates
-        // Check all tile positions if repeat is on
-        const shouldRepeat = stitch.repeat !== false;
-
-        if (shouldRepeat) {
-          // For repeat, check all tiles including negative offsets
-          for (let tileRow = -1; tileRow <= tilesY; tileRow += 1) {
-            for (let tileCol = -1; tileCol <= tilesX; tileCol += 1) {
-              // Check if this is an outer tile
-              const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
-                                  tileCol < 0 || tileCol >= tilesX;
-              
-              // Apply same filtering as rendering: skip outer tiles for boundary lines
-              if (isOuterTile) {
-                const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
-                const justTouchingBoundary = lineLength <= 1.5;
-                
-                const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize.x);
-                const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
-                
-                // A line runs along a boundary if BOTH endpoints are on the SAME boundary
-                const bothOnVerticalBoundary = 
-                  (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
-                  (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
-                  stitch.start.x === stitch.end.x;
-                
-                const bothOnHorizontalBoundary = 
-                  (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
-                  (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
-                  stitch.start.y === stitch.end.y;
-                
-                // Lines crossing horizontally OR running along vertical boundary: clickable in X direction (left/right outer tiles)
-                const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
-                
-                // Lines crossing vertically OR running along horizontal boundary: clickable in Y direction (top/bottom outer tiles)
-                const shouldRepeatInYDirection = crossesVertically || bothOnHorizontalBoundary;
-                
-                // Determine which outer tiles to check
-                const isLeftRightOuterTile = tileCol < 0 || tileCol >= tilesX;
-                const isTopBottomOuterTile = tileRow < 0 || tileRow >= tilesY;
-                
-                // Skip this outer tile if line shouldn't be clickable in this direction
-                if (isLeftRightOuterTile && !shouldRepeatInXDirection) {
-                  continue;
-                }
-                if (isTopBottomOuterTile && !shouldRepeatInYDirection) {
-                  continue;
-                }
-              }
-              
-              const tileOffsetX = tileCol * patternTileSize.x;
-              const tileOffsetY = tileRow * patternTileSize.y;
-            
-              const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
-              const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
-              const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
-              const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
-
-              if (startX > canvasWidth || startY > canvasHeight) {
-                continue;
-              }
-              
-              // For outer tiles, only check if line intersects artboard
-              if (isOuterTile) {
-                const artboardStartPixelX = artboardOffset;
-                const artboardEndPixelX = artboardOffset + artboardWidth;
-                const artboardStartPixelY = artboardOffset;
-                const artboardEndPixelY = artboardOffset + artboardHeight;
-                
-                const lineMinX = Math.min(startX, endX);
-                const lineMaxX = Math.max(startX, endX);
-                const lineMinY = Math.min(startY, endY);
-                const lineMaxY = Math.max(startY, endY);
-                
-                const intersectsArtboard = !(
-                  lineMaxX < artboardStartPixelX ||
-                  lineMinX > artboardEndPixelX ||
-                  lineMaxY < artboardStartPixelY ||
-                  lineMinY > artboardEndPixelY
-                );
-                
-                if (!intersectsArtboard) {
-                  continue;
-                }
-              }
-
-              const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
-              if (distance < closestDistance) {
-                closestDistance = distance;
-                closest = stitch.id;
-              }
-            }
-          }
-        } else {
-          // For non-repeat, check single position at origin
-          const tileOffsetX = 0;
-          const tileOffsetY = 0;
-          
-          const startX = artboardOffset + ((stitch.start.x + tileOffsetX) * patternGridSize);
-          const startY = artboardOffset + ((stitch.start.y + tileOffsetY) * patternGridSize);
-          const endX = artboardOffset + ((stitch.end.x + tileOffsetX) * patternGridSize);
-          const endY = artboardOffset + ((stitch.end.y + tileOffsetY) * patternGridSize);
-
-          if (startX > canvasWidth || startY > canvasHeight) {
-            // Skip this stitch if it's outside canvas
-          } else {
-            const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closest = stitch.id;
-            }
-          }
-        }
-      } else {
-        // Old format: use wrapped coordinates with tiling
-        const shouldRepeat = stitch.repeat !== false;
-        const tilesToCheckX = shouldRepeat ? tilesX : 1;
-        const tilesToCheckY = shouldRepeat ? tilesY : 1;
-
-        for (let tileRow = 0; tileRow < tilesToCheckY; tileRow += 1) {
-          for (let tileCol = 0; tileCol < tilesToCheckX; tileCol += 1) {
-            const offsetX = tileCol * patternTileSize.x;
-            const offsetY = tileRow * patternTileSize.y;
-            // Add artboardOffset to stitch coordinates
-            const startX = artboardOffset + (stitch.start.x + offsetX) * patternGridSize;
-            const startY = artboardOffset + (stitch.start.y + offsetY) * patternGridSize;
-            const endX = artboardOffset + (stitch.end.x + offsetX) * patternGridSize;
-            const endY = artboardOffset + (stitch.end.y + offsetY) * patternGridSize;
-
-            if (startX > canvasWidth || startY > canvasHeight) {
-              continue;
-            }
-
-            const distance = distancePointToSegment(clickX, clickY, startX, startY, endX, endY);
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closest = stitch.id;
-            }
-          }
+    visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
+      // Check each visible instance of this stitch for proximity to click
+      for (const instance of instances) {
+        const distance = distancePointToSegment(
+          clickX, clickY, 
+          instance.startX, instance.startY, 
+          instance.endX, instance.endY
+        );
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closest = stitchId;
         }
       }
     });
+
+
 
     if (closest) {
       const next = new Set(selectedStitchIds);

@@ -71,6 +71,33 @@
 - **Pattern-Relative Coordinates**: Normalized to single tile (0 to patternTileSize)
   - Used for repeated lines that tile across the artboard
 
+#### Shared Boundary Coordinates (CRITICAL)
+Tile boundaries are **shared** between adjacent tiles:
+- **y=0** is the top boundary of tile row 0 AND the bottom boundary of tile row -1
+- **y=10** (tileSize) is the bottom boundary of tile row 0 AND the top boundary of tile row 1
+- **x=0** is the left boundary of tile col 0 AND the right boundary of tile col -1
+- **x=10** (tileSize) is the right boundary of tile col 0 AND the left boundary of tile col 1
+
+**Coordinate Normalization for Shared Boundaries:**
+When a line is drawn on the canvas crossing a shared boundary, the system normalizes it to avoid duplication:
+- Lines starting at **y=0** with **negative Y** (going upward) are normalized to y=0 with negative end
+  - Example: Canvas line from (5, bottom) to (10, middle) → normalized to (5,0) to (10,-5)
+  - These lines belong to the tiles BELOW, not the first row
+- Lines starting at **x=0** with **negative X** (going leftward) are normalized to x=0 with negative end
+  - Example: Canvas line from (right, 5) to (middle, 10) → normalized to (0,5) to (-5,10)
+  - These lines belong to the tiles to the RIGHT, not the first column
+
+**Rendering Shift for Shared Boundary Lines:**
+Lines that start on a shared boundary with negative direction skip the first row/column:
+- **y=0 with negative Y**: Skip tile row 0 and top outer tile (row -1)
+  - Renders in rows 1, 2, 3 (artboard) + bottom outer tile
+  - Result: 4x4 grid shifted down by one row
+- **x=0 with negative X**: Skip tile col 0 and left outer tile (col -1)
+  - Renders in cols 1, 2, 3 (artboard) + right outer tile
+  - Result: 4x4 grid shifted right by one column
+
+This ensures lines on shared boundaries only render once at their actual position, not duplicated across adjacent tiles.
+
 ### Canvas Size Calculation (UPDATED)
 ```javascript
 const CANVAS_MARGIN_CELLS = 40; // 40 grid cells of margin around artboard
@@ -497,33 +524,47 @@ const intersectsArtboard = !(
 
 ## Selection System
 
+### Unified Selection Logic (CRITICAL)
+Both click and drag selection use `visibleStitchInstancesRef` which is populated during rendering:
+- **Single Source of Truth**: Selection checks ONLY the stitch instances that were actually rendered
+- **Automatic Filtering**: All rendering filters (coordinate shifts, boundary handling, outer tile logic) automatically apply to selection
+- **No Code Duplication**: Selection logic is ~10 lines instead of 200+ lines of duplicated filtering
+- **Guaranteed Consistency**: If a stitch isn't visible, it can't be selected
+
 ### Click Selection
-- Checks all stitches for proximity to click point
-- Threshold: 10px distance
-- **For pattern lines** (start in [0, patternGridSize), repeat !== false):
-  - Checks tiles 0 to tilesPerSide-1 if repeat true
-  - Checks only tile 0 if repeat false
-- **For absolute coordinate lines**:
-  - Checks tiles -1 to tilesPerSide if repeat !== false
-  - Checks only the absolute position if repeat false
+- Checks all visible stitch instances from `visibleStitchInstancesRef`
+- Uses `distancePointToSegment()` with 10px threshold
+- Finds closest visible stitch to click point
 - Modifiers:
-  - Ctrl/Cmd/Shift: Toggle selection
-  - No modifier: Replace selection
+  - Ctrl/Cmd/Shift: Toggle selection (add/remove from set)
+  - No modifier: Replace selection (clear and select one)
 
 ### Drag Selection
 - Rectangle selection with visual feedback (blue dashed border)
+- Checks all visible stitch instances from `visibleStitchInstancesRef`
 - Uses `lineIntersectsRect()` to detect line-rectangle intersection
-- **For pattern lines** (start in [0, patternGridSize), repeat !== false):
-  - Checks tiles 0 to tilesPerSide-1 if repeat true
-  - Checks only tile 0 if repeat false
-- **For absolute coordinate lines**:
-  - Checks tiles -1 to tilesPerSide if repeat !== false
-  - Checks only the absolute position if repeat false
+- Selects all stitches with at least one visible instance intersecting the rectangle
 - Prevents onClick from firing after drag via `justFinishedDragRef`
 - Ignores drags smaller than 5x5 pixels (treats as click instead)
 - Modifiers:
   - Ctrl/Cmd/Shift: Add to existing selection
   - No modifier: Replace selection
+
+### visibleStitchInstancesRef Structure
+```javascript
+// Map<stitchId: string, instances: Array<{startX, startY, endX, endY}>>
+{
+  "stitch-123": [
+    { startX: 100, startY: 200, endX: 300, endY: 200 },  // Instance in tile 0
+    { startX: 500, startY: 200, endX: 700, endY: 200 },  // Instance in tile 1
+    // ... more instances for this stitch
+  ],
+  // ... more stitches
+}
+```
+- Cleared at start of each render pass
+- Populated right before `ctx.stroke()` for each visible stitch instance
+- Used by both click and drag selection to ensure they match rendering exactly
 
 ### Selection Rendering
 - Selected stitches render in blue (#0000FF)
