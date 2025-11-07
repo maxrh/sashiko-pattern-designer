@@ -308,12 +308,14 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             const isInTopOuterTile = tileRow < 0;
             const isInLeftOuterTile = tileCol < 0;
             
-            // Vertical line from corner going UP (negative Y): skip in first row and top outer tiles
-            if (startsAtNormalizedCorner && startOnTopEdge && hasNegativeY && (isInFirstRow || isInTopOuterTile)) {
+            // Lines starting at top edge (y=0) going UP (negative Y): skip in first row and top outer tiles
+            // These lines belong to the row below, so shift rendering down
+            if (startOnTopEdge && hasNegativeY && (isInFirstRow || isInTopOuterTile)) {
               continue;
             }
-            // Horizontal line from corner going LEFT (negative X): skip in first col and left outer tiles
-            if (startsAtNormalizedCorner && startOnLeftEdge && hasNegativeX && (isInFirstCol || isInLeftOuterTile)) {
+            // Lines starting at left edge (x=0) going LEFT (negative X): skip in first col and left outer tiles  
+            // These lines belong to the column to the right, so shift rendering right
+            if (startOnLeftEdge && hasNegativeX && (isInFirstCol || isInLeftOuterTile)) {
               continue;
             }
             
@@ -356,15 +358,18 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
               
               // A line runs along a boundary if BOTH endpoints are on the SAME boundary
+              // AND the line doesn't move in that direction (vertical line has same X, horizontal line has same Y)
               const bothOnVerticalBoundary = 
                 (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
                 (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
-                stitch.start.x === stitch.end.x;
+                stitch.start.x === stitch.end.x &&
+                stitch.start.y !== stitch.end.y; // Must move in Y direction (vertical line)
               
               const bothOnHorizontalBoundary = 
                 (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
                 (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
-                stitch.start.y === stitch.end.y;
+                stitch.start.y === stitch.end.y &&
+                stitch.start.x !== stitch.end.x; // Must move in X direction (horizontal line)
               
               // Lines crossing horizontally OR running along vertical boundary: repeat in X direction (left/right outer tiles)
               const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;
