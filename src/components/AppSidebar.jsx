@@ -14,7 +14,7 @@ import {
 } from './ui/dropdown-menu';
 import { CanvasSettings } from './CanvasSettings.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
-import { ScanQrCode, ChevronsUpDown } from 'lucide-react';
+import { ScanQrCode, ChevronsUpDown, Github, Mail, SquareArrowOutUpRight } from 'lucide-react';
 
 export function AppSidebar({
   sidebarTab,
@@ -31,6 +31,8 @@ export function AppSidebar({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
+  displayUnit,
+  onDisplayUnitChange,
   artboardWidth,
   artboardHeight,
   canvasInfo,
@@ -47,16 +49,10 @@ export function AppSidebar({
   onDeletePattern,
   gridColor,
   onGridColorChange,
-  gridOpacity,
-  onGridOpacityChange,
   tileOutlineColor,
   onTileOutlineColorChange,
-  tileOutlineOpacity,
-  onTileOutlineOpacityChange,
   artboardOutlineColor,
   onArtboardOutlineColorChange,
-  artboardOutlineOpacity,
-  onArtboardOutlineOpacityChange,
   currentPattern,
   stitchColors,
 }) {
@@ -104,6 +100,8 @@ export function AppSidebar({
                     onTileSizeChange={onTileSizeChange}
                     gridSize={gridSize}
                     onGridSizeChange={onGridSizeChange}
+                    displayUnit={displayUnit}
+                    onDisplayUnitChange={onDisplayUnitChange}
                     artboardWidth={artboardWidth}
                     artboardHeight={artboardHeight}
                     canvasInfo={canvasInfo}
@@ -113,16 +111,10 @@ export function AppSidebar({
                     onResetSettings={onResetSettings}
                     gridColor={gridColor}
                     onGridColorChange={onGridColorChange}
-                    gridOpacity={gridOpacity}
-                    onGridOpacityChange={onGridOpacityChange}
                     tileOutlineColor={tileOutlineColor}
                     onTileOutlineColorChange={onTileOutlineColorChange}
-                    tileOutlineOpacity={tileOutlineOpacity}
-                    onTileOutlineOpacityChange={onTileOutlineOpacityChange}
                     artboardOutlineColor={artboardOutlineColor}
                     onArtboardOutlineColorChange={onArtboardOutlineColorChange}
-                    artboardOutlineOpacity={artboardOutlineOpacity}
-                    onArtboardOutlineOpacityChange={onArtboardOutlineOpacityChange}
                     onExportPattern={onExportPattern}
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}
@@ -161,14 +153,37 @@ export function AppSidebar({
               <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem>
-                Link 1
+              <DropdownMenuItem asChild>
+                <a 
+                  href="https://monsun.dk" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <SquareArrowOutUpRight className="h-4 w-4" />
+                  <span>monsun.dk</span>
+                </a>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                Link 2
+              <DropdownMenuItem asChild>
+                <a 
+                  href="mailto:max@monsun.dk"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Mail className="h-4 w-4" />
+                  <span>max@monsun.dk</span>
+                </a>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                Link 3
+              
+              <DropdownMenuItem asChild>
+                <a 
+                  href="https://github.com/maxrh/sashiko-app" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Github className="h-4 w-4" />
+                  <span>GitHub</span>
+                </a>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,7 +1,7 @@
-import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2 } from 'lucide-react';
+import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2, ChevronDown } from 'lucide-react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
-import { Toggle } from './ui/toggle';
 import { SidebarTrigger } from './ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -9,12 +9,11 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
 import { STITCH_WIDTHS } from './Stitches.jsx';
+import { formatValueNumber } from '../lib/unitConverter.js';
 
 export function Toolbar({
   drawingMode,
   onModeChange,
-  onSelectAll,
-  onDeselectAll,
   repeatPattern,
   onRepeatPatternChange,
   selectedStitchColor,
@@ -29,11 +28,36 @@ export function Toolbar({
   onGapSizeChange,
   showGrid,
   onShowGridChange,
+  displayUnit,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
 }) {
+  // Track hydration to prevent SSR mismatch for values from localStorage
+  const [isHydrated, setIsHydrated] = useState(false);
+  
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Memoize gap size callback to prevent recreating on every render
+  const handleGapSizeChange = useCallback((value) => {
+    onGapSizeChange(value[0]);
+  }, [onGapSizeChange]);
+
+  // Memoize display values to avoid recalculating on every render
+  const gapDisplayValue = useMemo(() => {
+    const value = formatValueNumber(gapSize, displayUnit, displayUnit === 'cm' ? 2 : 1);
+    // Format to always show decimals
+    if (displayUnit === 'mm') {
+      return Number(value).toFixed(1);
+    } else if (displayUnit === 'cm') {
+      return Number(value).toFixed(2);
+    }
+    return value;
+  }, [gapSize, displayUnit]);
+
   return (
     <TooltipProvider>
       <div className="flex items-center gap-4">
@@ -158,7 +182,7 @@ export function Toolbar({
           <Select value={stitchSize} onValueChange={onStitchSizeChange}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="">
                   <SelectValue />
                 </SelectTrigger>
               </TooltipTrigger>
@@ -167,11 +191,48 @@ export function Toolbar({
               </TooltipContent>
             </Tooltip>
             <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
-              <SelectItem value="small">Small (≈2mm)</SelectItem>
-              <SelectItem value="medium">Medium (≈4mm)</SelectItem>
-              <SelectItem value="large">Large (≈8mm)</SelectItem>
+              <SelectItem value="small">
+                Small (≈{displayUnit === 'px' ? '5px' : displayUnit === 'mm' ? '1.3mm' : '0.13cm'})
+              </SelectItem>
+              <SelectItem value="medium">
+                Medium (≈{displayUnit === 'px' ? '16px' : displayUnit === 'mm' ? '4.2mm' : '0.42cm'})
+              </SelectItem>
+              <SelectItem value="large">
+                Large (≈{displayUnit === 'px' ? '28px' : displayUnit === 'mm' ? '7.4mm' : '0.74cm'})
+              </SelectItem>
             </SelectContent>
           </Select>
+
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="font-normal justify-between">
+                    {isHydrated ? `${gapDisplayValue}${displayUnit}` : '—'}
+                    <ChevronDown className="text-muted-foreground h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stitch Gap</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Slider
+                    id="gap-size-slider"
+                    min={1}
+                    max={30}
+                    step={1}
+                    value={[gapSize]}
+                    onValueChange={handleGapSizeChange}
+                  />
+               
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Select value={stitchWidth} onValueChange={onStitchWidthChange}>
             <Tooltip>
@@ -210,39 +271,7 @@ export function Toolbar({
             </SelectContent>
           </Select>
 
-          <Popover>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-20 font-normal">
-                    {gapSize}px
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Gap Size</p>
-              </TooltipContent>
-            </Tooltip>
-            <PopoverContent className="w-64">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="gap-size-slider">Gap Size: {gapSize}px</Label>
-                  <Slider
-                    id="gap-size-slider"
-                    min={1}
-                    max={30}
-                    step={1}
-                    value={[gapSize]}
-                    onValueChange={(value) => onGapSizeChange(value[0])}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>1px</span>
-                    <span>30px</span>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          
 
           <Tooltip>
             <TooltipTrigger asChild>

@@ -1,11 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { PatternCanvas } from './PatternCanvas.jsx';
+import { normalizeTileSize, DEFAULT_GRID_SIZE } from '../lib/patternUtils.js';
 
 // Canvas terminology:
 // - "canvas" = the entire grid area where drawing happens (with margin around artboard)
 // - "artboard" = the total area of pattern tiles we draw inside
 const CANVAS_MARGIN_CELLS = 40; // 40 grid cells of margin around artboard
-const CELL_SIZE = 20;
 
 export const CanvasViewport = forwardRef(function CanvasViewport({
   patternTiles,
@@ -22,27 +22,17 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   repeatPattern,
   showGrid,
   gridColor,
-  gridOpacity,
   tileOutlineColor,
-  tileOutlineOpacity,
   artboardOutlineColor,
-  artboardOutlineOpacity,
 }, ref) {
   const containerRef = useRef(null);
   const canvasWrapperRef = useRef(null);
   const canvasRef = useRef(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-
-  // Normalize tileSize to {x, y} format (supports legacy number format)
-  const normalizeTileSize = (tileSize) => {
-    if (typeof tileSize === 'number') return { x: tileSize, y: tileSize };
-    if (tileSize && typeof tileSize === 'object') return { x: tileSize.x || 10, y: tileSize.y || 10 };
-    return { x: 10, y: 10 };
-  };
   
   const patternTileSize = normalizeTileSize(pattern?.tileSize);
-  const patternGridSize = pattern?.gridSize ?? CELL_SIZE;
+  const patternGridSize = pattern?.gridSize ?? DEFAULT_GRID_SIZE;
   // Artboard = the total area containing all pattern tiles (separate width and height for non-square tiles)
   const artboardWidth = patternTiles.x * patternTileSize.x * patternGridSize;
   const artboardHeight = patternTiles.y * patternTileSize.y * patternGridSize;
@@ -225,11 +215,8 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           repeatPattern={repeatPattern}
           showGrid={showGrid}
           gridColor={gridColor}
-          gridOpacity={gridOpacity}
           tileOutlineColor={tileOutlineColor}
-          tileOutlineOpacity={tileOutlineOpacity}
           artboardOutlineColor={artboardOutlineColor}
-          artboardOutlineOpacity={artboardOutlineOpacity}
         />
       </div>
     </div>
