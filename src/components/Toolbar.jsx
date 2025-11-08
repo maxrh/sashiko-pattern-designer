@@ -1,8 +1,7 @@
 import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2, ChevronDown } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
-import { Toggle } from './ui/toggle';
 import { SidebarTrigger } from './ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -10,7 +9,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
 import { STITCH_WIDTHS } from './Stitches.jsx';
-import { formatValueNumber, parseValueToPx, getInputConstraints, pxToMm, pxToCm } from '../lib/unitConverter.js';
+import { formatValueNumber } from '../lib/unitConverter.js';
 
 export function Toolbar({
   drawingMode,
@@ -30,12 +29,18 @@ export function Toolbar({
   showGrid,
   onShowGridChange,
   displayUnit,
-  onDisplayUnitChange,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
 }) {
+  // Track hydration to prevent SSR mismatch for values from localStorage
+  const [isHydrated, setIsHydrated] = useState(false);
+  
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   // Memoize gap size callback to prevent recreating on every render
   const handleGapSizeChange = useCallback((value) => {
     onGapSizeChange(value[0]);
@@ -203,7 +208,7 @@ export function Toolbar({
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="font-normal justify-between">
-                    {gapDisplayValue}{displayUnit}
+                    {isHydrated ? `${gapDisplayValue}${displayUnit}` : '—'}
                     <ChevronDown className="text-muted-foreground h-4 w-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>

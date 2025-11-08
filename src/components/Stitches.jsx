@@ -31,11 +31,17 @@ export const DEFAULT_GAP_SIZE = 9; // Space between adjacent dashes
 export const calculateStitchOffset = (gapSize) => gapSize / 2;
 
 // Default stitch appearance settings
+export const DEFAULT_STITCH_COLOR = '#f5f5f5'; // Light gray color for stitches
+export const DEFAULT_STITCH_SIZE = 'medium';
+export const DEFAULT_STITCH_WIDTH = 'normal';
+export const DEFAULT_SELECTED_COLOR = '#0000FF'; // Blue color for selected stitches
+
 export const STITCH_DEFAULTS = {
-  size: 'small',
-  width: 'normal',
-  color: '#000000',
-  gapSize: DEFAULT_GAP_SIZE
+  size: DEFAULT_STITCH_SIZE,
+  width: DEFAULT_STITCH_WIDTH,
+  color: DEFAULT_STITCH_COLOR,
+  gapSize: DEFAULT_GAP_SIZE,
+  selectedColor: DEFAULT_SELECTED_COLOR
 };
 
 // ===================================
@@ -202,7 +208,7 @@ export function renderStitch(
   ctx.save();
   ctx.beginPath();
   ctx.setLineDash([dashLength, gapLength]);
-  ctx.strokeStyle = isSelected ? '#0000FF' : colorOverride;
+  ctx.strokeStyle = isSelected ? DEFAULT_SELECTED_COLOR : colorOverride;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';

@@ -15,7 +15,6 @@ import {
 import { CanvasSettings } from './CanvasSettings.jsx';
 import { PatternSelector } from './PatternSelector.jsx';
 import { ScanQrCode, ChevronsUpDown, Github, Mail, SquareArrowOutUpRight } from 'lucide-react';
-import { formatValueNumber } from '../lib/unitConverter.js';
 
 export function AppSidebar({
   sidebarTab,

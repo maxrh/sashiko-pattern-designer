@@ -1,8 +1,6 @@
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ButtonGroup } from './ui/button-group';
 import { Slider } from './ui/slider';
@@ -152,8 +150,6 @@ export function CanvasSettings({
       toast.error('Failed to copy to clipboard');
     });
   };
-
-  console.log('CanvasSettings backgroundColor:', backgroundColor);
 
   return (
     <Card>
