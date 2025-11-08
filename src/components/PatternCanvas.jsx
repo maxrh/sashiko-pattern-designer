@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { renderStitch, DEFAULT_GAP_SIZE, calculateStitchOffset } from './Stitches';
+import { DEFAULT_GRID_COLOR, DEFAULT_TILE_OUTLINE_COLOR, DEFAULT_ARTBOARD_OUTLINE_COLOR } from './PatternDesigner';
 
 const SNAP_THRESHOLD = 15;
 const SELECT_THRESHOLD = 10;
@@ -104,12 +105,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   stitchSize,
   repeatPattern = true,
   showGrid = true,
-  gridColor = '#94a3b8',
-  gridOpacity = 0.25,
-  tileOutlineColor = '#94a3b8',
-  tileOutlineOpacity = 0.15,
-  artboardOutlineColor = '#3b82f6',
-  artboardOutlineOpacity = 0.5,
+  gridColor = DEFAULT_GRID_COLOR,
+  tileOutlineColor = DEFAULT_TILE_OUTLINE_COLOR,
+  artboardOutlineColor = DEFAULT_ARTBOARD_OUTLINE_COLOR,
 }, ref) {
   const canvasRef = useRef(null);
   const [dragSelectRect, setDragSelectRect] = useState(null);
@@ -205,12 +203,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
   const visualSettings = useMemo(() => ({
     backgroundColor,
     gridColor,
-    gridOpacity,
     tileOutlineColor,
-    tileOutlineOpacity,
     artboardOutlineColor,
-    artboardOutlineOpacity,
-  }), [backgroundColor, gridColor, gridOpacity, tileOutlineColor, tileOutlineOpacity, artboardOutlineColor, artboardOutlineOpacity]);
+  }), [backgroundColor, gridColor, tileOutlineColor, artboardOutlineColor]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -235,20 +230,24 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     if (showGrid) {
       // Draw artboard boundary (the area where pattern tiles are drawn)
-      const artboardR = parseInt(visualSettings.artboardOutlineColor.slice(1, 3), 16);
-      const artboardG = parseInt(visualSettings.artboardOutlineColor.slice(3, 5), 16);
-      const artboardB = parseInt(visualSettings.artboardOutlineColor.slice(5, 7), 16);
-      ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${visualSettings.artboardOutlineOpacity})`;
+      const artboardHex = visualSettings.artboardOutlineColor;
+      const artboardR = parseInt(artboardHex.slice(1, 3), 16);
+      const artboardG = parseInt(artboardHex.slice(3, 5), 16);
+      const artboardB = parseInt(artboardHex.slice(5, 7), 16);
+      const artboardA = artboardHex.length === 9 ? parseInt(artboardHex.slice(7, 9), 16) / 255 : 1;
+      ctx.strokeStyle = `rgba(${artboardR}, ${artboardG}, ${artboardB}, ${artboardA})`;
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
       ctx.strokeRect(artboardOffset, artboardOffset, artboardWidth, artboardHeight);
 
       // Draw pattern tile boundaries (only within artboard and when repeat pattern is enabled)
       if (repeatPattern) {
-        const tileR = parseInt(visualSettings.tileOutlineColor.slice(1, 3), 16);
-        const tileG = parseInt(visualSettings.tileOutlineColor.slice(3, 5), 16);
-        const tileB = parseInt(visualSettings.tileOutlineColor.slice(5, 7), 16);
-        ctx.strokeStyle = `rgba(${tileR}, ${tileG}, ${tileB}, ${visualSettings.tileOutlineOpacity})`;
+        const tileHex = visualSettings.tileOutlineColor;
+        const tileR = parseInt(tileHex.slice(1, 3), 16);
+        const tileG = parseInt(tileHex.slice(3, 5), 16);
+        const tileB = parseInt(tileHex.slice(5, 7), 16);
+        const tileA = tileHex.length === 9 ? parseInt(tileHex.slice(7, 9), 16) / 255 : 1;
+        ctx.strokeStyle = `rgba(${tileR}, ${tileG}, ${tileB}, ${tileA})`;
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
         // Use memoized tile dimensions
@@ -271,10 +270,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
 
     // Draw grid dots across entire canvas (not just artboard)
     if (showGrid) {
-      const gridR = parseInt(visualSettings.gridColor.slice(1, 3), 16);
-      const gridG = parseInt(visualSettings.gridColor.slice(3, 5), 16);
-      const gridB = parseInt(visualSettings.gridColor.slice(5, 7), 16);
-      ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${visualSettings.gridOpacity})`;
+      // Parse grid color - support both 6-char (#RRGGBB) and 8-char (#RRGGBBAA) hex
+      const gridHex = visualSettings.gridColor;
+      const gridR = parseInt(gridHex.slice(1, 3), 16);
+      const gridG = parseInt(gridHex.slice(3, 5), 16);
+      const gridB = parseInt(gridHex.slice(5, 7), 16);
+      const gridA = gridHex.length === 9 ? parseInt(gridHex.slice(7, 9), 16) / 255 : 1;
+      ctx.fillStyle = `rgba(${gridR}, ${gridG}, ${gridB}, ${gridA})`;
       // Use 2×2 pixel dots for all grid sizes
       const dotSize = 2;
       const dotOffset = dotSize / 2;

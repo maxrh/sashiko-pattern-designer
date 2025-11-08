@@ -4,6 +4,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { ButtonGroup } from './ui/button-group';
 import { Slider } from './ui/slider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -18,8 +19,10 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
+import { ColorPickerComponent } from './ui/color-picker';
 import { ChevronRight, Info, Download, Upload, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatValueNumber, parseValueToPx, UNITS, pxToCm } from '../lib/unitConverter.js';
 
 export function CanvasSettings({
   patternTiles,
@@ -34,6 +37,8 @@ export function CanvasSettings({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
+  displayUnit,
+  onDisplayUnitChange,
   artboardWidth,
   artboardHeight,
   canvasInfo,
@@ -43,22 +48,17 @@ export function CanvasSettings({
   onResetSettings,
   gridColor,
   onGridColorChange,
-  gridOpacity,
-  onGridOpacityChange,
   tileOutlineColor,
   onTileOutlineColorChange,
-  tileOutlineOpacity,
-  onTileOutlineOpacityChange,
   artboardOutlineColor,
   onArtboardOutlineColorChange,
-  artboardOutlineOpacity,
-  onArtboardOutlineOpacityChange,
   onExportPattern,
   onImportPattern,
   onExportImage,
   currentPattern,
   stitchColors,
 }) {
+  const [isArtboardSettingsOpen, setIsArtboardSettingsOpen] = useState(true);
   const [isGridAppearanceOpen, setIsGridAppearanceOpen] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -105,11 +105,8 @@ export function CanvasSettings({
       uiState: {
         backgroundColor,
         gridColor,
-        gridOpacity,
         tileOutlineColor,
-        tileOutlineOpacity,
         artboardOutlineColor,
-        artboardOutlineOpacity,
       },
     };
 
@@ -141,11 +138,8 @@ export function CanvasSettings({
     "uiState": {
       "backgroundColor": "${patternForJson.uiState.backgroundColor}",
       "gridColor": "${patternForJson.uiState.gridColor}",
-      "gridOpacity": ${patternForJson.uiState.gridOpacity},
       "tileOutlineColor": "${patternForJson.uiState.tileOutlineColor}",
-      "tileOutlineOpacity": ${patternForJson.uiState.tileOutlineOpacity},
-      "artboardOutlineColor": "${patternForJson.uiState.artboardOutlineColor}",
-      "artboardOutlineOpacity": ${patternForJson.uiState.artboardOutlineOpacity}
+      "artboardOutlineColor": "${patternForJson.uiState.artboardOutlineColor}"
     }
   }`;
     
@@ -158,6 +152,8 @@ export function CanvasSettings({
       toast.error('Failed to copy to clipboard');
     });
   };
+
+  console.log('CanvasSettings backgroundColor:', backgroundColor);
 
   return (
     <Card>
@@ -189,157 +185,191 @@ export function CanvasSettings({
           />
         </div>
 
+        <ColorPickerComponent
+          label="Fabric Color"
+          id="background-color"
+          value={backgroundColor}
+          onChange={onBackgroundColorChange}
+        />
+
         <div className="space-y-2">
-          <Label htmlFor="artboard-size">Pattern Size</Label>
+          <Label htmlFor="artboard-size">Artboard Size</Label>
           <input
             type="text"
             id="artboard-size"
-            value={`${artboardWidth}×${artboardHeight}px`}
+            value={`${formatValueNumber(artboardWidth, displayUnit, displayUnit === UNITS.MM ? 0 : undefined)}×${formatValueNumber(artboardHeight, displayUnit, displayUnit === UNITS.MM ? 0 : undefined)}${displayUnit}`}
             disabled
             className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
           />
         </div>
+       
+        <ButtonGroup className="w-full">
+          <Button
+            variant={displayUnit === UNITS.PX ? "default" : "outline"}
+            onClick={() => onDisplayUnitChange(UNITS.PX)}
+            className="flex-1"
+          >
+            px
+          </Button>
+          <Button
+            variant={displayUnit === UNITS.MM ? "default" : "outline"}
+            onClick={() => onDisplayUnitChange(UNITS.MM)}
+            className="flex-1"
+          >
+            mm
+          </Button>
+          <Button
+            variant={displayUnit === UNITS.CM ? "default" : "outline"}
+            onClick={() => onDisplayUnitChange(UNITS.CM)}
+            className="flex-1"
+          >
+            cm
+          </Button>
+        </ButtonGroup>
+           
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-1">
-            <Label htmlFor="pattern-tiles-x">Tiles Horizontally (X): {patternTiles.x}</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Controls how many times the pattern repeats horizontally on the artboard</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <Slider
-            id="pattern-tiles-x"
-            min={1}
-            max={10}
-            step={1}
-            value={[patternTiles.x]}
-            onValueChange={(value) => onPatternTilesChange('x', value[0])}
-            className="w-full"
-          />
-        </div>
+        
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-1">
-            <Label htmlFor="pattern-tiles-y">Tiles Vertically (Y): {patternTiles.y}</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Controls how many times the pattern repeats vertically on the artboard</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <Slider
-            id="pattern-tiles-y"
-            min={1}
-            max={10}
-            step={1}
-            value={[patternTiles.y]}
-            onValueChange={(value) => onPatternTilesChange('y', value[0])}
-            className="w-full"
-          />
-        </div>
+        
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-1">
-            <Label htmlFor="tile-size-x">Tile Width: {tileSize.x} cells</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Number of grid cells horizontally per pattern tile</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <Slider
-            id="tile-size-x"
-            min={5}
-            max={20}
-            step={1}
-            value={[tileSize.x]}
-            onValueChange={(value) => onTileSizeChange('x', value[0])}
-            className="w-full"
-          />
-        </div>
+        <Collapsible open={isArtboardSettingsOpen} onOpenChange={setIsArtboardSettingsOpen} className="space-y-2">
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
+            <span>Artboard Settings</span>
+            <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isArtboardSettingsOpen ? 'rotate-90' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 pt-2">
+            
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-1">
-            <Label htmlFor="tile-size-y">Tile Height: {tileSize.y} cells</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Number of grid cells vertically per pattern tile</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <Slider
-            id="tile-size-y"
-            min={5}
-            max={20}
-            step={1}
-            value={[tileSize.y]}
-            onValueChange={(value) => onTileSizeChange('y', value[0])}
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-1">
-            <Label htmlFor="grid-size">Grid Size: {gridSize}px</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Pixel size of each grid cell</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <Slider
-            id="grid-size"
-            min={10}
-            max={50}
-            step={1}
-            value={[gridSize]}
-            onValueChange={(value) => onGridSizeChange(value[0])}
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="background-color">Fabric Color</Label>
-          <div className="flex gap-2">
-            <input
-              type="color"
-              id="background-color"
-              value={backgroundColor}
-              onChange={(e) => onBackgroundColorChange(e.target.value)}
-              className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background"
-            />
-            <div className="flex flex-1 items-center rounded-md border border-input bg-background px-3 text-xs text-foreground">
-              {backgroundColor.toUpperCase()}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="pattern-tiles-x">Columns (X): {patternTiles.x} </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Controls how many times the pattern repeats horizontally on the artboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Slider
+                id="pattern-tiles-x"
+                min={1}
+                max={10}
+                step={1}
+                value={[patternTiles.x]}
+                onValueChange={(value) => onPatternTilesChange('x', value[0])}
+                className="w-full"
+              />
             </div>
-          </div>
-        </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="pattern-tiles-y">Rows (Y): {patternTiles.y} </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Controls how many times the pattern repeats vertically on the artboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Slider
+                id="pattern-tiles-y"
+                min={1}
+                max={10}
+                step={1}
+                value={[patternTiles.y]}
+                onValueChange={(value) => onPatternTilesChange('y', value[0])}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="tile-size-x">Column Width (X): {tileSize.x}</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Number of grid cells horizontally per pattern tile</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Slider
+                id="tile-size-x"
+                min={5}
+                max={20}
+                step={1}
+                value={[tileSize.x]}
+                onValueChange={(value) => onTileSizeChange('x', value[0])}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="tile-size-y">Row Height (Y): {tileSize.y}</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Number of grid cells vertically per pattern tile</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Slider
+                id="tile-size-y"
+                min={5}
+                max={20}
+                step={1}
+                value={[tileSize.y]}
+                onValueChange={(value) => onTileSizeChange('y', value[0])}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Label htmlFor="grid-size">
+                  Grid Size: {formatValueNumber(gridSize, displayUnit, displayUnit === UNITS.CM ? 2 : undefined)}{displayUnit}
+                </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Size of each grid cell ({gridSize}px)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Slider
+                id="grid-size"
+                min={10}
+                max={50}
+                step={1}
+                value={[gridSize]}
+                onValueChange={(value) => onGridSizeChange(value[0])}
+                className="w-full"
+              />
+            </div>
+
+            
+          </CollapsibleContent>
+        </Collapsible>
 
         <Collapsible open={isGridAppearanceOpen} onOpenChange={setIsGridAppearanceOpen} className="space-y-2">
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
@@ -347,92 +377,26 @@ export function CanvasSettings({
             <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isGridAppearanceOpen ? 'rotate-90' : ''}`} />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="grid-color">Grid Color</Label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  id="grid-color"
-                  value={gridColor}
-                  onChange={(e) => onGridColorChange(e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background"
-                />
-                <div className="flex flex-1 items-center rounded-md border border-input bg-background px-3 text-xs text-foreground">
-                  {gridColor.toUpperCase()}
-                </div>
-              </div>
-            </div>
+            <ColorPickerComponent
+              label="Grid Color"
+              id="grid-color"
+              value={gridColor}
+              onChange={onGridColorChange}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="grid-opacity">Grid Opacity: {Math.round(gridOpacity * 100)}%</Label>
-              <Slider
-                id="grid-opacity"
-                min={0}
-                max={100}
-                step={1}
-                value={[gridOpacity * 100]}
-                onValueChange={(value) => onGridOpacityChange(value[0] / 100)}
-                className="w-full"
-              />
-            </div>
+            <ColorPickerComponent
+              label="Tile Outline Color"
+              id="tile-outline-color"
+              value={tileOutlineColor}
+              onChange={onTileOutlineColorChange}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="tile-outline-color">Tile Outline Color</Label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  id="tile-outline-color"
-                  value={tileOutlineColor}
-                  onChange={(e) => onTileOutlineColorChange(e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background"
-                />
-                <div className="flex flex-1 items-center rounded-md border border-input bg-background px-3 text-xs text-foreground">
-                  {tileOutlineColor.toUpperCase()}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tile-outline-opacity">Tile Outline Opacity: {Math.round(tileOutlineOpacity * 100)}%</Label>
-              <Slider
-                id="tile-outline-opacity"
-                min={0}
-                max={100}
-                step={1}
-                value={[tileOutlineOpacity * 100]}
-                onValueChange={(value) => onTileOutlineOpacityChange(value[0] / 100)}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="artboard-outline-color">Artboard Outline Color</Label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  id="artboard-outline-color"
-                  value={artboardOutlineColor}
-                  onChange={(e) => onArtboardOutlineColorChange(e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background"
-                />
-                <div className="flex flex-1 items-center rounded-md border border-input bg-background px-3 text-xs text-foreground">
-                  {artboardOutlineColor.toUpperCase()}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="artboard-outline-opacity">Artboard Outline Opacity: {Math.round(artboardOutlineOpacity * 100)}%</Label>
-              <Slider
-                id="artboard-outline-opacity"
-                min={0}
-                max={100}
-                step={1}
-                value={[artboardOutlineOpacity * 100]}
-                onValueChange={(value) => onArtboardOutlineOpacityChange(value[0] / 100)}
-                className="w-full"
-              />
-            </div>
+            <ColorPickerComponent
+              label="Artboard Outline Color"
+              id="artboard-outline-color"
+              value={artboardOutlineColor}
+              onChange={onArtboardOutlineColorChange}
+            />
           </CollapsibleContent>
         </Collapsible>
 
