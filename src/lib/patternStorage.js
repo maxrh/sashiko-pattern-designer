@@ -42,6 +42,7 @@ export function saveCurrentPattern(pattern, stitchColors, uiState) {
         tileOutlineColor: uiState.tileOutlineColor,
         artboardOutlineColor: uiState.artboardOutlineColor,
         displayUnit: uiState.displayUnit,
+        colorPresets: uiState.colorPresets,
       },
       timestamp: Date.now(),
     };
@@ -157,6 +158,7 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
         tileOutlineColor: uiState.tileOutlineColor,
         artboardOutlineColor: uiState.artboardOutlineColor,
         displayUnit: uiState.displayUnit,
+        colorPresets: uiState.colorPresets,
       } : undefined,
       savedAt: Date.now(),
     };

@@ -46,8 +46,16 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 		<script is:inline>
 			window.addEventListener('keydown', function(e) {
 				if (e.code === 'Space' || e.key === ' ') {
-					// Prevent default scroll behavior
-					e.preventDefault();
+					// Allow spacebar in input fields and textareas
+					const target = e.target;
+					const isTyping = target.tagName === 'INPUT' || 
+					                 target.tagName === 'TEXTAREA' || 
+					                 target.isContentEditable;
+					
+					if (!isTyping) {
+						// Prevent default scroll behavior
+						e.preventDefault();
+					}
 				}
 			}, { capture: true, passive: false });
 		</script>
