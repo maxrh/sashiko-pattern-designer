@@ -123,11 +123,10 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   });
 
   const [sidebarTab, setSidebarTab] = useState('controls');
-  const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
 
   // Pattern import/export operations
-  const { exportPattern, importPattern, exportImage } = usePatternImportExport({
+  const { exportPattern, importPattern, exportImage, copyPatternToClipboard } = usePatternImportExport({
     currentPattern,
     stitchColors,
     backgroundColor,
@@ -164,11 +163,6 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     setGapSize,
     historyManager,
   });
-
-  // Mark as hydrated after initial render to prevent SSR mismatch
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // Sync pattern tiles with current pattern
   useEffect(() => {
@@ -342,21 +336,12 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleAddStitch = useCallback(({ start, end, stitchSize, repeat }) => {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
     
-    // Determine default stitch size based on orientation if not provided
-    let defaultSize = 'small';
-    if (!stitchSize) {
-      const gridDx = Math.abs(end.x - start.x);
-      const gridDy = Math.abs(end.y - start.y);
-      const isDiagonal = gridDx > 0 && gridDy > 0;
-      defaultSize = isDiagonal ? 'small' : 'medium';
-    }
-    
     const newStitch = {
       id: newId,
       start,
       end,
       color: null,
-      stitchSize: stitchSize || defaultSize,
+      stitchSize: stitchSize,
       stitchWidth: stitchWidth,
       gapSize: gapSize,
       repeat: repeat !== undefined ? repeat : true,
@@ -605,6 +590,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         onExportPattern={exportPattern}
         onImportPattern={importPattern}
         onExportImage={exportImage}
+        onCopyPatternToClipboard={copyPatternToClipboard}
         savedPatterns={savedPatterns}
         activePatternId={currentPattern.id}
         onSelectPattern={(pattern) => {

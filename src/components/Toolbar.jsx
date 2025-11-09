@@ -1,5 +1,5 @@
 import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2, ChevronDown } from 'lucide-react';
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
 import { SidebarTrigger } from './ui/sidebar';
@@ -34,13 +34,6 @@ export function Toolbar({
   canUndo,
   canRedo,
 }) {
-  // Track hydration to prevent SSR mismatch for values from localStorage
-  const [isHydrated, setIsHydrated] = useState(false);
-  
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   // Memoize gap size callback to prevent recreating on every render
   const handleGapSizeChange = useCallback((value) => {
     onGapSizeChange(value[0]);
@@ -208,7 +201,7 @@ export function Toolbar({
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="font-normal justify-between">
-                    {isHydrated ? `${gapDisplayValue}${displayUnit}` : '—'}
+                    {`${gapDisplayValue}${displayUnit}`}
                     <ChevronDown className="text-muted-foreground h-4 w-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>

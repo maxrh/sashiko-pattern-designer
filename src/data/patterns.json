@@ -50,6 +50,41 @@
     }
   },
   {
+    "id": "ajiro-wickerwork",
+    "name": "Ajiro Wickerwork",
+    "description": "Simple grass wickerwork pattern",
+    "isStarterPattern": true,
+    "tileSize": {"x":6,"y":6},
+    "gridSize": 18,
+    "patternTiles": {"x":4,"y":4},
+    "stitches": [
+      { "id": "stitch-1762655460846-9d5bd7", "start": {"x":1,"y":0}, "end": {"x":4,"y":3}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655509335-b9eabe", "start": {"x":3,"y":2}, "end": {"x":0,"y":5}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655519768-f08907", "start": {"x":0,"y":3}, "end": {"x":2,"y":1}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655522898-39a8ee", "start": {"x":0,"y":1}, "end": {"x":1,"y":0}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655769157-e220bd", "start": {"x":2,"y":3}, "end": {"x":5,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655773612-e51888", "start": {"x":5,"y":0}, "end": {"x":6,"y":1}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655780667-d73a60", "start": {"x":1,"y":4}, "end": {"x":3,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655783297-2987bd", "start": {"x":5,"y":2}, "end": {"x":3,"y":0}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655896139-b3858a", "start": {"x":6,"y":1}, "end": {"x":3,"y":4}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655899663-a146ee", "start": {"x":6,"y":3}, "end": {"x":4,"y":5}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655901329-a46265", "start": {"x":0,"y":5}, "end": {"x":-1,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655903303-fe00f1", "start": {"x":1,"y":0}, "end": {"x":0,"y":-1}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655913049-7a6e32", "start": {"x":0,"y":5}, "end": {"x":1,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762655923231-5f7693", "start": {"x":5,"y":0}, "end": {"x":6,"y":-1}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762656401392-e333e3", "start": {"x":5,"y":0}, "end": {"x":6,"y":-1}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762656403944-f713d8", "start": {"x":0,"y":5}, "end": {"x":-1,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762656406872-c988e1", "start": {"x":0,"y":5}, "end": {"x":-1,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true },
+      { "id": "stitch-1762656482774-f2c3f1", "start": {"x":0,"y":5}, "end": {"x":-1,"y":6}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 6, "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172aff",
+      "gridColor": "#94a3b840",
+      "tileOutlineColor": "#94a3b826",
+      "artboardOutlineColor": "#3b82f680"
+    }
+  }, 
+  {
     "id": "simple-cross",
     "name": "Simple Cross",
     "description": "Cross stitches on an 6x6 grid",

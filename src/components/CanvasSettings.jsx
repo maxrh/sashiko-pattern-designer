@@ -20,7 +20,7 @@ import { Spinner } from './ui/spinner';
 import { ColorPickerComponent } from './ui/color-picker';
 import { ChevronRight, Info, Download, Upload, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatValueNumber, parseValueToPx, UNITS, pxToCm } from '../lib/unitConverter.js';
+import { formatValueNumber, UNITS } from '../lib/unitConverter.js';
 
 export function CanvasSettings({
   patternTiles,
@@ -39,7 +39,6 @@ export function CanvasSettings({
   onDisplayUnitChange,
   artboardWidth,
   artboardHeight,
-  canvasInfo,
   onNewPattern,
   onSavePattern,
   saveState = 'idle',
@@ -53,8 +52,7 @@ export function CanvasSettings({
   onExportPattern,
   onImportPattern,
   onExportImage,
-  currentPattern,
-  stitchColors,
+  onCopyPatternToClipboard,
 }) {
   const [isArtboardSettingsOpen, setIsArtboardSettingsOpen] = useState(true);
   const [isGridAppearanceOpen, setIsGridAppearanceOpen] = useState(false);
@@ -83,72 +81,13 @@ export function CanvasSettings({
   };
 
   const handleCopyForPatternsJson = () => {
-    // Create pattern object in the format expected by patterns.json
-    const patternForJson = {
-      id: currentPattern.id,
-      name: currentPattern.name || 'Untitled Pattern',
-      description: currentPattern.description || '',
-      tileSize: currentPattern.tileSize,
-      gridSize: currentPattern.gridSize,
-      patternTiles: currentPattern.patternTiles,
-      stitches: currentPattern.stitches.map(stitch => ({
-        id: stitch.id,
-        start: { ...stitch.start },
-        end: { ...stitch.end },
-        color: stitchColors.get(stitch.id) || stitch.color || null,
-        stitchSize: stitch.stitchSize || 'small',
-        stitchWidth: stitch.stitchWidth || 'normal',
-        repeat: stitch.repeat !== false,
-      })),
-      uiState: {
-        backgroundColor,
-        gridColor,
-        tileOutlineColor,
-        artboardOutlineColor,
-      },
-    };
-
-    // Custom compact JSON formatting - stitches on single lines
-    const formatStitch = (stitch) => {
-      const parts = [];
-      parts.push(`"id": "${stitch.id}"`);
-      parts.push(`"start": ${JSON.stringify(stitch.start)}`);
-      parts.push(`"end": ${JSON.stringify(stitch.end)}`);
-      parts.push(`"color": "${stitch.color}"`);
-      parts.push(`"stitchSize": "${stitch.stitchSize}"`);
-      parts.push(`"stitchWidth": "${stitch.stitchWidth}"`);
-      parts.push(`"repeat": ${stitch.repeat}`);
-      return `{ ${parts.join(', ')} }`;
-    };
-
-    const stitchesJson = patternForJson.stitches.length === 0 
-      ? '[]'
-      : '[\n      ' + patternForJson.stitches.map(formatStitch).join(',\n      ') + '\n    ]';
-
-    const jsonString = `{
-    "id": "${patternForJson.id}",
-    "name": "${patternForJson.name}",
-    "description": "${patternForJson.description}",
-    "tileSize": ${JSON.stringify(patternForJson.tileSize)},
-    "gridSize": ${patternForJson.gridSize},
-    "patternTiles": ${JSON.stringify(patternForJson.patternTiles)},
-    "stitches": ${stitchesJson},
-    "uiState": {
-      "backgroundColor": "${patternForJson.uiState.backgroundColor}",
-      "gridColor": "${patternForJson.uiState.gridColor}",
-      "tileOutlineColor": "${patternForJson.uiState.tileOutlineColor}",
-      "artboardOutlineColor": "${patternForJson.uiState.artboardOutlineColor}"
-    }
-  }`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(jsonString).then(() => {
-      toast.success('Copied to clipboard!', {
-        description: 'Paste this into src/data/patterns.json',
+    onCopyPatternToClipboard()
+      .then(() => {
+        toast.success('Copied to clipboard!');
+      })
+      .catch(() => {
+        toast.error('Failed to copy to clipboard');
       });
-    }).catch(() => {
-      toast.error('Failed to copy to clipboard');
-    });
   };
 
   return (
@@ -234,7 +173,6 @@ export function CanvasSettings({
             <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isArtboardSettingsOpen ? 'rotate-90' : ''}`} />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-2">
-            
 
             <div className="space-y-2">
               <div className="flex items-center gap-1">
@@ -363,7 +301,6 @@ export function CanvasSettings({
               />
             </div>
 
-            
           </CollapsibleContent>
         </Collapsible>
 

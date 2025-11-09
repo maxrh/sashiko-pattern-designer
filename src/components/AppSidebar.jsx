@@ -43,6 +43,7 @@ export function AppSidebar({
   onExportPattern,
   onImportPattern,
   onExportImage,
+  onCopyPatternToClipboard,
   savedPatterns,
   activePatternId,
   onSelectPattern,
@@ -118,6 +119,7 @@ export function AppSidebar({
                     onExportPattern={onExportPattern}
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}
+                    onCopyPatternToClipboard={onCopyPatternToClipboard}
                     currentPattern={currentPattern}
                     stitchColors={stitchColors}
                   />
