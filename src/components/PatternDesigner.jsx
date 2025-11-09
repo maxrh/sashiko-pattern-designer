@@ -43,7 +43,7 @@ const COLOR_PRESETS = [
 
 // Default settings constants (non-stitch related)
 export const DEFAULT_PATTERN_TILES = 4;
-export const DEFAULT_BACKGROUND_COLOR = '#0f172aff'; // Dark slate with full opacity (8-char hex)
+export const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // Dark slate with full opacity (8-char hex)
 export const DEFAULT_REPEAT_PATTERN = true;
 export const DEFAULT_SHOW_GRID = true;
 export const DEFAULT_GRID_COLOR = '#94a3b840'; // Grid color with 25% alpha
@@ -122,12 +122,24 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     return saved?.uiState?.displayUnit ?? DEFAULT_UNIT;
   });
 
+  // Color presets for SketchPicker
+  const [colorPresets, setColorPresets] = useState(() => {
+    const saved = loadCurrentPattern();
+    return saved?.uiState?.colorPresets ?? [
+      '#6366f1', // Indigo
+      '#f5f5f5', // White
+      '#ef4444', // Red
+      '#14b8a6', // Teal
+      '#fb7185', // Coral
+      '#0b1120', // Black
+    ];
+  });
+
   const [sidebarTab, setSidebarTab] = useState('controls');
-  const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
 
   // Pattern import/export operations
-  const { exportPattern, importPattern, exportImage } = usePatternImportExport({
+  const { exportPattern, importPattern, exportImage, copyPatternToClipboard } = usePatternImportExport({
     currentPattern,
     stitchColors,
     backgroundColor,
@@ -164,11 +176,6 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     setGapSize,
     historyManager,
   });
-
-  // Mark as hydrated after initial render to prevent SSR mismatch
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // Sync pattern tiles with current pattern
   useEffect(() => {
@@ -259,6 +266,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
       tileOutlineColor,
       artboardOutlineColor,
       displayUnit,
+      colorPresets,
     });
   }, [
     currentPattern,
@@ -275,6 +283,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     tileOutlineColor,
     artboardOutlineColor,
     displayUnit,
+    colorPresets,
   ]);
 
   // Artboard = the total area containing all pattern tiles
@@ -342,21 +351,12 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleAddStitch = useCallback(({ start, end, stitchSize, repeat }) => {
     const newId = `stitch-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
     
-    // Determine default stitch size based on orientation if not provided
-    let defaultSize = 'small';
-    if (!stitchSize) {
-      const gridDx = Math.abs(end.x - start.x);
-      const gridDy = Math.abs(end.y - start.y);
-      const isDiagonal = gridDx > 0 && gridDy > 0;
-      defaultSize = isDiagonal ? 'small' : 'medium';
-    }
-    
     const newStitch = {
       id: newId,
       start,
       end,
       color: null,
-      stitchSize: stitchSize || defaultSize,
+      stitchSize: stitchSize,
       stitchWidth: stitchWidth,
       gapSize: gapSize,
       repeat: repeat !== undefined ? repeat : true,
@@ -558,8 +558,29 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     // This will be used for the next drawn stitch
   }, [selectedStitchIds]);
 
-  const handleClearColors = useCallback(() => {
-    setStitchColors(new Map());
+  const handleAddColorPreset = useCallback((color) => {
+    if (!color) return;
+    setColorPresets((prev) => {
+      if (!prev.includes(color)) {
+        return [...prev, color];
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleRemoveColorPreset = useCallback((color) => {
+    setColorPresets((prev) => prev.filter(c => c !== color));
+  }, []);
+
+  const handleResetColorPresets = useCallback(() => {
+    setColorPresets([
+      '#6366f1', // Indigo
+      '#f5f5f5', // White
+      '#ef4444', // Red
+      '#14b8a6', // Teal
+      '#fb7185', // Coral
+      '#0b1120', // Black
+    ]);
   }, []);
 
   // Keyboard shortcuts
@@ -605,6 +626,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         onExportPattern={exportPattern}
         onImportPattern={importPattern}
         onExportImage={exportImage}
+        onCopyPatternToClipboard={copyPatternToClipboard}
         savedPatterns={savedPatterns}
         activePatternId={currentPattern.id}
         onSelectPattern={(pattern) => {
@@ -617,6 +639,9 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         onTileOutlineColorChange={setTileOutlineColor}
         artboardOutlineColor={artboardOutlineColor}
         onArtboardOutlineColorChange={setArtboardOutlineColor}
+        colorPresets={colorPresets}
+        onAddColorPreset={handleAddColorPreset}
+        onRemoveColorPreset={handleRemoveColorPreset}
         currentPattern={currentPattern}
         stitchColors={stitchColors}
       />
@@ -634,8 +659,9 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
               onRepeatPatternChange={handleChangeRepeatPattern}
               selectedStitchColor={selectedStitchColor}
               onSelectedStitchColorChange={handleColorChange}
-              onClearColors={handleClearColors}
-              colorPresets={COLOR_PRESETS}
+              colorPresets={colorPresets}
+              onAddColorPreset={handleAddColorPreset}
+              onRemoveColorPreset={handleRemoveColorPreset}
               stitchSize={stitchSize}
               onStitchSizeChange={handleChangeSelectedStitchSize}
               stitchWidth={stitchWidth}

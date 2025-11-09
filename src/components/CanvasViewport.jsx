@@ -115,6 +115,16 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space') {
+        // Ignore if typing in input fields or textareas
+        const target = e.target;
+        const isTyping = target.tagName === 'INPUT' || 
+                         target.tagName === 'TEXTAREA' || 
+                         target.isContentEditable;
+        
+        if (isTyping) {
+          return; // Allow normal spacebar behavior in input fields
+        }
+
         // Always prevent default scroll behavior for spacebar
         e.preventDefault();
         e.stopPropagation();
@@ -128,6 +138,16 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
 
     const handleKeyUp = (e) => {
       if (e.code === 'Space') {
+        // Ignore if typing in input fields or textareas
+        const target = e.target;
+        const isTyping = target.tagName === 'INPUT' || 
+                         target.tagName === 'TEXTAREA' || 
+                         target.isContentEditable;
+        
+        if (isTyping) {
+          return; // Allow normal spacebar behavior in input fields
+        }
+
         e.preventDefault();
         e.stopPropagation();
         // Return to previous mode when spacebar is released

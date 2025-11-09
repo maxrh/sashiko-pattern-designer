@@ -43,6 +43,7 @@ export function AppSidebar({
   onExportPattern,
   onImportPattern,
   onExportImage,
+  onCopyPatternToClipboard,
   savedPatterns,
   activePatternId,
   onSelectPattern,
@@ -53,6 +54,9 @@ export function AppSidebar({
   onTileOutlineColorChange,
   artboardOutlineColor,
   onArtboardOutlineColorChange,
+  colorPresets,
+  onAddColorPreset,
+  onRemoveColorPreset,
   currentPattern,
   stitchColors,
 }) {
@@ -115,9 +119,13 @@ export function AppSidebar({
                     onTileOutlineColorChange={onTileOutlineColorChange}
                     artboardOutlineColor={artboardOutlineColor}
                     onArtboardOutlineColorChange={onArtboardOutlineColorChange}
+                    colorPresets={colorPresets}
+                    onAddColorPreset={onAddColorPreset}
+                    onRemoveColorPreset={onRemoveColorPreset}
                     onExportPattern={onExportPattern}
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}
+                    onCopyPatternToClipboard={onCopyPatternToClipboard}
                     currentPattern={currentPattern}
                     stitchColors={stitchColors}
                   />

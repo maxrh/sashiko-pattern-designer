@@ -26,6 +26,16 @@ export function useKeyboardShortcuts({
 }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
+      // Ignore shortcuts when typing in input fields or textareas
+      const target = event.target;
+      const isTyping = target.tagName === 'INPUT' || 
+                       target.tagName === 'TEXTAREA' || 
+                       target.isContentEditable;
+      
+      if (isTyping) {
+        return; // Don't trigger shortcuts while typing
+      }
+
       // Undo: Ctrl+Z or Cmd+Z
       if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
         event.preventDefault();

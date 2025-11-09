@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { ButtonGroup } from './ui/button-group';
 import { Slider } from './ui/slider';
@@ -17,10 +20,10 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
-import { ColorPickerComponent } from './ui/color-picker';
+import { ColorPicker } from './ui/color-picker';
 import { ChevronRight, Info, Download, Upload, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatValueNumber, parseValueToPx, UNITS, pxToCm } from '../lib/unitConverter.js';
+import { formatValueNumber, UNITS } from '../lib/unitConverter.js';
 
 export function CanvasSettings({
   patternTiles,
@@ -39,7 +42,6 @@ export function CanvasSettings({
   onDisplayUnitChange,
   artboardWidth,
   artboardHeight,
-  canvasInfo,
   onNewPattern,
   onSavePattern,
   saveState = 'idle',
@@ -50,13 +52,14 @@ export function CanvasSettings({
   onTileOutlineColorChange,
   artboardOutlineColor,
   onArtboardOutlineColorChange,
+  colorPresets,
+  onAddColorPreset,
+  onRemoveColorPreset,
   onExportPattern,
   onImportPattern,
   onExportImage,
-  currentPattern,
-  stitchColors,
+  onCopyPatternToClipboard,
 }) {
-  const [isArtboardSettingsOpen, setIsArtboardSettingsOpen] = useState(true);
   const [isGridAppearanceOpen, setIsGridAppearanceOpen] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -83,289 +86,223 @@ export function CanvasSettings({
   };
 
   const handleCopyForPatternsJson = () => {
-    // Create pattern object in the format expected by patterns.json
-    const patternForJson = {
-      id: currentPattern.id,
-      name: currentPattern.name || 'Untitled Pattern',
-      description: currentPattern.description || '',
-      tileSize: currentPattern.tileSize,
-      gridSize: currentPattern.gridSize,
-      patternTiles: currentPattern.patternTiles,
-      stitches: currentPattern.stitches.map(stitch => ({
-        id: stitch.id,
-        start: { ...stitch.start },
-        end: { ...stitch.end },
-        color: stitchColors.get(stitch.id) || stitch.color || null,
-        stitchSize: stitch.stitchSize || 'small',
-        stitchWidth: stitch.stitchWidth || 'normal',
-        repeat: stitch.repeat !== false,
-      })),
-      uiState: {
-        backgroundColor,
-        gridColor,
-        tileOutlineColor,
-        artboardOutlineColor,
-      },
-    };
-
-    // Custom compact JSON formatting - stitches on single lines
-    const formatStitch = (stitch) => {
-      const parts = [];
-      parts.push(`"id": "${stitch.id}"`);
-      parts.push(`"start": ${JSON.stringify(stitch.start)}`);
-      parts.push(`"end": ${JSON.stringify(stitch.end)}`);
-      parts.push(`"color": "${stitch.color}"`);
-      parts.push(`"stitchSize": "${stitch.stitchSize}"`);
-      parts.push(`"stitchWidth": "${stitch.stitchWidth}"`);
-      parts.push(`"repeat": ${stitch.repeat}`);
-      return `{ ${parts.join(', ')} }`;
-    };
-
-    const stitchesJson = patternForJson.stitches.length === 0 
-      ? '[]'
-      : '[\n      ' + patternForJson.stitches.map(formatStitch).join(',\n      ') + '\n    ]';
-
-    const jsonString = `{
-    "id": "${patternForJson.id}",
-    "name": "${patternForJson.name}",
-    "description": "${patternForJson.description}",
-    "tileSize": ${JSON.stringify(patternForJson.tileSize)},
-    "gridSize": ${patternForJson.gridSize},
-    "patternTiles": ${JSON.stringify(patternForJson.patternTiles)},
-    "stitches": ${stitchesJson},
-    "uiState": {
-      "backgroundColor": "${patternForJson.uiState.backgroundColor}",
-      "gridColor": "${patternForJson.uiState.gridColor}",
-      "tileOutlineColor": "${patternForJson.uiState.tileOutlineColor}",
-      "artboardOutlineColor": "${patternForJson.uiState.artboardOutlineColor}"
-    }
-  }`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(jsonString).then(() => {
-      toast.success('Copied to clipboard!', {
-        description: 'Paste this into src/data/patterns.json',
+    onCopyPatternToClipboard()
+      .then(() => {
+        toast.success('Copied to clipboard!');
+      })
+      .catch(() => {
+        toast.error('Failed to copy to clipboard');
       });
-    }).catch(() => {
-      toast.error('Failed to copy to clipboard');
-    });
   };
 
   return (
     <Card>
       {/* <CardHeader className="space-y-2">
-        <CardTitle>Canvas Settings</CardTitle>
+        <CardTitle>Pattern Settings</CardTitle>
       </CardHeader> */}
       <CardContent className="space-y-5 text-sm">
         <div className="space-y-2">
           <Label htmlFor="pattern-name">Pattern Name</Label>
-          <input
+          <Input
             type="text"
             id="pattern-name"
             value={patternName}
             onChange={(e) => onPatternNameChange(e.target.value)}
             placeholder="Untitled pattern"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="pattern-description">Pattern Description</Label>
-          <textarea
+          <Label htmlFor="pattern-description">Description</Label>
+          <Textarea
             id="pattern-description"
             value={patternDescription}
             onChange={(e) => onPatternDescriptionChange(e.target.value)}
             placeholder="Describe your pattern..."
             rows={2}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+            className="resize-none"
           />
         </div>
 
-        <ColorPickerComponent
-          label="Fabric Color"
-          id="background-color"
-          value={backgroundColor}
-          onChange={onBackgroundColorChange}
-        />
+        
 
         <div className="space-y-2">
           <Label htmlFor="artboard-size">Artboard Size</Label>
-          <input
-            type="text"
-            id="artboard-size"
-            value={`${formatValueNumber(artboardWidth, displayUnit, displayUnit === UNITS.MM ? 0 : undefined)}×${formatValueNumber(artboardHeight, displayUnit, displayUnit === UNITS.MM ? 0 : undefined)}${displayUnit}`}
-            disabled
-            className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
-          />
+          <ButtonGroup className="w-full">
+            <Input
+              type="text"
+              id="artboard-size"
+              value={`${formatValueNumber(artboardWidth, displayUnit, displayUnit === UNITS.MM ? 0 : undefined)}×${formatValueNumber(artboardHeight, displayUnit, displayUnit === UNITS.MM ? 0 : undefined)}`}
+              disabled
+              className="bg-muted disabled:cursor-default disabled:opacity-100 flex-1 rounded-r-none"
+            />
+            <Select value={displayUnit} onValueChange={onDisplayUnitChange}>
+              <SelectTrigger className="w-20 rounded-l-none border-l-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNITS.PX}>px</SelectItem>
+                <SelectItem value={UNITS.MM}>mm</SelectItem>
+                <SelectItem value={UNITS.CM}>cm</SelectItem>
+              </SelectContent>
+            </Select>
+          </ButtonGroup>
         </div>
        
-        <ButtonGroup className="w-full">
-          <Button
-            variant={displayUnit === UNITS.PX ? "default" : "outline"}
-            onClick={() => onDisplayUnitChange(UNITS.PX)}
-            className="flex-1"
-          >
-            px
-          </Button>
-          <Button
-            variant={displayUnit === UNITS.MM ? "default" : "outline"}
-            onClick={() => onDisplayUnitChange(UNITS.MM)}
-            className="flex-1"
-          >
-            mm
-          </Button>
-          <Button
-            variant={displayUnit === UNITS.CM ? "default" : "outline"}
-            onClick={() => onDisplayUnitChange(UNITS.CM)}
-            className="flex-1"
-          >
-            cm
-          </Button>
-        </ButtonGroup>
-           
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="pattern-tiles-x">Columns (X): {patternTiles.x} </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Controls how many times the pattern repeats horizontally on the artboard</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="pattern-tiles-x"
+            min={1}
+            max={10}
+            step={1}
+            value={[patternTiles.x]}
+            onValueChange={(value) => onPatternTilesChange('x', value[0])}
+            className="w-full"
+          />
+        </div>
 
-        
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="pattern-tiles-y">Rows (Y): {patternTiles.y} </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Controls how many times the pattern repeats vertically on the artboard</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="pattern-tiles-y"
+            min={1}
+            max={10}
+            step={1}
+            value={[patternTiles.y]}
+            onValueChange={(value) => onPatternTilesChange('y', value[0])}
+            className="w-full"
+          />
+        </div>
 
-        
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="tile-size-x">Column Width (X): {tileSize.x}</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Number of grid cells horizontally per pattern tile</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="tile-size-x"
+            min={5}
+            max={20}
+            step={1}
+            value={[tileSize.x]}
+            onValueChange={(value) => onTileSizeChange('x', value[0])}
+            className="w-full"
+          />
+        </div>
 
-        <Collapsible open={isArtboardSettingsOpen} onOpenChange={setIsArtboardSettingsOpen} className="space-y-2">
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
-            <span>Artboard Settings</span>
-            <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isArtboardSettingsOpen ? 'rotate-90' : ''}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-2">
-            
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="tile-size-y">Row Height (Y): {tileSize.y}</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Number of grid cells vertically per pattern tile</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="tile-size-y"
+            min={5}
+            max={20}
+            step={1}
+            value={[tileSize.y]}
+            onValueChange={(value) => onTileSizeChange('y', value[0])}
+            className="w-full"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="pattern-tiles-x">Columns (X): {patternTiles.x} </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Controls how many times the pattern repeats horizontally on the artboard</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Slider
-                id="pattern-tiles-x"
-                min={1}
-                max={10}
-                step={1}
-                value={[patternTiles.x]}
-                onValueChange={(value) => onPatternTilesChange('x', value[0])}
-                className="w-full"
-              />
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="grid-size">
+              Grid Size: {formatValueNumber(gridSize, displayUnit, displayUnit === UNITS.CM ? 2 : undefined)}{displayUnit}
+            </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Size of each grid cell ({gridSize}px)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Slider
+            id="grid-size"
+            min={10}
+            max={50}
+            step={1}
+            value={[gridSize]}
+            onValueChange={(value) => onGridSizeChange(value[0])}
+            className="w-full"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="pattern-tiles-y">Rows (Y): {patternTiles.y} </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Controls how many times the pattern repeats vertically on the artboard</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Slider
-                id="pattern-tiles-y"
-                min={1}
-                max={10}
-                step={1}
-                value={[patternTiles.y]}
-                onValueChange={(value) => onPatternTilesChange('y', value[0])}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="tile-size-x">Column Width (X): {tileSize.x}</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Number of grid cells horizontally per pattern tile</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Slider
-                id="tile-size-x"
-                min={5}
-                max={20}
-                step={1}
-                value={[tileSize.x]}
-                onValueChange={(value) => onTileSizeChange('x', value[0])}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="tile-size-y">Row Height (Y): {tileSize.y}</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Number of grid cells vertically per pattern tile</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Slider
-                id="tile-size-y"
-                min={5}
-                max={20}
-                step={1}
-                value={[tileSize.y]}
-                onValueChange={(value) => onTileSizeChange('y', value[0])}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="grid-size">
-                  Grid Size: {formatValueNumber(gridSize, displayUnit, displayUnit === UNITS.CM ? 2 : undefined)}{displayUnit}
-                </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Size of each grid cell ({gridSize}px)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Slider
-                id="grid-size"
-                min={10}
-                max={50}
-                step={1}
-                value={[gridSize]}
-                onValueChange={(value) => onGridSizeChange(value[0])}
-                className="w-full"
-              />
-            </div>
-
-            
-          </CollapsibleContent>
-        </Collapsible>
+        <div className="space-y-2">
+          <Label htmlFor="background-color">Fabric Color</Label>
+          <ButtonGroup className="w-full">
+            <ColorPicker
+              value={backgroundColor}
+              onChange={onBackgroundColorChange}
+              presetColors={colorPresets}
+              onAddPreset={onAddColorPreset}
+              onRemovePreset={onRemoveColorPreset}
+            />
+            <Input
+              id="background-color"
+              type="text"
+              value={backgroundColor.toUpperCase()}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                const pattern = /^#[0-9A-F]{0,6}$/i;
+                if (pattern.test(newValue)) {
+                  onBackgroundColorChange(newValue);
+                }
+              }}
+              className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
+              placeholder="#000000"
+              maxLength={7}
+            />
+          </ButtonGroup>
+        </div>
 
         <Collapsible open={isGridAppearanceOpen} onOpenChange={setIsGridAppearanceOpen} className="space-y-2">
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
@@ -373,26 +310,114 @@ export function CanvasSettings({
             <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isGridAppearanceOpen ? 'rotate-90' : ''}`} />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-2">
-            <ColorPickerComponent
-              label="Grid Color"
-              id="grid-color"
-              value={gridColor}
-              onChange={onGridColorChange}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="grid-color">Grid Color</Label>
+              <ButtonGroup className="w-full">
+                <ColorPicker
+                  value={gridColor}
+                  onChange={onGridColorChange}
+                  presetColors={colorPresets}
+                  onAddPreset={onAddColorPreset}
+                  onRemovePreset={onRemoveColorPreset}
+                />
+                <Input
+                  id="grid-color"
+                  type="text"
+                  value={gridColor.toUpperCase()}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    if (pattern.test(newValue)) {
+                      onGridColorChange(newValue);
+                    }
+                  }}
+                  className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
+                  placeholder="#000000"
+                  maxLength={7}
+                />
+              </ButtonGroup>
+            </div>
 
-            <ColorPickerComponent
-              label="Tile Outline Color"
-              id="tile-outline-color"
-              value={tileOutlineColor}
-              onChange={onTileOutlineColorChange}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="tile-outline-color">Tile Outline Color</Label>
+              <ButtonGroup className="w-full">
+                <ColorPicker
+                  value={tileOutlineColor}
+                  onChange={onTileOutlineColorChange}
+                  presetColors={colorPresets}
+                  onAddPreset={onAddColorPreset}
+                  onRemovePreset={onRemoveColorPreset}
+                />
+                <Input
+                  id="tile-outline-color"
+                  type="text"
+                  value={tileOutlineColor.toUpperCase()}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    if (pattern.test(newValue)) {
+                      onTileOutlineColorChange(newValue);
+                    }
+                  }}
+                  className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
+                  placeholder="#000000"
+                  maxLength={7}
+                />
+              </ButtonGroup>
+            </div>
 
-            <ColorPickerComponent
-              label="Artboard Outline Color"
-              id="artboard-outline-color"
-              value={artboardOutlineColor}
-              onChange={onArtboardOutlineColorChange}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="artboard-outline-color">Artboard Outline Color</Label>
+              <ButtonGroup className="w-full">
+                <ColorPicker
+                  value={artboardOutlineColor}
+                  onChange={onArtboardOutlineColorChange}
+                  presetColors={colorPresets}
+                  onAddPreset={onAddColorPreset}
+                  onRemovePreset={onRemoveColorPreset}
+                />
+                <Input
+                  id="tile-outline-color"
+                  type="text"
+                  value={tileOutlineColor.toUpperCase()}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    if (pattern.test(newValue)) {
+                      onTileOutlineColorChange(newValue);
+                    }
+                  }}
+                  className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
+                  placeholder="#000000"
+                  maxLength={7}
+                />
+              </ButtonGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="artboard-outline-color">Artboard Outline Color</Label>
+              <ButtonGroup className="w-full">
+                <ColorPicker
+                  value={artboardOutlineColor}
+                  onChange={onArtboardOutlineColorChange}
+                />
+                <Input
+                  id="artboard-outline-color"
+                  type="text"
+                  value={artboardOutlineColor.toUpperCase()}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    if (pattern.test(newValue)) {
+                      onArtboardOutlineColorChange(newValue);
+                    }
+                  }}
+                  className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
+                  placeholder="#000000"
+                  maxLength={7}
+                />
+              </ButtonGroup>
+            </div>
           </CollapsibleContent>
         </Collapsible>
 

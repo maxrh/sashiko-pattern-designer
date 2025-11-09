@@ -157,9 +157,88 @@ export function usePatternImportExport({
     document.body.removeChild(link);
   }, [currentPattern.name, canvasRef]);
 
+  /**
+   * Copy pattern to clipboard in compact format for patterns.json
+   * Formats the pattern with single-line stitches for easy pasting
+   */
+  const copyPatternToClipboard = useCallback(() => {
+    // Create pattern object in the format expected by patterns.json
+    const patternForJson = {
+      id: currentPattern.id,
+      name: currentPattern.name || 'Untitled Pattern',
+      description: currentPattern.description || '',
+      tileSize: currentPattern.tileSize,
+      gridSize: currentPattern.gridSize,
+      patternTiles: currentPattern.patternTiles,
+      stitches: currentPattern.stitches.map(stitch => ({
+        id: stitch.id,
+        start: { ...stitch.start },
+        end: { ...stitch.end },
+        color: stitchColors.get(stitch.id) || stitch.color || null,
+        stitchSize: stitch.stitchSize || 'small',
+        stitchWidth: stitch.stitchWidth || 'normal',
+        gapSize: stitch.gapSize,
+        repeat: stitch.repeat !== false,
+      })),
+      uiState: {
+        backgroundColor,
+        gridColor,
+        tileOutlineColor,
+        artboardOutlineColor,
+      },
+    };
+
+    // Custom compact JSON formatting - stitches on single lines
+    const formatStitch = (stitch) => {
+      const parts = [];
+      parts.push(`"id": "${stitch.id}"`);
+      parts.push(`"start": ${JSON.stringify(stitch.start)}`);
+      parts.push(`"end": ${JSON.stringify(stitch.end)}`);
+      parts.push(`"color": "${stitch.color}"`);
+      parts.push(`"stitchSize": "${stitch.stitchSize}"`);
+      parts.push(`"stitchWidth": "${stitch.stitchWidth}"`);
+      if (stitch.gapSize !== undefined) {
+        parts.push(`"gapSize": ${stitch.gapSize}`);
+      }
+      parts.push(`"repeat": ${stitch.repeat}`);
+      return `{ ${parts.join(', ')} }`;
+    };
+
+    const stitchesJson = patternForJson.stitches.length === 0 
+      ? '[]'
+      : '[\n      ' + patternForJson.stitches.map(formatStitch).join(',\n      ') + '\n    ]';
+
+    const jsonString = `{
+    "id": "${patternForJson.id}",
+    "name": "${patternForJson.name}",
+    "description": "${patternForJson.description}",
+    "tileSize": ${JSON.stringify(patternForJson.tileSize)},
+    "gridSize": ${patternForJson.gridSize},
+    "patternTiles": ${JSON.stringify(patternForJson.patternTiles)},
+    "stitches": ${stitchesJson},
+    "uiState": {
+      "backgroundColor": "${patternForJson.uiState.backgroundColor}",
+      "gridColor": "${patternForJson.uiState.gridColor}",
+      "tileOutlineColor": "${patternForJson.uiState.tileOutlineColor}",
+      "artboardOutlineColor": "${patternForJson.uiState.artboardOutlineColor}"
+    }
+  }`;
+    
+    // Copy to clipboard
+    return navigator.clipboard.writeText(jsonString);
+  }, [
+    currentPattern,
+    stitchColors,
+    backgroundColor,
+    gridColor,
+    tileOutlineColor,
+    artboardOutlineColor,
+  ]);
+
   return {
     exportPattern,
     importPattern,
     exportImage,
+    copyPatternToClipboard,
   };
 }

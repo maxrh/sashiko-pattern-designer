@@ -1,13 +1,13 @@
 import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2, ChevronDown } from 'lucide-react';
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
 import { SidebarTrigger } from './ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
+import { ColorPicker } from './ui/color-picker';
 import { STITCH_WIDTHS } from './Stitches.jsx';
 import { formatValueNumber } from '../lib/unitConverter.js';
 
@@ -18,8 +18,9 @@ export function Toolbar({
   onRepeatPatternChange,
   selectedStitchColor,
   onSelectedStitchColorChange,
-  onClearColors,
   colorPresets,
+  onAddColorPreset,
+  onRemoveColorPreset,
   stitchSize,
   onStitchSizeChange,
   stitchWidth,
@@ -34,13 +35,6 @@ export function Toolbar({
   canUndo,
   canRedo,
 }) {
-  // Track hydration to prevent SSR mismatch for values from localStorage
-  const [isHydrated, setIsHydrated] = useState(false);
-  
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   // Memoize gap size callback to prevent recreating on every render
   const handleGapSizeChange = useCallback((value) => {
     onGapSizeChange(value[0]);
@@ -120,65 +114,15 @@ export function Toolbar({
 
         <ButtonGroup>
 
-          <Popover>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                  >
-                    <div 
-                      className="w-4 h-4 rounded "
-                      style={{ backgroundColor: selectedStitchColor }}
-                    />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Stitch Color</p>
-              </TooltipContent>
-            </Tooltip>
-            <PopoverContent className="w-64">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="toolbar-stitch-color">Stitch Color</Label>
-                  <input
-                    type="color"
-                    id="toolbar-stitch-color"
-                    value={selectedStitchColor}
-                    onChange={(e) => onSelectedStitchColorChange(e.target.value)}
-                    className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Presets</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {colorPresets.map((preset) => (
-                      <button
-                        key={preset.value}
-                        type="button"
-                        onClick={() => onSelectedStitchColorChange(preset.value)}
-                        className="h-8 w-8 rounded border-2 border-border transition-transform hover:scale-110"
-                        style={{ backgroundColor: preset.value }}
-                        title={preset.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClearColors}
-                  className="w-full"
-                >
-                  Clear Custom Colors
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <ColorPicker
+            value={selectedStitchColor}
+            onChange={onSelectedStitchColorChange}
+            presetColors={colorPresets}
+            onAddPreset={onAddColorPreset}
+            onRemovePreset={onRemoveColorPreset}
+            tooltip="Stitch Color"
+          />
+
           <Select value={stitchSize} onValueChange={onStitchSizeChange}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -208,7 +152,7 @@ export function Toolbar({
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="font-normal justify-between">
-                    {isHydrated ? `${gapDisplayValue}${displayUnit}` : '—'}
+                    {`${gapDisplayValue}${displayUnit}`}
                     <ChevronDown className="text-muted-foreground h-4 w-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>
