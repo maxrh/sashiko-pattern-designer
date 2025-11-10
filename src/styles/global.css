@@ -45,7 +45,7 @@
   --foreground: oklch(0.28 0.04 260);
   --card: oklch(0.985 0 0);
   --card-foreground: oklch(0.28 0.04 260);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.985 0 0);
   --popover-foreground: oklch(0.28 0.04 260);
   --primary: oklch(0.28 0.04 260);
   --primary-foreground: oklch(0.985 0 0);
@@ -74,6 +74,13 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+
+.alpha-slider > div > div,
+.hue-slider .hue-horizontal {
+  margin-block: 3px !important;
+  height: 12px !important;
+  border-radius: 100px;
+}
 
 
 @layer base {
@@ -113,49 +120,4 @@
   .tab-slider-right {
     transition: left 200ms ease-in-out 100ms, right 200ms ease-in-out;
   }
-}
-
-
-.sketch-picker > :nth-child(2) > :nth-child(2),
-.sketch-picker > :nth-child(2) > div > *,
-.sketch-picker > :nth-child(2) > div > div > * {
-  height: 30px !important;
-}
-
-.sketch-picker > :nth-child(2) > :nth-child(2) {
-  width: 30px !important;
-}
-
-.sketch-picker > :nth-child(2) > :nth-child(2) > :nth-child(2) {
-  box-shadow: none !important;
-  border-bottom-right-radius: calc(var(--radius) - 2px) !important;
-}
-
-.sketch-picker > :nth-child(2) > div > div > div > div > div > div {
-  height: 28px !important;
-}
-
-.sketch-picker > :nth-child(3) * {}
-
-.sketch-picker > :nth-child(4) {
-  margin: 10px 0 10px !important;
-  padding: 0 !important;
-  border-top: none !important;
-  display: grid !important;
-  grid-template-columns: repeat(6, 1fr) !important;
-  gap: 5px !important;
-}
-
-.sketch-picker > :nth-child(4) > div {
-  margin: 0 !important;
-  padding: 0 !important;
-  aspect-ratio: 1 !important;
-  width: 100% !important;
-  height: auto !important;
-  border: none !important;
-}
-
-.sketch-picker > :nth-child(4) > div > span > div{
-  box-shadow: none !important;
-  border-radius: calc(var(--radius) - 2px) !important;
 }
