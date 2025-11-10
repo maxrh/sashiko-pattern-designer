@@ -137,7 +137,7 @@ export function CanvasSettings({
               className="bg-muted disabled:cursor-default disabled:opacity-100 flex-1 rounded-r-none"
             />
             <Select value={displayUnit} onValueChange={onDisplayUnitChange}>
-              <SelectTrigger className="w-20 rounded-l-none border-l-0">
+              <SelectTrigger className="w-20 rounded-l-none border-l-0 hover:bg-accent hover:text-accent-foreground ">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

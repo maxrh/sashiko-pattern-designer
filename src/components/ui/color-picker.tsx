@@ -258,7 +258,7 @@ export function ColorPicker({
       <Button
         type="button"
         variant='outline'
-        className="aspect-square h-9 p-0 border border-input rounded-l-md rounded-r-none hover:opacity-90 transition-opacity outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="aspect-square h-9 p-0 rounded-md"
         // style={isClient ? { backgroundColor: value, backgroundImage: 'none' } : {}}
         aria-label="Pick color"
       >
@@ -378,7 +378,7 @@ export function ColorPicker({
                     e.currentTarget.blur();
                   }
                 }}
-                className="h-9 w-full rounded-r-md border border-l-0 border-input bg-transparent px-3 py-1 text-sm font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-r-md border border-l-0 border-input bg-transparent px-3 py-1 text-sm font-mono transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/10"
                 placeholder={showAlpha ? "#RRGGBBAA" : "#RRGGBB"}
               />
             </ButtonGroup>

@@ -126,7 +126,7 @@ export function Toolbar({
           <Select value={stitchSize} onValueChange={onStitchSizeChange}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <SelectTrigger className="">
+                <SelectTrigger className="hover:bg-accent hover:text-accent-foreground">
                   <SelectValue />
                 </SelectTrigger>
               </TooltipTrigger>
@@ -181,7 +181,7 @@ export function Toolbar({
           <Select value={stitchWidth} onValueChange={onStitchWidthChange}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <SelectTrigger >
+                <SelectTrigger className="hover:bg-accent hover:text-accent-foreground">
                   <SelectValue>
                     {stitchWidth === 'thin' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />}
                     {stitchWidth === 'normal' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />}
