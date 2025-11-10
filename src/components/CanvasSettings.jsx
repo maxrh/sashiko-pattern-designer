@@ -137,7 +137,7 @@ export function CanvasSettings({
               className="bg-muted disabled:cursor-default disabled:opacity-100 flex-1 rounded-r-none"
             />
             <Select value={displayUnit} onValueChange={onDisplayUnitChange}>
-              <SelectTrigger className="w-20 rounded-l-none border-l-0">
+              <SelectTrigger className="w-20 rounded-l-none border-l-0 hover:bg-accent hover:text-accent-foreground ">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -316,9 +316,7 @@ export function CanvasSettings({
                 <ColorPicker
                   value={gridColor}
                   onChange={onGridColorChange}
-                  presetColors={colorPresets}
-                  onAddPreset={onAddColorPreset}
-                  onRemovePreset={onRemoveColorPreset}
+                  showAlpha={true}
                 />
                 <Input
                   id="grid-color"
@@ -344,9 +342,7 @@ export function CanvasSettings({
                 <ColorPicker
                   value={tileOutlineColor}
                   onChange={onTileOutlineColorChange}
-                  presetColors={colorPresets}
-                  onAddPreset={onAddColorPreset}
-                  onRemovePreset={onRemoveColorPreset}
+                  showAlpha={true}
                 />
                 <Input
                   id="tile-outline-color"
@@ -372,34 +368,7 @@ export function CanvasSettings({
                 <ColorPicker
                   value={artboardOutlineColor}
                   onChange={onArtboardOutlineColorChange}
-                  presetColors={colorPresets}
-                  onAddPreset={onAddColorPreset}
-                  onRemovePreset={onRemoveColorPreset}
-                />
-                <Input
-                  id="tile-outline-color"
-                  type="text"
-                  value={tileOutlineColor.toUpperCase()}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    const pattern = /^#[0-9A-F]{0,6}$/i;
-                    if (pattern.test(newValue)) {
-                      onTileOutlineColorChange(newValue);
-                    }
-                  }}
-                  className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
-                  placeholder="#000000"
-                  maxLength={7}
-                />
-              </ButtonGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="artboard-outline-color">Artboard Outline Color</Label>
-              <ButtonGroup className="w-full">
-                <ColorPicker
-                  value={artboardOutlineColor}
-                  onChange={onArtboardOutlineColorChange}
+                  showAlpha={true}
                 />
                 <Input
                   id="artboard-outline-color"
