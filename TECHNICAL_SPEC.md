@@ -251,7 +251,13 @@ if (isOuterTile) {
 
 #### When Drawing a Line:
 
+**Line Direction (Anchor Point):**
+- If start point is outside artboard and end point is inside, the line is automatically reversed
+- This ensures the "anchor" (start point) is always inside the artboard for pattern lines
+- Improves data integrity and normalization behavior
+
 **Repeat Mode ON + Line touches artboard:**
+- If needed, swap start/end so start is inside artboard bounds
 - Normalize START point by subtracting tile offset: `startGridX - (startTileX * patternGridSize)`
 - Calculate dx/dy offset from start to end
 - Apply offset to normalized start to get end: `normalizedStart + dx`
@@ -556,6 +562,30 @@ const intersectsArtboard = !(
   lineMinY > artboardEndPixel
 );
 ```
+
+### Tile Size Changes (Stitch Filtering)
+
+When user resizes the tile dimensions, stitches may become invalid and must be removed to prevent crashes.
+
+**Filtering Logic (PatternDesigner.jsx `handleTileSizeChange`):**
+
+1. **Absolute stitches (`repeat: false`)**: Always kept - they use artboard coordinates, not tile coordinates
+2. **Pattern stitches (`repeat !== false`)**: Filtered only when SHRINKING the tile
+3. **When GROWING**: No stitches are removed (all existing coordinates remain valid)
+4. **When SHRINKING**: Remove stitches that would become invalid:
+   - Stitches with start/end at the OLD boundary (e.g., x=10 or y=10 when shrinking from 10→9)
+   - Stitches with start beyond new tile size
+   - Stitches with end extending too far beyond new tile size (> newSize + 1)
+
+**Special Cases:**
+- Lines with negative coordinates (e.g., x=-2) are kept - they're valid corner backward lines
+- Lines in extended area remain when growing tile
+- Lines like (9,10)→(10,9) are removed when shrinking from 10→9 (touch old boundaries)
+
+**Cleanup:**
+- Removed stitches' colors are deleted from `stitchColors` Map
+- Removed stitches are cleared from `selectedStitchIds` Set
+- Prevents orphaned data and selection inconsistencies
 
 ## Selection System
 

@@ -728,13 +728,36 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       let shouldRepeat = false;
       
       if (repeatPattern && lineIntersectsArtboardArea) {
+        // Check if start point is inside artboard bounds
+        const startInArtboard = 
+          startGridX >= 0 && startGridX <= artboardGridWidth &&
+          startGridY >= 0 && startGridY <= artboardGridHeight;
+        
+        const endInArtboard = 
+          endGridX >= 0 && endGridX <= artboardGridWidth &&
+          endGridY >= 0 && endGridY <= artboardGridHeight;
+        
+        // If start is outside artboard but end is inside, swap them
+        // This ensures the anchor (start point) is always inside the artboard
+        let actualStartX = startGridX;
+        let actualStartY = startGridY;
+        let actualEndX = endGridX;
+        let actualEndY = endGridY;
+        
+        if (!startInArtboard && endInArtboard) {
+          // Swap start and end
+          actualStartX = endGridX;
+          actualStartY = endGridY;
+          actualEndX = startGridX;
+          actualEndY = startGridY;
+        }
         // Reduce coordinates to the first tile while preserving cross-tile relationships
         // We want lines to stay within the pattern space (0 to patternTileSize.x/y) for their "base" position
         // But they can extend beyond that to represent cross-tile lines
         
         // Check if this is a boundary line (runs exactly along a tile edge)
-        const isVerticalBoundaryLine = startGridX === endGridX && (startGridX % patternTileSize.x === 0);
-        const isHorizontalBoundaryLine = startGridY === endGridY && (startGridY % patternTileSize.y === 0);
+        const isVerticalBoundaryLine = actualStartX === actualEndX && (actualStartX % patternTileSize.x === 0);
+        const isHorizontalBoundaryLine = actualStartY === actualEndY && (actualStartY % patternTileSize.y === 0);
         
         if (isVerticalBoundaryLine || isHorizontalBoundaryLine) {
           // Boundary lines need special handling
@@ -756,13 +779,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           };
           
           // Calculate the offset between start and end
-          const dx = endGridX - startGridX;
-          const dy = endGridY - startGridY;
+          const dx = actualEndX - actualStartX;
+          const dy = actualEndY - actualStartY;
           
           // Normalize the start point
           finalStart = {
-            x: normalizeBoundaryCoordX(startGridX),
-            y: normalizeBoundaryCoordY(startGridY),
+            x: normalizeBoundaryCoordX(actualStartX),
+            y: normalizeBoundaryCoordY(actualStartY),
           };
           
           // Apply the offset to get the end point
@@ -773,18 +796,18 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
         } else {
           // Non-boundary lines: use floor-based normalization
           // Find which tile the START and END points are in
-          const startTileX = Math.floor(startGridX / patternTileSize.x);
-          const startTileY = Math.floor(startGridY / patternTileSize.y);
-          const endTileX = Math.floor(endGridX / patternTileSize.x);
-          const endTileY = Math.floor(endGridY / patternTileSize.y);
+          const startTileX = Math.floor(actualStartX / patternTileSize.x);
+          const startTileY = Math.floor(actualStartY / patternTileSize.y);
+          const endTileX = Math.floor(actualEndX / patternTileSize.x);
+          const endTileY = Math.floor(actualEndY / patternTileSize.y);
           
           // If start and end are in adjacent tiles (line just touches boundary),
           // normalize to the tile that contains the majority of the line
           // For lines going from boundary into tile, use the "inner" tile
           
           // Use the tile of whichever point is NOT on a boundary, or use end tile for ties
-          const startOnBoundary = (startGridX % patternTileSize.x === 0) || (startGridY % patternTileSize.y === 0);
-          const endOnBoundary = (endGridX % patternTileSize.x === 0) || (endGridY % patternTileSize.y === 0);
+          const startOnBoundary = (actualStartX % patternTileSize.x === 0) || (actualStartY % patternTileSize.y === 0);
+          const endOnBoundary = (actualEndX % patternTileSize.x === 0) || (actualEndY % patternTileSize.y === 0);
           
           let baseTileX, baseTileY;
           if (startOnBoundary && !endOnBoundary) {
@@ -799,10 +822,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           }
           
           // Normalize both points to the base tile
-          const normalizedStartX = startGridX - (baseTileX * patternTileSize.x);
-          const normalizedStartY = startGridY - (baseTileY * patternTileSize.y);
-          const normalizedEndX = endGridX - (baseTileX * patternTileSize.x);
-          const normalizedEndY = endGridY - (baseTileY * patternTileSize.y);
+          const normalizedStartX = actualStartX - (baseTileX * patternTileSize.x);
+          const normalizedStartY = actualStartY - (baseTileY * patternTileSize.y);
+          const normalizedEndX = actualEndX - (baseTileX * patternTileSize.x);
+          const normalizedEndY = actualEndY - (baseTileY * patternTileSize.y);
           
           finalStart = {
             x: normalizedStartX,

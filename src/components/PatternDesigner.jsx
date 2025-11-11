@@ -438,15 +438,89 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleTileSizeChange = useCallback((axis, value) => {
     setCurrentPattern((prev) => {
       const normalized = normalizeTileSize(prev.tileSize);
+      const oldTileSize = { ...normalized };
+      const newTileSize = {
+        ...normalized,
+        [axis]: value
+      };
+      
+      // Filter out stitches that fall outside the new tile bounds
+      // Pattern stitches (repeat !== false) should have normalized coordinates within [0, tileSize]
+      // But we need to be careful: only filter if we're SHRINKING and coordinates exceed new bounds
+      const filteredStitches = prev.stitches.filter(stitch => {
+        // Absolute stitches (repeat: false) are always kept - they use artboard coordinates
+        if (stitch.repeat === false) return true;
+        
+        // For pattern stitches: start point should be within [0, tileSize] range
+        // But during resize, only remove if shrinking would make coordinates invalid
+        
+        // Only filter when SHRINKING the relevant axis
+        if (axis === 'x' && value < oldTileSize.x) {
+          // Shrinking X: remove if start.x or end.x touches/exceeds old boundary
+          if (stitch.start.x === oldTileSize.x || stitch.end.x === oldTileSize.x) {
+            return false;
+          }
+          // Also remove if start.x would be outside new bounds
+          if (stitch.start.x > newTileSize.x) {
+            return false;
+          }
+          // Remove if end.x extends too far beyond new bounds
+          if (stitch.end.x > newTileSize.x + 1) {
+            return false;
+          }
+        }
+        
+        if (axis === 'y' && value < oldTileSize.y) {
+          // Shrinking Y: remove if start.y or end.y touches/exceeds old boundary
+          if (stitch.start.y === oldTileSize.y || stitch.end.y === oldTileSize.y) {
+            return false;
+          }
+          // Also remove if start.y would be outside new bounds
+          if (stitch.start.y > newTileSize.y) {
+            return false;
+          }
+          // Remove if end.y extends too far beyond new bounds
+          if (stitch.end.y > newTileSize.y + 1) {
+            return false;
+          }
+        }
+        
+        // Keep the stitch (either growing, or shrinking but stitch is within bounds)
+        return true;
+      });
+      
+      // If we removed stitches, also clean up their colors
+      if (filteredStitches.length < prev.stitches.length) {
+        const keptIds = new Set(filteredStitches.map(s => s.id));
+        setStitchColors(prevColors => {
+          const newColors = new Map(prevColors);
+          for (const [id] of prevColors) {
+            if (!keptIds.has(id)) {
+              newColors.delete(id);
+            }
+          }
+          return newColors;
+        });
+        
+        // Clear selection if any selected stitches were removed
+        setSelectedStitchIds(prevSelected => {
+          const newSelected = new Set();
+          for (const id of prevSelected) {
+            if (keptIds.has(id)) {
+              newSelected.add(id);
+            }
+          }
+          return newSelected;
+        });
+      }
+      
       return {
         ...prev,
-        tileSize: {
-          ...normalized,
-          [axis]: value
-        }
+        tileSize: newTileSize,
+        stitches: filteredStitches
       };
     });
-  }, []);
+  }, [setStitchColors, setSelectedStitchIds]);
 
   const handleGridSizeChange = useCallback((gridSize) => {
     setCurrentPattern((prev) => ({ ...prev, gridSize }));
