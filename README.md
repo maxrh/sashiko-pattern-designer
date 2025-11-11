@@ -231,3 +231,6 @@ This project is configured for **Cloudflare Pages** deployment:
 - **shadcn/ui**: [Component Library](https://ui.shadcn.com/)
 - **Lucide Icons**: [Icon Library](https://lucide.dev/)
 
+---
+
+Made by **Monsun** • [monsun.dk](https://monsun.dk) • [max@monsun.dk](mailto:max@monsun.dk)
