@@ -378,7 +378,7 @@ export function ColorPicker({
                     e.currentTarget.blur();
                   }
                 }}
-                className="flex h-9 w-full rounded-r-md border border-l-0 border-input bg-transparent px-3 py-1 text-sm font-mono transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/10"
+                className="flex h-9 w-full uppercase rounded-r-md border border-l-0 border-input bg-transparent px-3 py-1 text-sm font-mono transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/10"
                 placeholder={showAlpha ? "#RRGGBBAA" : "#RRGGBB"}
               />
             </ButtonGroup>

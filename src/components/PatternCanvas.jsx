@@ -3,7 +3,7 @@ import { renderStitch, DEFAULT_GAP_SIZE, calculateStitchOffset } from './Stitche
 import { DEFAULT_GRID_COLOR, DEFAULT_TILE_OUTLINE_COLOR, DEFAULT_ARTBOARD_OUTLINE_COLOR } from './PatternDesigner';
 
 const SNAP_THRESHOLD = 15;
-const SELECT_THRESHOLD = 10;
+const SELECT_THRESHOLD = 5;
 const DOT_RADIUS = 2.5;
 
 function wrapCoordinate(value, gridSize) {

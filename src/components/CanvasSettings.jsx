@@ -324,14 +324,14 @@ export function CanvasSettings({
                   value={gridColor.toUpperCase()}
                   onChange={(e) => {
                     const newValue = e.target.value;
-                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    const pattern = /^#[0-9A-F]{0,8}$/i;
                     if (pattern.test(newValue)) {
                       onGridColorChange(newValue);
                     }
                   }}
                   className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
-                  placeholder="#000000"
-                  maxLength={7}
+                  placeholder="#000000FF"
+                  maxLength={9}
                 />
               </ButtonGroup>
             </div>
@@ -350,14 +350,14 @@ export function CanvasSettings({
                   value={tileOutlineColor.toUpperCase()}
                   onChange={(e) => {
                     const newValue = e.target.value;
-                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    const pattern = /^#[0-9A-F]{0,8}$/i;
                     if (pattern.test(newValue)) {
                       onTileOutlineColorChange(newValue);
                     }
                   }}
                   className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
-                  placeholder="#000000"
-                  maxLength={7}
+                  placeholder="#000000FF"
+                  maxLength={9}
                 />
               </ButtonGroup>
             </div>
@@ -376,14 +376,14 @@ export function CanvasSettings({
                   value={artboardOutlineColor.toUpperCase()}
                   onChange={(e) => {
                     const newValue = e.target.value;
-                    const pattern = /^#[0-9A-F]{0,6}$/i;
+                    const pattern = /^#[0-9A-F]{0,8}$/i;
                     if (pattern.test(newValue)) {
                       onArtboardOutlineColorChange(newValue);
                     }
                   }}
                   className="flex-1 text-xs uppercase font-mono rounded-l-none border-l-0"
-                  placeholder="#000000"
-                  maxLength={7}
+                  placeholder="#000000FF"
+                  maxLength={9}
                 />
               </ButtonGroup>
             </div>

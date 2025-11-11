@@ -13,10 +13,10 @@
 
 ### UI & Icons
 - **Custom UI Components** - Hand-built shadcn-style components in `src/components/ui/`
-- **Icons** - Inline SVG icons using Heroicons paths
-  - Reference: [Heroicons](https://www.shadcn.io/icons/heroicons)
-  - Implementation: SVG markup embedded directly in components
-  - No external icon library dependency
+- **Icons** - Using `lucide-react` package (v0.552.0)
+  - Reference: [Lucide Icons](https://lucide.dev/)
+  - Implementation: Import icons from package: `import { Edit3, Hand } from 'lucide-react'`
+  - Package dependency in package.json
 
 ### Data Persistence
 - **Local Storage API** - Browser-native storage for auto-save and pattern library
@@ -25,31 +25,40 @@
 ## Constants & Configuration
 
 ### Fixed Values
-- **Canvas Size**: 2200×2200px
-- **Cell Size**: 20px per grid cell
-- **Canvas Grid Size**: 110×110 cells (calculated: canvasSize / cellSize)
-- **Stitch Offset**: 4px from grid points along line direction
-- **Gap Between Stitches**: 8px
-- **Selection Threshold**: 10px for click selection
-- **Drag Threshold**: 5×5px minimum to count as drag (vs click)
+- **Canvas Size**: Dynamic (calculated: artboard size + 2 × `CANVAS_MARGIN_CELLS` × gridSize)
+- **Canvas Margin**: `CANVAS_MARGIN_CELLS` grid cells on all sides
+- **Grid Size**: `DEFAULT_GRID_SIZE` pixels per grid cell (configurable)
+- **Stitch Offset**: `calculateStitchOffset(gapSize)` where calculation = `gapSize / 2`
+- **Gap Between Stitches**: `DEFAULT_GAP_SIZE` pixels
+- **Snap Threshold**: `SNAP_THRESHOLD` pixels for grid snapping
+- **Selection Threshold**: `SELECT_THRESHOLD` pixels for click selection
+- **Drag Threshold**: 5×5 pixels minimum to count as drag (vs click)
+- **Grid Dot Radius**: `DOT_RADIUS` pixels
 - **Device Pixel Ratio**: window.devicePixelRatio for high-DPI displays
 
 ### Default Values
-- **Pattern Grid Size**: 10 cells (configurable per pattern)
-  - **CRITICAL**: gridSize represents number of CELLS per tile
-  - Example: gridSize 10 = 10 cells = 11 grid points (0 through 10)
-  - Valid coordinate range: 0 to gridSize (inclusive, 0-10 for gridSize 10)
-  - Each tile spans exactly gridSize cells
-- **Tiles Per Side**: 4×4 default (configurable)
-- **Default Thread Color**: Configurable
-- **Default Stitch Size**: 'medium' (or 'large' for straight lines)
-- **Default Repeat**: true
+- **Pattern Grid Size**: `DEFAULT_GRID_SIZE` pixels per cell (configurable per pattern)
+  - **CRITICAL**: gridSize represents number of CELLS per tile in tileSize (e.g., tileSize.x = 10 means 10 cells)
+  - Example: tileSize 10 = 10 cells = 11 grid points (0 through 10)
+  - Valid coordinate range: 0 to tileSize (inclusive, 0-10 for tileSize 10)
+  - Each tile spans exactly tileSize cells
+- **Pattern Tiles**: `DEFAULT_PATTERN_TILES` (configurable)
+- **Stitch Colors**: `DEFAULT_STITCH_COLOR` for new stitches
+- **Stitch Size**: `DEFAULT_STITCH_SIZE`
+- **Stitch Width**: `DEFAULT_STITCH_WIDTH`
+- **Gap Size**: `DEFAULT_GAP_SIZE` pixels between stitches
+- **Repeat Pattern**: `DEFAULT_REPEAT_PATTERN`
+- **Background Color**: `DEFAULT_BACKGROUND_COLOR`
+- **Grid Color**: `DEFAULT_GRID_COLOR` (with alpha channel)
+- **Tile Outline Color**: `DEFAULT_TILE_OUTLINE_COLOR` (with alpha channel)
+- **Artboard Outline Color**: `DEFAULT_ARTBOARD_OUTLINE_COLOR` (with alpha channel)
+- **Show Grid**: `DEFAULT_SHOW_GRID`
 
 ## Canvas System
 
 ### Canvas Structure (UPDATED)
 - **Canvas Size**: Dynamic, calculated based on artboard + margins
-- **Canvas Margin**: 40 grid cells on all sides of artboard
+- **Canvas Margin**: `CANVAS_MARGIN_CELLS` grid cells on all sides of artboard
 - **Artboard**: Centered in canvas, size depends on pattern tiles × tileSize × gridSize
   - Example: 5×5 tiles with 10×10 grid cells and 20px grid size = 1000×1000px artboard
 - **Extended Area**: 1 tile margin on all sides for cross-boundary line visibility
@@ -58,7 +67,7 @@
   - Cannot initiate drawing from margin area - drawing must start within artboard
 
 ### Terminology (CRITICAL)
-- **Canvas**: The entire grid area where drawing happens (includes artboard + 40-cell margin)
+- **Canvas**: The entire grid area where drawing happens (includes artboard + `CANVAS_MARGIN_CELLS` cell margin)
 - **Artboard**: The total area of pattern tiles we draw inside (the actual pattern area)
 - **Grid Cell**: A single cell in the grid (size controlled by gridSize parameter in pixels)
 - **Grid Point**: Intersection points where grid cells meet (where stitches can connect)
@@ -130,29 +139,51 @@ const artboardOffset = canvasMarginPixels;
 
 ### Extended Margin Area (CRITICAL BEHAVIOR)
 
-**The 1-tile margin around the artboard is for visualization only, not for independent drawing.**
+**The 1-tile extended area around the artboard allows bidirectional drawing with the artboard.**
 
 #### Purpose:
 - Shows continuations of lines that cross artboard boundaries
 - Allows users to see how their pattern repeats at the edges
-- Example: Line drawn from inside artboard that extends outward will show in margin
+- Enables drawing lines that span from artboard into extended area or vice versa
 
 #### Constraints:
-- ✅ **Can draw FROM** inside artboard TO outside (into margin)
-- ❌ **Cannot draw FROM** margin area (drawing must start in artboard)
-- ✅ Lines that cross boundaries show in adjacent margin tile
-- ❌ Lines don't randomly repeat in margins unless they touch artboard
+- ✅ **Can draw FROM** inside artboard TO extended area (1-tile margin)
+- ✅ **Can draw FROM** extended area TO inside artboard
+- ❌ **Cannot draw in** canvas margin area (the 40-cell area beyond extended tiles)
+- ✅ Lines that cross artboard boundaries repeat when repeat mode is ON
+- ❌ Lines entirely in extended area (not crossing artboard) do NOT repeat
+
+#### Key Behavior:
+- **Repeat Mode ON**: Only lines that intersect the artboard boundaries will repeat across tiles
+- **Repeat Mode OFF**: Lines appear only where drawn, regardless of location
+- **Extended area purpose**: Visual feedback for pattern continuity, not independent drawing space
 
 #### Implementation:
 ```javascript
 // In rendering loop, for outer tiles (tileRow/Col < 0 or >= tilesPerSide):
-const isOuterTile = tileRow < 0 || tileRow >= tilesPerSide || 
-                    tileCol < 0 || tileCol >= tilesPerSide;
+const isOuterTile = tileRow < 0 || tileRow >= tilesY || 
+                    tileCol < 0 || tileCol >= tilesX;
 
 if (isOuterTile) {
-  // Only render if line's bounding box intersects the real artboard
-  const intersectsArtboard = /* intersection check */;
-  if (!intersectsArtboard) continue; // Skip this line in this outer tile
+  // Boundary line filtering logic (see Tile Boundary Handling section)
+  // ... shouldRepeatInXDirection, shouldRepeatInYDirection checks ...
+  
+  // Only render if line's bounding box intersects the artboard
+  const lineMinX = Math.min(startX, endX);
+  const lineMaxX = Math.max(startX, endX);
+  const lineMinY = Math.min(startY, endY);
+  const lineMaxY = Math.max(startY, endY);
+  
+  const intersectsArtboard = !(
+    lineMaxX < artboardBounds.startPixelX ||
+    lineMinX > artboardBounds.endPixelX ||
+    lineMaxY < artboardBounds.startPixelY ||
+    lineMinY > artboardBounds.endPixelY
+  );
+  
+  if (!intersectsArtboard) {
+    continue; // Skip - line doesn't touch artboard from this outer tile
+  }
 }
 ```
 
@@ -178,36 +209,42 @@ if (isOuterTile) {
   id: string,              // Pattern identifier (e.g., "asanoha")
   name: string,            // Display name
   description: string,     // Pattern description
-  gridSize: number,        // Cells per tile (e.g., 10 = 10 cells = 11 grid points)
+  tileSize: {x, y},        // Grid cells per tile (e.g., {x:10, y:10})
+  gridSize: number,        // Pixel size per grid cell (e.g., 20 = 20px per cell)
+  patternTiles: {x, y},    // Number of times pattern repeats (e.g., {x:4, y:4})
   stitches: [...]          // Array of stitch definitions
 }
 ```
 
 **Coordinate System:**
-- **gridSize**: Number of cells per tile (e.g., gridSize 10 means each tile is 10×10 cells)
-- **Grid Points**: gridSize + 1 points (e.g., gridSize 10 has points 0-10, spanning 10 cells)
-- **Valid Coordinates**: 0 to gridSize (inclusive) for pattern lines
+- **tileSize**: Must be `{x, y}` object format - defines grid cells per tile dimension
+- **gridSize**: Pixel size of each grid cell (e.g., 20 = 20px per cell)
+- **patternTiles**: Must be `{x, y}` object format - how many times pattern repeats on artboard
+- **Grid Points**: tileSize + 1 points per dimension (e.g., tileSize 10 has points 0-10, spanning 10 cells)
+- **Valid Coordinates**: 0 to tileSize (inclusive) for pattern lines
 - **Boundary Points**: 
-  - Coordinate 0 = left/top edge of tile (shared with previous tile's coordinate gridSize)
-  - Coordinate gridSize = right/bottom edge of tile (shared with next tile's coordinate 0)
+  - Coordinate 0 = left/top edge of tile (shared with previous tile's coordinate tileSize)
+  - Coordinate tileSize = right/bottom edge of tile (shared with next tile's coordinate 0)
 
-**Example - Asanoha Pattern (gridSize 10):**
+**Example - Asanoha Pattern:**
 ```javascript
 {
   "id": "asanoha",
   "name": "Asanoha",
-  "gridSize": 10,
+  "tileSize": {"x":12,"y":20},
+  "gridSize": 13,
+  "patternTiles": {"x":4,"y":2},
   "stitches": [
-    { "start": { "x": 0, "y": 5 }, "end": { "x": 5, "y": 0 }, "repeat": true },
-    { "start": { "x": 5, "y": 0 }, "end": { "x": 10, "y": 5 }, "repeat": true },
-    { "start": { "x": 0, "y": 0 }, "end": { "x": 5, "y": 5 }, "repeat": true }
+    { "start": { "x": 0, "y": 0 }, "end": { "x": 0, "y": 7 }, "repeat": true },
+    { "start": { "x": 6, "y": 10 }, "end": { "x": 0, "y": 7 }, "repeat": true },
+    { "start": { "x": 6, "y": 10 }, "end": { "x": 12, "y": 7 }, "repeat": true }
     // ... more stitches
   ]
 }
 ```
-- Grid points range: 0-10 (11 points total)
-- Cell range: 10 cells per tile
-- Coordinate 10 reaches the right/bottom edge
+- Grid points range: 0-12 in X (13 points), 0-20 in Y (21 points)
+- Tile size: 12×20 grid cells
+- Pattern repeats: 4×2 (4 columns, 2 rows)
 - All lines repeat across tiles since repeat: true
 
 ### Coordinate Storage Logic
@@ -305,6 +342,7 @@ const isPatternLine = stitch.repeat !== false &&
    - Detected by: Line length ≤ 1.5 grid cells (just 1 cell apart, possibly diagonal)
    - Example: (10,2) to (9,2) - starts on boundary, goes inward
    - **Behavior**: Repeat normally 4x4 (skip all outer tiles)
+
 
 **Detection Logic:**
 ```javascript
@@ -533,19 +571,19 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 
 ### Click Selection
 - Checks all visible stitch instances from `visibleStitchInstancesRef`
-- Uses `distancePointToSegment()` with 10px threshold
+- Uses `distancePointToSegment()` with `SELECT_THRESHOLD` pixels
 - Finds closest visible stitch to click point
 - Modifiers:
   - Ctrl/Cmd/Shift: Toggle selection (add/remove from set)
   - No modifier: Replace selection (clear and select one)
 
 ### Drag Selection
-- Rectangle selection with visual feedback (blue dashed border)
+- Rectangle selection with visual feedback (see Canvas Render Order for colors)
 - Checks all visible stitch instances from `visibleStitchInstancesRef`
 - Uses `lineIntersectsRect()` to detect line-rectangle intersection
 - Selects all stitches with at least one visible instance intersecting the rectangle
 - Prevents onClick from firing after drag via `justFinishedDragRef`
-- Ignores drags smaller than 5x5 pixels (treats as click instead)
+- Ignores drags smaller than 5×5 pixels (treats as click instead)
 - Modifiers:
   - Ctrl/Cmd/Shift: Add to existing selection
   - No modifier: Replace selection
@@ -567,8 +605,8 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 - Used by both click and drag selection to ensure they match rendering exactly
 
 ### Selection Rendering
-- Selected stitches render in blue (#0000FF)
-- Non-selected stitches use their assigned color or default thread color
+- Selected stitches render in `DEFAULT_SELECTED_COLOR`
+- Non-selected stitches use their assigned color from `stitchColors` map or `DEFAULT_STITCH_COLOR`
 
 ## Tools/Modes
 
@@ -578,7 +616,7 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 - Works across all tiles for repeated stitches
 
 ### Draw Mode
-- Click to set first point (blue dot indicator, 2px radius)
+- Click to set first point (first point indicator: blue, 2px radius)
 - Click same point again to cancel
 - Click second point to create line
 - **Line Validation**:
@@ -605,55 +643,56 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 
 **Controls:**
 1. **Pattern Name**: Text input for naming the pattern
-2. **Pattern Tiles**: Slider (1×1 to 10×10, step 1) - controls how many times pattern repeats on artboard
-   - Affects artboard size and canvas size dynamically
-3. **Tile Size**: Slider (5×5 to 20×20 grid cells, step 1) - number of grid cells per pattern tile
-   - Affects the resolution/detail level of each pattern tile
-4. **Grid Size**: Slider (10px to 50px, step 1) - pixel size of each grid cell
-   - Affects visual scale of the entire pattern
-   - Changes canvas margin size (40 cells × grid size)
-5. **Background Color**: Color picker for canvas background
-6. **Default Stitch Color**: Color picker for fallback thread color
-   - Used when stitches have no color override
-   - Independent from drawing color
-
-**Display:** Badge showing canvas info (tile count, grid size)
+2. **Pattern Description**: Textarea for pattern description
+3. **Artboard Size**: Display-only field showing artboard dimensions with unit selector (px/mm/cm)
+4. **Columns (X)**: Slider (1 to 10, step 1) - controls horizontal pattern repetitions (`patternTiles.x`)
+5. **Rows (Y)**: Slider (1 to 10, step 1) - controls vertical pattern repetitions (`patternTiles.y`)
+6. **Column Width (X)**: Slider (5 to 20, step 1) - grid cells horizontally per pattern tile (`tileSize.x`)
+7. **Row Height (Y)**: Slider (5 to 20, step 1) - grid cells vertically per pattern tile (`tileSize.y`)
+8. **Grid Size**: Slider (10px to 50px, step 1) - pixel size of each grid cell
+   - Displayed with unit conversion based on unit selector
+9. **Fabric Color**: 6-char hex color picker with presets and text input (#RRGGBB)
+10. **Grid Appearance** (collapsible):
+    - **Grid Color**: 8-char hex color picker with alpha (#RRGGBBAA)
+    - **Tile Outline Color**: 8-char hex color picker with alpha (#RRGGBBAA)
+    - **Artboard Outline Color**: 8-char hex color picker with alpha (#RRGGBBAA)
+11. **Action Buttons**:
+    - **New**: Creates new blank pattern
+    - **Save**: Saves pattern to library (shows state: Saving.../Saved!)
+    - **Reset to Defaults**: Restores default settings
+    - **Export / Import** (dropdown):
+      - Export as JSON
+      - Export as PNG (1x/2x/3x/4x quality options)
+      - Export as SVG (disabled)
+      - Copy JSON (for patterns.json)
+      - Import JSON
 
 **Interaction Effects:**
-- Changing Pattern Tiles: Artboard and canvas resize dynamically
-- Changing Tile Size: Pattern detail level changes, artboard may resize
-- Changing Grid Size: Everything scales proportionally, canvas margin adjusts
+- Changing Columns/Rows: Artboard and canvas resize dynamically based on pattern repetitions
+- Changing Column Width/Row Height: Pattern tile resolution changes, affects artboard size
+- Changing Grid Size: Everything scales proportionally, canvas margin adjusts (40 cells × grid size)
 
-### ContextualSidebar (Right Sidebar)
+### Toolbar (Top Bar)
 
-**Purpose:** Control settings that apply to drawing and selection
-
-**Context-Aware Behavior:**
-- **No selection**: Shows "Default settings for draw tool"
-  - Changes affect future drawn lines
-- **Has selection**: Shows "X stitch(es) selected" badge
-  - Changes apply immediately to all selected lines
+**Purpose:** Tool selection and stitch property controls
 
 **Controls:**
-1. **Stitch Length**: Dropdown (medium | large | xlarge)
-   - Works for both drawing and selection modes
-2. **Repeat Pattern**: Toggle button (ON | OFF)
-   - ON: Lines repeat across all tiles
-   - OFF: Lines appear only where drawn
-3. **Stitch Color**: Color picker with preset swatches
-   - Color input: Standard HTML color picker
-   - Preset swatches: 8-10 clickable color buttons
+1. **Tool Selection**: Select, Draw, Pan modes
+2. **Stitch Color**: Color picker with preset swatches (6-char hex #RRGGBB)
    - Used for drawing new stitches
    - Used for changing selected stitch colors
-4. **Clear Custom Colors**: Button to clear `stitchColors` map
-   - Removes all color overrides, stitches revert to `defaultThreadColor`
-5. **Delete Selected**: Button (only visible with selection)
-   - Deletes all selected stitches
+3. **Stitch Length**: Dropdown (small | medium | large)
+4. **Stitch Gap**: Slider/popover control for gap between stitches
+5. **Stitch Width**: Dropdown (thin | normal | bold)
+6. **Repeat Pattern**: Toggle button (ON | OFF)
+   - ON: Lines repeat across all tiles
+   - OFF: Lines appear only where drawn
+7. **Undo/Redo**: History navigation buttons
+8. **Show/Hide Grid**: Toggle grid visibility
 
 ### Auto-Apply Behavior
 - All changes apply immediately without "Apply" buttons
-- Stitch Length: Updates selected or sets default for drawing
-- Repeat Pattern: Updates selected or sets default for drawing
+- Stitch properties: Updates selected or sets default for drawing
 - Color: Updates `stitchColors` map for selected or affects next drawn stitch
 
 ## Event Flow
@@ -676,34 +715,40 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 
 ### Canvas Render Order
 1. Clear canvas with high DPI scaling
-2. Fill background color
-3. Draw artboard boundary (blue outline, 2px, rgba(59, 130, 246, 0.5))
-4. Draw pattern tile boundaries within artboard (light gray, 1px)
-5. Draw grid dots across entire canvas (3x3px squares, rgba(148, 163, 184, 0.25))
+2. Fill background color (`backgroundColor` state)
+3. Draw artboard boundary (`DEFAULT_ARTBOARD_OUTLINE_COLOR`, 2px line width)
+4. Draw pattern tile boundaries within artboard (`DEFAULT_TILE_OUTLINE_COLOR`, 1px line width)
+5. Draw grid dots across entire canvas (`DOT_RADIUS`, `DEFAULT_GRID_COLOR`)
 6. Render all stitches (forEach loop):
    - Detect pattern vs absolute coordinates
    - For pattern lines: Loop through tiles (-1 to tilesPerSide), apply outer tile filtering
    - For absolute lines: Render once at position
    - Calculate dash pattern based on stitch size and line length
-   - Apply 4px offset from grid points along the line direction
-   - Use color override → stitch.color → defaultThreadColor
-   - Selected stitches render in blue (#0000FF)
-7. Draw first point indicator (blue 2px radius circle, if in draw mode with firstPoint)
-8. Draw drag selection rectangle (blue dashed 2px border, if isDragging)
+   - Apply stitch offset from grid points: `calculateStitchOffset(gapSize)` 
+   - Use color from `stitchColors` map or stitch.color
+   - Selected stitches render in `DEFAULT_SELECTED_COLOR`
+7. Draw first point indicator (blue, 2px radius, if in draw mode with firstPoint)
+8. Draw drag selection rectangle (blue stroke with light fill, 5px dashed line, if isDragging)
 
 ### Stitch Rendering Details
-- **Offset**: 4px from start/end grid points along the line direction (using unit vector)
-- **Drawable Length**: Total length - 8px (4px offset on each end)
-- **Gap Between Stitches**: 8px fixed
-- **Dash Count Calculation**:
-  - Medium: 2 dashes per 20px cell (Math.round(actualCellsInLine * 2))
-  - Large: 1 dash per 20px cell (Math.round(actualCellsInLine * 1))
-  - XLarge: Same as large, but pairs of dashes merged (even count required)
+- **Offset**: `calculateStitchOffset(gapSize)` where calculation = `gapSize / 2` from start/end grid points (using unit vector)
+- **Drawable Length**: Total length - 2 × offset
+- **Gap Between Stitches**: `DEFAULT_GAP_SIZE` pixels (configurable)
+- **Stitch Size Ratios** (dashes per grid cell):
+  - `STITCH_SIZE_RATIOS.small` (dashes per cell)
+  - `STITCH_SIZE_RATIOS.medium` (dashes per cell)
+  - `STITCH_SIZE_RATIOS.large` (uses medium calculation, then merges pairs)
+- **Minimum Dash Lengths** (prevents too-small dashes):
+  - `MIN_DASH_LENGTHS.small` pixels
+  - `MIN_DASH_LENGTHS.medium` pixels
+  - `MIN_DASH_LENGTHS.large` pixels
+- **Line Widths**:
+  - `STITCH_WIDTHS.thin` pixels
+  - `STITCH_WIDTHS.normal` pixels
+  - `STITCH_WIDTHS.bold` pixels
 - **Line Cap**: Round (for dashes), Butt (for base line)
 - **Line Join**: Round
-- **Line Width**: 3px
-- **Selection Color**: #0000FF (blue)
-- **Canvas Line Cap**: Butt (for precise pixel alignment)
+- **Selection Color**: `DEFAULT_SELECTED_COLOR`
 
 ## State Management
 
@@ -712,12 +757,14 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 - `selectedStitchIds`: Set of selected stitch IDs
 - `stitchColors`: Map of stitch ID to color overrides (specific color assignments)
 - `drawingState`: { mode, firstPoint, previousMode }
-- `defaultThreadColor`: Fallback color for stitches without color overrides (Canvas Settings)
-- `selectedStitchColor`: Color for drawing new stitches and changing selected stitches (ContextualSidebar)
+- `selectedStitchColor`: Color for drawing new stitches and changing selected stitches (Toolbar)
 - `backgroundColor`: Canvas background color (Canvas Settings)
+- `gridColor`: Grid dots color with alpha (Canvas Settings)
+- `tileOutlineColor`: Tile boundary lines color with alpha (Canvas Settings)
+- `artboardOutlineColor`: Artboard border color with alpha (Canvas Settings)
 - `stitchSize`: Default stitch size for new stitches
 - `repeatPattern`: Default repeat setting for new stitches
-- `patternTiles`: Number of tiles per side (e.g., 5 = 5×5 artboard)
+- `patternTiles`: Number of tiles (e.g., {x:4, y:4} = 4×4 artboard)
 
 ### PatternCanvas State
 - `dragSelectRect`: { startX, startY, endX, endY } during drag selection
@@ -742,41 +789,47 @@ Both click and drag selection use `visibleStitchInstancesRef` which is populated
 
 ### Color System (CRITICAL BEHAVIOR)
 
-**Two Independent Color Controls:**
+**Three Independent Color Categories:**
 
-1. **Default Thread Color** (Canvas Settings, left sidebar)
-   - Purpose: Display color for stitches without explicit color overrides
-   - Controlled by: `defaultThreadColor` state
+1. **Fabric Colors** (Canvas Settings, left sidebar)
+   - `backgroundColor` - 6-char hex (#RRGGBB) for canvas/fabric background
+   - Purpose: Background color of the canvas
+   - User input limited to 6 chars (#RRGGBB), no alpha channel
    - Changed via: CanvasSettings component only
-   - Used for: Rendering fallback when `stitchColors.get(id)` and `stitch.color` are null
-   - Initial value: `#ffffff` (white)
+   - Includes preset color swatches
 
-2. **Stitch Color** (ContextualSidebar, right sidebar)
+2. **Grid Appearance Colors** (Canvas Settings, left sidebar → "Grid Appearance" collapsible)
+   - `gridColor` - 8-char hex (#RRGGBBAA) with alpha channel for grid dots
+   - `tileOutlineColor` - 8-char hex (#RRGGBBAA) for tile boundary lines
+   - `artboardOutlineColor` - 8-char hex (#RRGGBBAA) for artboard border
+   - Purpose: Visual appearance of grid and boundaries
+   - User input limited to 8 chars (#RRGGBBAA), includes alpha transparency
+   - Changed via: CanvasSettings component only
+
+3. **Stitch Colors** (Toolbar)
+   - `selectedStitchColor` - 6-char hex (#RRGGBB) for drawing new stitches and editing selected
    - Purpose: Color for drawing new stitches and changing selected stitches
-   - Controlled by: `selectedStitchColor` state
-   - Changed via: ContextualSidebar component only
+   - User input limited to 6 chars (#RRGGBB), no alpha channel
+   - Applied via `stitchColors` Map (stitch ID → color string)
+   - Changed via: Toolbar component only
+   - Includes preset color swatches
    - Used for: 
      - Drawing: All new stitches get this color in `stitchColors` map
      - Selection: Applied to all selected stitches in `stitchColors` map
-   - Initial value: `#fb7185` (pink)
-   - Includes color presets for quick selection
 
 **Color Precedence (Rendering):**
 ```javascript
-const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultThreadColor;
+const colorOverride = stitchColors.get(stitch.id) ?? stitch.color;
 ctx.strokeStyle = isSelected ? '#0000FF' : colorOverride;
 ```
 1. If selected: Blue (#0000FF)
 2. Else if in `stitchColors` map: Use that color
 3. Else if `stitch.color` exists: Use that color
-4. Else: Use `defaultThreadColor`
 
 **Key Behaviors:**
 - New stitches always get `selectedStitchColor` applied (stored in `stitchColors` map)
 - Changing `selectedStitchColor` with selection: Updates all selected stitches
 - Changing `selectedStitchColor` without selection: Only affects next drawn stitch
-- `defaultThreadColor` and `selectedStitchColor` are completely independent
-- "Clear Custom Colors" button clears entire `stitchColors` map
 
 ## Future Considerations
 

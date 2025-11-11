@@ -4,12 +4,9 @@
 export const DEFAULT_GRID_SIZE = 20;
 
 /**
- * Normalize tileSize to {x, y} format (supports legacy number format)
+ * Normalize tileSize to {x, y} format
  */
 export function normalizeTileSize(tileSize) {
-  if (typeof tileSize === 'number') {
-    return { x: tileSize, y: tileSize };
-  }
   if (tileSize && typeof tileSize === 'object' && typeof tileSize.x === 'number' && typeof tileSize.y === 'number') {
     return { x: tileSize.x, y: tileSize.y };
   }
@@ -20,9 +17,6 @@ export function normalizeTileSize(tileSize) {
  * Normalize patternTiles to {x, y} format
  */
 export function normalizePatternTiles(patternTiles) {
-  if (typeof patternTiles === 'number') {
-    return { x: patternTiles, y: patternTiles };
-  }
   if (patternTiles && typeof patternTiles === 'object' && typeof patternTiles.x === 'number' && typeof patternTiles.y === 'number') {
     return { x: patternTiles.x, y: patternTiles.y };
   }
@@ -54,7 +48,7 @@ export function clonePattern(pattern, DEFAULT_GAP_SIZE = 9) {
     ...pattern,
     tileSize: normalizedTileSize,
     gridSize: pattern.gridSize ?? 20,
-    patternTiles: normalizePatternTiles(pattern.patternTiles ?? 4),
+    patternTiles: normalizePatternTiles(pattern.patternTiles ?? { x: 4, y: 4 }),
     stitches: (pattern.stitches ?? []).map((stitch) => ({
       ...stitch,
       start: { ...stitch.start },
@@ -81,17 +75,20 @@ export function deriveColorMap(pattern) {
  * Validate pattern data structure
  */
 export function isValidPattern(data) {
-  // Support both old number format and new {x, y} object format for tileSize
-  const validTileSize = typeof data.tileSize === 'number' || 
-    (data.tileSize && typeof data.tileSize === 'object' && 
-     typeof data.tileSize.x === 'number' && typeof data.tileSize.y === 'number');
+  const validTileSize = 
+    data.tileSize && typeof data.tileSize === 'object' && 
+    typeof data.tileSize.x === 'number' && typeof data.tileSize.y === 'number';
+  
+  const validPatternTiles = 
+    data.patternTiles && typeof data.patternTiles === 'object' && 
+    typeof data.patternTiles.x === 'number' && typeof data.patternTiles.y === 'number';
   
   return (
     data &&
     typeof data === 'object' &&
     validTileSize &&
     typeof data.gridSize === 'number' &&
-    typeof data.patternTiles === 'number' &&
+    validPatternTiles &&
     Array.isArray(data.stitches)
   );
 }

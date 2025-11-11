@@ -4,9 +4,9 @@
     "name": "Blank Canvas",
     "description": "Start with a clean canvas",
     "isStarterPattern": true,
-    "tileSize": 10,
+    "tileSize": {"x":10,"y":10},
     "gridSize": 20,
-    "patternTiles": 4,
+    "patternTiles": {"x":4,"y":4},
     "stitches": [],
     "uiState": {
       "backgroundColor": "#0f172a",
@@ -89,9 +89,9 @@
     "name": "Simple Cross",
     "description": "Cross stitches on an 6x6 grid",
     "isStarterPattern": true,
-    "tileSize": 6,
+    "tileSize": {"x":6,"y":6},
     "gridSize": 15,
-    "patternTiles": 6,
+    "patternTiles": {"x":6,"y":6},
     "stitches": [
       { "id": "stitch-1762366054266-501c00", "start": { "x": 1, "y": 0 }, "end": { "x": -1, "y": 0 }, "color": "#f5f5f5", "stitchSize": "large", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
       { "id": "stitch-1762366056332-314a90", "start": { "x": 0, "y": 5 }, "end": { "x": 0, "y": 7 }, "color": "#f5f5f5", "stitchSize": "large", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
@@ -110,9 +110,9 @@
     "name": "Diagonal Flow",
     "description": "Flowing diagonal lines on a 6x6 grid",
     "isStarterPattern": true,
-    "tileSize": 6,
+    "tileSize": {"x":6,"y":6},
     "gridSize": 20,
-    "patternTiles": 6,
+    "patternTiles": {"x":6,"y":6},
     "stitches": [
       { "id": "diag-1", "start": { "x": 0, "y": 0 }, "end": { "x": 6, "y": 6 }, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
       { "id": "diag-2", "start": { "x": 0, "y": 2 }, "end": { "x": 4, "y": 6 }, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
@@ -132,7 +132,7 @@
     "isStarterPattern": true,
     "tileSize": { "x": 12, "y": 8 },
     "gridSize": 20,
-    "patternTiles": 4,
+    "patternTiles": {"x":4,"y":4},
     "stitches": [
       { "id": "stitch-1762398107451-26c870", "start": { "x": 5, "y": 1 }, "end": { "x": 3, "y": 1 }, "color": "#f5f5f5", "stitchSize": "medium", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
       { "id": "stitch-1762398108671-d6ece8", "start": { "x": 3, "y": 1 }, "end": { "x": 3, "y": 3 }, "color": "#f5f5f5", "stitchSize": "medium", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
@@ -173,7 +173,7 @@
     "isStarterPattern": true,
     "tileSize": {"x":12,"y":8},
     "gridSize": 20,
-    "patternTiles": 4,
+    "patternTiles": {"x":4,"y":4},
     "stitches": [
       { "id": "stitch-1762399697870-5a1ae3", "start": {"x":0,"y":1}, "end": {"x":0,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
       { "id": "stitch-1762399699269-28dee1", "start": {"x":0,"y":3}, "end": {"x":2,"y":3}, "color": "#f5f5f5", "stitchSize": "medium", "stitchWidth": "normal", "gapSize": 9, "repeat": true },
