@@ -3,6 +3,16 @@
 ## Project Overview
 A web-based interactive tool for designing Sashiko embroidery patterns using **Astro 5** (static site) + **React 19** + **Tailwind CSS 4**. The app features a tile-based repeating pattern system with a dynamic canvas that auto-resizes based on pattern configuration.
 
+## UI Component Library
+**Use shadcn/ui components wherever possible** - the project uses shadcn/ui component library built on Radix UI primitives. Components are located in `src/components/ui/` and include:
+- Buttons, inputs, labels, sliders
+- Dialogs, popovers, dropdowns, sheets
+- Tabs, collapsibles, separators
+- Cards, badges, tooltips
+- And more in `src/components/ui/`
+
+When adding new UI elements, prefer using existing shadcn components or adding new ones from [shadcn/ui](https://ui.shadcn.com/) rather than building from scratch.
+
 ## Critical Architecture Concepts
 
 ### Canvas System (THE MOST IMPORTANT CONCEPT)
