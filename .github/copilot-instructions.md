@@ -66,12 +66,21 @@ Three distinct coordinate systems exist:
 ### State Management (Custom Hooks Pattern)
 - `src/hooks/usePatternState.js` - Core pattern state (currentPattern, stitchColors, selection)
 - `src/hooks/useHistory.js` - Undo/redo with debounced property editing
-- `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (localStorage)
+- `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (Dexie/IndexedDB)
 - `src/hooks/usePatternImportExport.js` - JSON export/import, PNG export
 - `src/hooks/usePropertyEditor.js` - Batch property editing for selected stitches
 - `src/hooks/useKeyboardShortcuts.js` - Keyboard event handlers
 
 Each hook encapsulates a specific concern and is composed in `PatternDesigner.jsx`.
+
+### Data Persistence (Dexie.js / IndexedDB)
+- `src/lib/db.js` - Dexie database configuration and initialization
+- `src/lib/patternStorage.js` - Pattern CRUD operations using Dexie
+- **Database Schema**:
+  - `patterns` table: User-saved patterns with indexing on name, createdAt, updatedAt
+  - `currentPattern` table: Active working pattern (auto-save)
+  - `settings` table: User preferences and UI state
+- **Benefits**: ~50MB+ storage, async operations, structured querying, future cloud sync ready
 
 ### Component Hierarchy
 ```
@@ -88,7 +97,7 @@ PatternDesigner.jsx (root state container)
 ### Data Flow
 1. **User draws line** → `PatternCanvas.jsx` calculates grid coordinates → calls `onAddStitch`
 2. **PatternDesigner** updates `currentPattern.stitches` + `stitchColors` Map
-3. **Auto-save** triggers via `useEffect` → `patternStorage.js` saves to localStorage
+3. **Auto-save** triggers via `useEffect` → `patternStorage.js` saves to Dexie (IndexedDB)
 4. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
 
 ### Color System (THREE CATEGORIES)

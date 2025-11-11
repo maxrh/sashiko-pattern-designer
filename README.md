@@ -9,7 +9,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Tailwind CSS** v4.1.16 - Utility-first CSS framework
 - **shadcn/ui** - Component library built on Radix UI primitives
 - **Lucide React** v0.552.0 - Modern icon library ([Reference](https://lucide.dev/))
-- **Local Storage API** - Browser-native data persistence
+- **Dexie.js** v4.0.10 - IndexedDB wrapper for robust data persistence
 
 ## Features
 
@@ -35,7 +35,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Pattern Repeat Toggle**: Choose between repeating patterns and single-instance stitches
 
 ### Pattern Management
-- **Auto-Save**: Your work is automatically saved to browser local storage
+- **Auto-Save**: Your work is automatically saved to IndexedDB (via Dexie.js)
 - **Pattern Library**: Save and organize multiple patterns with custom names
 - **Load Patterns**: Switch between built-in patterns and your custom saved patterns
 - **Export/Import**: Export patterns as JSON files for sharing or backup
@@ -128,22 +128,29 @@ All commands are run from the root of the project, from a terminal:
 ## Data Persistence
 
 ### Auto-Save
-Your current work is automatically saved to browser local storage whenever you make changes. This includes:
+Your current work is automatically saved to IndexedDB (via Dexie.js) whenever you make changes. This includes:
 - Adding, removing, or modifying stitches
 - Changing stitch colors
 - Adjusting canvas settings (tiles, colors, etc.)
 - Updating tool settings
 
-Your work will persist across page refreshes and browser sessions.
+Benefits over localStorage:
+- **Larger storage capacity**: ~50MB+ vs localStorage's ~5-10MB limit
+- **Better performance**: Async operations don't block the UI
+- **Structured data**: No JSON stringify/parse overhead
+- **Future-ready**: Easily extensible to cloud sync with Dexie Cloud
+
+Your work persists across page refreshes and browser sessions.
 
 ### Pattern Library
 - Click **"Save Pattern"** to add your current design to your personal library
-- Saved patterns appear in the "My Patterns" section
+- Saved patterns are stored in IndexedDB with metadata (name, timestamps, etc.)
+- Patterns are indexed for fast searching and filtering
 - Edit and re-save patterns to update them
 - Delete unwanted patterns with the Delete button
 
 ### Export & Import
-- **Export JSON**: Download your pattern as a `.json` file
+- **Export JSON**: Download your pattern as a `.json` file for sharing or backup
 - **Export PNG**: Download a high-quality image of your design
 - **Import JSON**: Load previously exported pattern files
 
@@ -186,7 +193,7 @@ Your work will persist across page refreshes and browser sessions.
 - **Batch Editing**: Select multiple stitches and edit properties all at once
 
 ### Pattern Management
-- **Auto-Save**: Current pattern automatically saves to browser localStorage
+- **Auto-Save**: Current pattern automatically saves to IndexedDB (Dexie.js)
 - **Pattern Library**: Access saved patterns and built-in patterns via left sidebar
 - **Keyboard Shortcuts**:
   - `Ctrl+Z` / `Cmd+Z`: Undo
@@ -203,6 +210,7 @@ Your work will persist across page refreshes and browser sessions.
 - **Coordinate Systems**: Three distinct systems (Canvas, Artboard-Relative, Pattern-Relative)
 - **Tile Boundaries**: Shared coordinates between adjacent tiles with duplication prevention
 - **Error Handling**: ErrorBoundary component with user-friendly error messages and recovery options
+- **Data Persistence**: Dexie.js for IndexedDB with structured storage and async operations
 
 ### Canvas System
 - **Canvas**: Artboard + 40-cell margin on all sides
@@ -211,10 +219,17 @@ Your work will persist across page refreshes and browser sessions.
 - **Dynamic Sizing**: Recalculates when gridSize, tileSize, or patternTiles change
 
 ### Storage Format
-- **Pattern Data**: Stored as JSON with tile-relative coordinates
+- **Database**: Dexie.js wrapper around IndexedDB with 3 tables:
+  - `patterns`: User-saved patterns with indexing (name, createdAt, updatedAt)
+  - `currentPattern`: Active working pattern (auto-save)
+  - `settings`: User preferences and UI state
+- **Pattern Data**: Stored as structured objects with tile-relative coordinates
 - **Stitch Format**: Start/end points, color, size, width, gapSize, repeat flag
-- **Auto-Save**: Triggers on any pattern change via localStorage API
+- **Auto-Save**: Triggers on any pattern change via async Dexie operations
 - **Export**: JSON format for patterns, PNG for images
+- **Benefits**: ~50MB+ capacity, async operations, structured querying, cloud sync ready
+
+For complete technical specifications, architecture details, and coordinate system documentation, see [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md).
 
 ## Deployment
 
@@ -230,6 +245,7 @@ This project is configured for **Cloudflare Pages** deployment:
 - **Tailwind CSS**: [Documentation](https://tailwindcss.com/docs)
 - **shadcn/ui**: [Component Library](https://ui.shadcn.com/)
 - **Lucide Icons**: [Icon Library](https://lucide.dev/)
+- **Dexie.js**: [Documentation](https://dexie.org/) | [API Reference](https://dexie.org/docs/API-Reference)
 
 ---
 

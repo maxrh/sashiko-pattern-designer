@@ -76,10 +76,7 @@
       "tileOutlineColor": "#94a3b826",
       "artboardOutlineColor": "#3b82f680"
     }
-  }, 
-
-
-
+  },
   {
     "id": "simple-cross",
     "name": "Simple Cross",
@@ -101,7 +98,6 @@
       "artboardOutlineColor": "#3b82f680"
     }
   },
-
   {
     "id": "diagonal-flow",
     "name": "Diagonal Flow",
