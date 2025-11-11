@@ -147,6 +147,30 @@ npm run preview          # Preview production build locally
 4. **Selection uses visibleStitchInstancesRef** - populated during rendering to ensure click/drag selection matches visible stitches
 5. **Color overrides in stitchColors Map** - NOT stored in stitch.color field directly
 6. **Auto-save triggers on ANY state change** - be careful with useEffect dependencies
+7. **Boundary crossing detection is simple** - only check if endpoint exceeds [0, tileSize] bounds, NOT line length or distance
+
+## Boundary Line Logic (CRITICAL - UPDATED)
+
+**Four types of boundary-related lines:**
+
+1. **Corner Lines Going Backward**: Start at corner (0,0 or tileSize,tileSize) with negative end coords
+   - Example: (0,0)→(0,-5) vertical line going UP from top-left corner
+   - Skip in first row/col and corresponding outer tiles to prevent duplication
+
+2. **Lines Running Along Boundaries**: Both endpoints on SAME boundary, moving perpendicular
+   - Vertical: both x=0 or x=tileSize, different y values
+   - Horizontal: both y=0 or y=tileSize, different x values
+   - Repeat in outer tiles perpendicular to boundary (5x on 4x4 artboard)
+
+3. **Lines Crossing Tile Boundaries**: Endpoint extends beyond [0, tileSize]
+   - Detection: `end.x < 0 || end.x > tileSize` (horizontal crossing)
+   - Detection: `end.y < 0 || end.y > tileSize` (vertical crossing)
+   - Repeat in ALL outer tiles in crossing direction(s)
+
+4. **Lines Entirely Within Tile**: Both endpoints within [0, tileSize], not running along boundary
+   - Example: (5,5)→(7,8) or (9,10)→(10,9) diagonal touching boundaries but contained
+   - Repeat only in artboard tiles (4x4), skip all outer tiles
+   - **IMPORTANT**: Lines like (9,10)→(10,9) look like they touch boundaries but are fully contained, so they don't trigger outer tile repetition
 
 ## When Modifying Rendering Logic
 
@@ -154,7 +178,8 @@ npm run preview          # Preview production build locally
 2. **Test cross-tile lines**: Ensure (9,5)→(11,5) repeats correctly across ALL tiles
 3. **Test boundary lines**: Ensure vertical/horizontal boundary lines render 5x (not 4x) on 4×4 artboard
 4. **Test corner lines with negative coords**: Ensure (0,0)→(0,-5) skips first row and top margin
-5. **Check selection**: Click/drag should match rendered stitch positions exactly
+5. **Test contained boundary-touching lines**: Ensure (9,10)→(10,9) repeats 4x4 (not in outer tiles)
+6. **Check selection**: Click/drag should match rendered stitch positions exactly
 
 ## Debugging Workflow
 

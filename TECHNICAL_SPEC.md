@@ -333,15 +333,17 @@ const isPatternLine = stitch.repeat !== false &&
      - Vertical boundary → repeats in left/right outer tiles (5x in X direction on 4x4 board)
      - Horizontal boundary → repeats in top/bottom outer tiles (5x in Y direction on 4x4 board)
 
-3. **Lines Crossing Tile Boundaries**: Actually span into adjacent tile(s)
-   - Detected by: Line length > 1.5 grid cells AND end coordinate outside tile bounds
+3. **Lines Crossing Tile Boundaries**: Endpoint extends beyond tile bounds
+   - Detected by: End coordinate outside [0, tileSize] range (e.g., end.x < 0 or end.x > tileSize)
    - Example: (5,5) to (11,5) - end.x exceeds patternTileSize
    - **Behavior**: Repeat in ALL outer tiles in the crossing direction (5x5 if crossing both X and Y)
 
-4. **Lines Touching Boundaries**: Start or end on boundary but don't run along or truly cross
-   - Detected by: Line length ≤ 1.5 grid cells (just 1 cell apart, possibly diagonal)
-   - Example: (10,2) to (9,2) - starts on boundary, goes inward
-   - **Behavior**: Repeat normally 4x4 (skip all outer tiles)
+4. **Lines Entirely Within Tile**: Start and end both within [0, tileSize] range
+   - Detected by: Both start and end coordinates within tile bounds, not running along boundary
+   - Examples:
+     - (5,5) to (7,8) - regular internal line
+     - (9,10) to (10,9) - diagonal touching two boundaries but contained within tile
+   - **Behavior**: Repeat normally in artboard tiles only (4x4 on 4x4 artboard, skip all outer tiles)
 
 
 **Detection Logic:**
@@ -376,28 +378,23 @@ if (startsAtNormalizedCorner && startOnLeftEdge && hasNegativeX &&
 
 // THEN for outer tiles only:
 if (isOuterTile) {
+  // A line ACTUALLY CROSSES a tile boundary if the endpoint goes outside [0, tileSize]
+  // This is different from just touching a boundary point
+  const crossesHorizontally = stitch.end.x < 0 || stitch.end.x > patternTileSize.x;
+  const crossesVertically = stitch.end.y < 0 || stitch.end.y > patternTileSize.y;
+  
   // Detect lines running along boundaries (both endpoints on SAME boundary)
   const bothOnVerticalBoundary = 
-    (stitch.start.x === 0 || stitch.start.x === patternTileSize) &&
-    (stitch.end.x === 0 || stitch.end.x === patternTileSize) &&
-    stitch.start.x === stitch.end.x;
+    (stitch.start.x === 0 || stitch.start.x === patternTileSize.x) &&
+    (stitch.end.x === 0 || stitch.end.x === patternTileSize.x) &&
+    stitch.start.x === stitch.end.x &&
+    stitch.start.y !== stitch.end.y; // Must move in Y direction (vertical line)
   
   const bothOnHorizontalBoundary = 
-    (stitch.start.y === 0 || stitch.start.y === patternTileSize) &&
-    (stitch.end.y === 0 || stitch.end.y === patternTileSize) &&
-    stitch.start.y === stitch.end.y;
-  
-  // Detect true crossing: line length > 1.5 AND end outside tile bounds
-  const lineLength = Math.sqrt(
-    Math.pow(stitch.end.x - stitch.start.x, 2) + 
-    Math.pow(stitch.end.y - stitch.start.y, 2)
-  );
-  const justTouchingBoundary = lineLength <= 1.5; // Single cell or diagonal
-  
-  const crossesHorizontally = !justTouchingBoundary && 
-    (stitch.end.x < 0 || stitch.end.x > patternTileSize);
-  const crossesVertically = !justTouchingBoundary && 
-    (stitch.end.y < 0 || stitch.end.y > patternTileSize);
+    (stitch.start.y === 0 || stitch.start.y === patternTileSize.y) &&
+    (stitch.end.y === 0 || stitch.end.y === patternTileSize.y) &&
+    stitch.start.y === stitch.end.y &&
+    stitch.start.x !== stitch.end.x; // Must move in X direction (horizontal line)
   
   // Determine which directions should repeat in outer tiles
   const shouldRepeatInXDirection = crossesHorizontally || bothOnVerticalBoundary;

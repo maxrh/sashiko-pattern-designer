@@ -365,20 +365,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 continue;
               }
               
-              // A line crosses if BOTH start and end are not within normal tile bounds
-              // OR if end extends beyond bounds and start is not on the boundary it's leaving from
-              const startOnLeftBoundary = stitch.start.x === 0;
-              const startOnRightBoundary = stitch.start.x === patternTileSize.x;
-              const startOnTopBoundary = stitch.start.y === 0;
-              const startOnBottomBoundary = stitch.start.y === patternTileSize.y;
-              
-              // If line goes slightly outside bounds (by 1), it's just touching boundary, not crossing
-              // True crossing: goes outside by more than 1 grid cell
-              const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
-              const justTouchingBoundary = lineLength <= 1.5; // Allow for diagonal (sqrt(2) ≈ 1.41)
-              
-              const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize.x);
-              const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
+              // A line ACTUALLY CROSSES a tile boundary if the endpoint goes outside [0, tileSize]
+              // This is different from just touching a boundary point
+              const crossesHorizontally = stitch.end.x < 0 || stitch.end.x > patternTileSize.x;
+              const crossesVertically = stitch.end.y < 0 || stitch.end.y > patternTileSize.y;
               
               // A line runs along a boundary if BOTH endpoints are on the SAME boundary
               // AND the line doesn't move in that direction (vertical line has same X, horizontal line has same Y)
