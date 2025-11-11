@@ -1,8 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import PatternDesigner from '../components/PatternDesigner.jsx';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 ---
 
 <Layout title="Sashiko Pattern Designer">
-	<PatternDesigner client:only="react" />
+	<ErrorBoundary client:only="react">
+		<PatternDesigner client:only="react" />
+	</ErrorBoundary>
 </Layout>

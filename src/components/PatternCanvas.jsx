@@ -1,9 +1,9 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, memo } from 'react';
 import { renderStitch, DEFAULT_GAP_SIZE, calculateStitchOffset } from './Stitches';
 import { DEFAULT_GRID_COLOR, DEFAULT_TILE_OUTLINE_COLOR, DEFAULT_ARTBOARD_OUTLINE_COLOR } from './PatternDesigner';
 
 const SNAP_THRESHOLD = 15;
-const SELECT_THRESHOLD = 10;
+const SELECT_THRESHOLD = 5;
 const DOT_RADIUS = 2.5;
 
 function wrapCoordinate(value, gridSize) {
@@ -86,7 +86,7 @@ function lineIntersectsArtboard(startX, startY, endX, endY, artboardX, artboardY
 // PatternCanvas component renders the drawing surface:
 // - Canvas = the entire grid area (includes artboard + padding)
 // - Artboard = the total area containing all pattern tiles (inside the canvas)
-export const PatternCanvas = forwardRef(function PatternCanvas({
+const PatternCanvasComponent = forwardRef(function PatternCanvas({
   canvasWidth,       // Width of entire canvas (grid area)
   canvasHeight,      // Height of entire canvas (grid area)
   cellSize,          // Size of each grid cell in pixels
@@ -355,7 +355,9 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
               const extendsRightBeyond = stitch.end.x > patternTileSize.x;
               const extendsBottomBeyond = stitch.end.y > patternTileSize.y;
               const isInLeftOuterTile = tileCol < 0;
+              const isInRightOuterTile = tileCol >= tilesX;
               const isInTopOuterTile = tileRow < 0;
+              const isInBottomOuterTile = tileRow >= tilesY;
               // CORNER-SPECIFIC: Line starting at corner extending right: skip in right outer tiles
               if (startOnCorner && startOnRightEdge && extendsRightBeyond && isInRightOuterTile) {
                 continue;
@@ -365,20 +367,10 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
                 continue;
               }
               
-              // A line crosses if BOTH start and end are not within normal tile bounds
-              // OR if end extends beyond bounds and start is not on the boundary it's leaving from
-              const startOnLeftBoundary = stitch.start.x === 0;
-              const startOnRightBoundary = stitch.start.x === patternTileSize.x;
-              const startOnTopBoundary = stitch.start.y === 0;
-              const startOnBottomBoundary = stitch.start.y === patternTileSize.y;
-              
-              // If line goes slightly outside bounds (by 1), it's just touching boundary, not crossing
-              // True crossing: goes outside by more than 1 grid cell
-              const lineLength = Math.sqrt(Math.pow(stitch.end.x - stitch.start.x, 2) + Math.pow(stitch.end.y - stitch.start.y, 2));
-              const justTouchingBoundary = lineLength <= 1.5; // Allow for diagonal (sqrt(2) ≈ 1.41)
-              
-              const crossesHorizontally = !justTouchingBoundary && (stitch.end.x < 0 || stitch.end.x > patternTileSize.x);
-              const crossesVertically = !justTouchingBoundary && (stitch.end.y < 0 || stitch.end.y > patternTileSize.y);
+              // A line ACTUALLY CROSSES a tile boundary if the endpoint goes outside [0, tileSize]
+              // This is different from just touching a boundary point
+              const crossesHorizontally = stitch.end.x < 0 || stitch.end.x > patternTileSize.x;
+              const crossesVertically = stitch.end.y < 0 || stitch.end.y > patternTileSize.y;
               
               // A line runs along a boundary if BOTH endpoints are on the SAME boundary
               // AND the line doesn't move in that direction (vertical line has same X, horizontal line has same Y)
@@ -738,13 +730,34 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       let shouldRepeat = false;
       
       if (repeatPattern && lineIntersectsArtboardArea) {
-        // Reduce coordinates to the first tile while preserving cross-tile relationships
-        // We want lines to stay within the pattern space (0 to patternTileSize.x/y) for their "base" position
-        // But they can extend beyond that to represent cross-tile lines
+        // CRITICAL: The anchor (start point) should be whichever endpoint is closest to the GLOBAL origin (0,0)
+        // NOT their individual tile origins, to ensure consistent behavior for cross-tile lines
+        
+        // Calculate distance from each point to the global origin (0,0)
+        const startDistToOrigin = Math.sqrt(startGridX * startGridX + startGridY * startGridY);
+        const endDistToOrigin = Math.sqrt(endGridX * endGridX + endGridY * endGridY);
+        
+        // Whichever point is closer to the global origin becomes the anchor (start)
+        let actualStartX = startGridX;
+        let actualStartY = startGridY;
+        let actualEndX = endGridX;
+        let actualEndY = endGridY;
+        
+        if (endDistToOrigin < startDistToOrigin) {
+          // End is closer to origin, so make it the anchor
+          actualStartX = endGridX;
+          actualStartY = endGridY;
+          actualEndX = startGridX;
+          actualEndY = startGridY;
+        }
+        
+        // Determine which tile the anchor point belongs to
+        const anchorTileX = Math.floor(actualStartX / patternTileSize.x);
+        const anchorTileY = Math.floor(actualStartY / patternTileSize.y);
         
         // Check if this is a boundary line (runs exactly along a tile edge)
-        const isVerticalBoundaryLine = startGridX === endGridX && (startGridX % patternTileSize.x === 0);
-        const isHorizontalBoundaryLine = startGridY === endGridY && (startGridY % patternTileSize.y === 0);
+        const isVerticalBoundaryLine = actualStartX === actualEndX && (actualStartX % patternTileSize.x === 0);
+        const isHorizontalBoundaryLine = actualStartY === actualEndY && (actualStartY % patternTileSize.y === 0);
         
         if (isVerticalBoundaryLine || isHorizontalBoundaryLine) {
           // Boundary lines need special handling
@@ -766,13 +779,13 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
           };
           
           // Calculate the offset between start and end
-          const dx = endGridX - startGridX;
-          const dy = endGridY - startGridY;
+          const dx = actualEndX - actualStartX;
+          const dy = actualEndY - actualStartY;
           
           // Normalize the start point
           finalStart = {
-            x: normalizeBoundaryCoordX(startGridX),
-            y: normalizeBoundaryCoordY(startGridY),
+            x: normalizeBoundaryCoordX(actualStartX),
+            y: normalizeBoundaryCoordY(actualStartY),
           };
           
           // Apply the offset to get the end point
@@ -781,38 +794,14 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
             y: finalStart.y + dy,
           };
         } else {
-          // Non-boundary lines: use floor-based normalization
-          // Find which tile the START and END points are in
-          const startTileX = Math.floor(startGridX / patternTileSize.x);
-          const startTileY = Math.floor(startGridY / patternTileSize.y);
-          const endTileX = Math.floor(endGridX / patternTileSize.x);
-          const endTileY = Math.floor(endGridY / patternTileSize.y);
+          // Non-boundary lines: normalize both points relative to the anchor's tile
+          // This ensures consistent coordinates regardless of which tiles the line crosses
           
-          // If start and end are in adjacent tiles (line just touches boundary),
-          // normalize to the tile that contains the majority of the line
-          // For lines going from boundary into tile, use the "inner" tile
-          
-          // Use the tile of whichever point is NOT on a boundary, or use end tile for ties
-          const startOnBoundary = (startGridX % patternTileSize.x === 0) || (startGridY % patternTileSize.y === 0);
-          const endOnBoundary = (endGridX % patternTileSize.x === 0) || (endGridY % patternTileSize.y === 0);
-          
-          let baseTileX, baseTileY;
-          if (startOnBoundary && !endOnBoundary) {
-            // Start on boundary, end inside - use end's tile (regardless of line length)
-            // This ensures lines drawn from boundary inward normalize to the correct tile
-            baseTileX = endTileX;
-            baseTileY = endTileY;
-          } else {
-            // Normal case: use start's tile
-            baseTileX = startTileX;
-            baseTileY = startTileY;
-          }
-          
-          // Normalize both points to the base tile
-          const normalizedStartX = startGridX - (baseTileX * patternTileSize.x);
-          const normalizedStartY = startGridY - (baseTileY * patternTileSize.y);
-          const normalizedEndX = endGridX - (baseTileX * patternTileSize.x);
-          const normalizedEndY = endGridY - (baseTileY * patternTileSize.y);
+          // Normalize both points to the anchor's tile
+          const normalizedStartX = actualStartX - (anchorTileX * patternTileSize.x);
+          const normalizedStartY = actualStartY - (anchorTileY * patternTileSize.y);
+          const normalizedEndX = actualEndX - (anchorTileX * patternTileSize.x);
+          const normalizedEndY = actualEndY - (anchorTileY * patternTileSize.y);
           
           finalStart = {
             x: normalizedStartX,
@@ -905,3 +894,75 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
     />
   );
 });
+
+// Custom comparison function for React.memo
+// Only re-render if props that affect rendering have actually changed
+function arePropsEqual(prevProps, nextProps) {
+  // Always re-render if selected stitches change (for live feedback)
+  if (prevProps.selectedStitchIds !== nextProps.selectedStitchIds) {
+    return false;
+  }
+  
+  // Always re-render if stitch colors change (for selected stitches)
+  if (prevProps.stitchColors !== nextProps.stitchColors) {
+    return false;
+  }
+  
+  // Always re-render if drawing state changes (for live drawing feedback)
+  if (prevProps.drawingState !== nextProps.drawingState) {
+    return false;
+  }
+  
+  // Check if pattern stitches have changed
+  if (prevProps.pattern?.stitches !== nextProps.pattern?.stitches) {
+    return false;
+  }
+  
+  // Check if pattern structure changed
+  if (prevProps.pattern?.tileSize !== nextProps.pattern?.tileSize) {
+    return false;
+  }
+  
+  // Check canvas dimensions
+  if (
+    prevProps.canvasWidth !== nextProps.canvasWidth ||
+    prevProps.canvasHeight !== nextProps.canvasHeight ||
+    prevProps.artboardWidth !== nextProps.artboardWidth ||
+    prevProps.artboardHeight !== nextProps.artboardHeight ||
+    prevProps.cellSize !== nextProps.cellSize ||
+    prevProps.artboardOffset !== nextProps.artboardOffset
+  ) {
+    return false;
+  }
+  
+  // Check visual settings
+  if (
+    prevProps.backgroundColor !== nextProps.backgroundColor ||
+    prevProps.showGrid !== nextProps.showGrid ||
+    prevProps.gridColor !== nextProps.gridColor ||
+    prevProps.tileOutlineColor !== nextProps.tileOutlineColor ||
+    prevProps.artboardOutlineColor !== nextProps.artboardOutlineColor ||
+    prevProps.repeatPattern !== nextProps.repeatPattern ||
+    prevProps.defaultStitchColor !== nextProps.defaultStitchColor
+  ) {
+    return false;
+  }
+  
+  // Skip re-render if only stitchSize changed but no stitches are selected
+  // This prevents re-renders when dragging the gap slider and no stitches are selected
+  if (prevProps.stitchSize !== nextProps.stitchSize) {
+    // If there are selected stitches, we need to re-render to show updated appearance
+    if (nextProps.selectedStitchIds && nextProps.selectedStitchIds.size > 0) {
+      return false;
+    }
+    // If no selected stitches, the stitchSize only affects NEW stitches, so we can skip re-render
+    return true;
+  }
+  
+  // All relevant props are equal, skip re-render
+  return true;
+}
+
+// Export memoized version
+export const PatternCanvas = memo(PatternCanvasComponent, arePropsEqual);
+

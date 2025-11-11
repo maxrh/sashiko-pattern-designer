@@ -438,15 +438,64 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleTileSizeChange = useCallback((axis, value) => {
     setCurrentPattern((prev) => {
       const normalized = normalizeTileSize(prev.tileSize);
+      const newTileSize = {
+        ...normalized,
+        [axis]: value
+      };
+      
+      // Filter out stitches that would be completely outside the new tile bounds
+      // Keep stitches if ANY part of the line would be visible within [0, tileSize]
+      const filteredStitches = prev.stitches.filter(stitch => {
+        // Absolute stitches (repeat: false) are always kept - they use artboard coordinates
+        if (stitch.repeat === false) return true;
+        
+        // Pattern stitches: Keep if any endpoint or the line itself intersects [0, newTileSize]
+        // Check if at least one endpoint is within valid range, OR line crosses through valid range
+        
+        const startXValid = stitch.start.x >= -1 && stitch.start.x <= newTileSize.x + 1;
+        const startYValid = stitch.start.y >= -1 && stitch.start.y <= newTileSize.y + 1;
+        const endXValid = stitch.end.x >= -1 && stitch.end.x <= newTileSize.x + 1;
+        const endYValid = stitch.end.y >= -1 && stitch.end.y <= newTileSize.y + 1;
+        
+        // Keep if at least one endpoint has both coordinates in valid range
+        const startValid = startXValid && startYValid;
+        const endValid = endXValid && endYValid;
+        
+        return startValid || endValid;
+      });
+      
+      // If we removed stitches, also clean up their colors
+      if (filteredStitches.length < prev.stitches.length) {
+        const keptIds = new Set(filteredStitches.map(s => s.id));
+        setStitchColors(prevColors => {
+          const newColors = new Map(prevColors);
+          for (const [id] of prevColors) {
+            if (!keptIds.has(id)) {
+              newColors.delete(id);
+            }
+          }
+          return newColors;
+        });
+        
+        // Clear selection if any selected stitches were removed
+        setSelectedStitchIds(prevSelected => {
+          const newSelected = new Set();
+          for (const id of prevSelected) {
+            if (keptIds.has(id)) {
+              newSelected.add(id);
+            }
+          }
+          return newSelected;
+        });
+      }
+      
       return {
         ...prev,
-        tileSize: {
-          ...normalized,
-          [axis]: value
-        }
+        tileSize: newTileSize,
+        stitches: filteredStitches
       };
     });
-  }, []);
+  }, [setStitchColors, setSelectedStitchIds]);
 
   const handleGridSizeChange = useCallback((gridSize) => {
     setCurrentPattern((prev) => ({ ...prev, gridSize }));
@@ -676,6 +725,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
               onRedo={handleRedo}
               canUndo={historyManager.canUndo}
               canRedo={historyManager.canRedo}
+              selectedStitch={selectedStitchIds.size === 1 ? currentPattern.stitches.find(s => selectedStitchIds.has(s.id)) : null}
             />
             <HelpButton />
           </div>
