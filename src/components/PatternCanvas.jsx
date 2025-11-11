@@ -728,29 +728,39 @@ export const PatternCanvas = forwardRef(function PatternCanvas({
       let shouldRepeat = false;
       
       if (repeatPattern && lineIntersectsArtboardArea) {
-        // Check if start point is inside artboard bounds
-        const startInArtboard = 
-          startGridX >= 0 && startGridX <= artboardGridWidth &&
-          startGridY >= 0 && startGridY <= artboardGridHeight;
+        // CRITICAL: The anchor (start point) should be whichever endpoint is closest to tile origin (0,0)
+        // This ensures consistent normalization behavior across all tiles
         
-        const endInArtboard = 
-          endGridX >= 0 && endGridX <= artboardGridWidth &&
-          endGridY >= 0 && endGridY <= artboardGridHeight;
+        // Determine which tile each point belongs to
+        const startTileX = Math.floor(startGridX / patternTileSize.x);
+        const startTileY = Math.floor(startGridY / patternTileSize.y);
+        const endTileX = Math.floor(endGridX / patternTileSize.x);
+        const endTileY = Math.floor(endGridY / patternTileSize.y);
         
-        // If start is outside artboard but end is inside, swap them
-        // This ensures the anchor (start point) is always inside the artboard
+        // Normalize both points to their tile coordinates
+        const startNormX = startGridX - (startTileX * patternTileSize.x);
+        const startNormY = startGridY - (startTileY * patternTileSize.y);
+        const endNormX = endGridX - (endTileX * patternTileSize.x);
+        const endNormY = endGridY - (endTileY * patternTileSize.y);
+        
+        // Calculate distance from each normalized point to tile origin (0,0)
+        const startDistToOrigin = Math.sqrt(startNormX * startNormX + startNormY * startNormY);
+        const endDistToOrigin = Math.sqrt(endNormX * endNormX + endNormY * endNormY);
+        
+        // Whichever point is closer to its tile's origin becomes the anchor (start)
         let actualStartX = startGridX;
         let actualStartY = startGridY;
         let actualEndX = endGridX;
         let actualEndY = endGridY;
         
-        if (!startInArtboard && endInArtboard) {
-          // Swap start and end
+        if (endDistToOrigin < startDistToOrigin) {
+          // End is closer to origin, so make it the anchor
           actualStartX = endGridX;
           actualStartY = endGridY;
           actualEndX = startGridX;
           actualEndY = startGridY;
         }
+        
         // Reduce coordinates to the first tile while preserving cross-tile relationships
         // We want lines to stay within the pattern space (0 to patternTileSize.x/y) for their "base" position
         // But they can extend beyond that to represent cross-tile lines

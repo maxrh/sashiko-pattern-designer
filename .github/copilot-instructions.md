@@ -123,7 +123,7 @@ npm run preview          # Preview production build locally
 ```javascript
 {
   id: string,              // Unique identifier
-  start: { x, y },         // Start point = "anchor" (always inside artboard for pattern lines)
+  start: { x, y },         // Start point = "anchor" (closest to tile origin after normalization)
   end: { x, y },           // End point (can exceed tileSize for cross-tile)
   color: string | null,    // Optional color override
   stitchSize: string,      // 'small' | 'medium' | 'large'
@@ -133,7 +133,7 @@ npm run preview          # Preview production build locally
 }
 ```
 
-**Important**: When drawing from outside artboard into it, the line is automatically reversed so `start` (anchor) is inside artboard bounds.
+**Important**: Lines are automatically oriented so the point closest to tile origin (0,0) becomes the anchor (start).
 
 ### Pattern File Format (`patterns.json`)
 - `gridSize`: Number of CELLS per tile (e.g., 10 means 11 grid points: 0-10)
@@ -151,7 +151,7 @@ npm run preview          # Preview production build locally
 6. **Auto-save triggers on ANY state change** - be careful with useEffect dependencies
 7. **Boundary crossing detection is simple** - only check if endpoint exceeds [0, tileSize] bounds, NOT line length or distance
 8. **Tile resizing removes invalid stitches** - only when SHRINKING; growing keeps all stitches
-9. **Anchor reversal** - lines drawn from margin into artboard are auto-reversed so start is inside
+9. **Anchor auto-orientation** - anchor (start) is always the endpoint closest to tile origin (0,0)
 
 ## Boundary Line Logic (CRITICAL - UPDATED)
 

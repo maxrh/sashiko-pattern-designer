@@ -252,12 +252,15 @@ if (isOuterTile) {
 #### When Drawing a Line:
 
 **Line Direction (Anchor Point):**
-- If start point is outside artboard and end point is inside, the line is automatically reversed
-- This ensures the "anchor" (start point) is always inside the artboard for pattern lines
-- Improves data integrity and normalization behavior
+- Each endpoint is normalized to its tile coordinates [0, tileSize]
+- Distance from each normalized point to tile origin (0,0) is calculated
+- Whichever point is closer to its tile origin becomes the anchor (start point)
+- This ensures consistent normalization behavior across all tiles and drawable areas
+- Guarantees start point always normalizes cleanly to [0, tileSize] range
 
 **Repeat Mode ON + Line touches artboard:**
-- If needed, swap start/end so start is inside artboard bounds
+- Calculate distance of each endpoint to its tile origin
+- Swap start/end if needed so closer-to-origin point is the anchor
 - Normalize START point by subtracting tile offset: `startGridX - (startTileX * patternGridSize)`
 - Calculate dx/dy offset from start to end
 - Apply offset to normalized start to get end: `normalizedStart + dx`
