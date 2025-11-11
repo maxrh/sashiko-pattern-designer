@@ -573,17 +573,21 @@ When user resizes the tile dimensions, stitches may become invalid and must be r
 **Filtering Logic (PatternDesigner.jsx `handleTileSizeChange`):**
 
 1. **Absolute stitches (`repeat: false`)**: Always kept - they use artboard coordinates, not tile coordinates
-2. **Pattern stitches (`repeat !== false`)**: Filtered only when SHRINKING the tile
-3. **When GROWING**: No stitches are removed (all existing coordinates remain valid)
-4. **When SHRINKING**: Remove stitches that would become invalid:
-   - Stitches with start/end at the OLD boundary (e.g., x=10 or y=10 when shrinking from 10→9)
-   - Stitches with start beyond new tile size
-   - Stitches with end extending too far beyond new tile size (> newSize + 1)
+2. **Pattern stitches (`repeat !== false`)**: Keep if start point is within [0, newTileSize] bounds
+3. **Simple check**: Only the start point (anchor) is checked - it's guaranteed to be closest to origin (0,0)
+4. **Works for growing and shrinking**: Same logic applies whether tile is getting larger or smaller
 
-**Special Cases:**
-- Lines with negative coordinates (e.g., x=-2) are kept - they're valid corner backward lines
-- Lines in extended area remain when growing tile
-- Lines like (9,10)→(10,9) are removed when shrinking from 10→9 (touch old boundaries)
+**Logic:**
+```javascript
+const startXValid = stitch.start.x >= 0 && stitch.start.x <= newTileSize.x;
+const startYValid = stitch.start.y >= 0 && stitch.start.y <= newTileSize.y;
+return startXValid && startYValid;
+```
+
+**Why it works:**
+- Start point is auto-oriented to be closest to tile origin during drawing
+- If start leaves [0, tileSize] bounds, the stitch can't be properly normalized
+- End points can extend beyond for cross-tile lines, so they don't need checking
 
 **Cleanup:**
 - Removed stitches' colors are deleted from `stitchColors` Map

@@ -150,7 +150,7 @@ npm run preview          # Preview production build locally
 5. **Color overrides in stitchColors Map** - NOT stored in stitch.color field directly
 6. **Auto-save triggers on ANY state change** - be careful with useEffect dependencies
 7. **Boundary crossing detection is simple** - only check if endpoint exceeds [0, tileSize] bounds, NOT line length or distance
-8. **Tile resizing removes invalid stitches** - only when SHRINKING; growing keeps all stitches
+8. **Tile resizing removes invalid stitches** - only if start point leaves [0, tileSize] bounds
 9. **Anchor auto-orientation** - anchor (start) is always the endpoint closest to tile origin (0,0)
 
 ## Boundary Line Logic (CRITICAL - UPDATED)

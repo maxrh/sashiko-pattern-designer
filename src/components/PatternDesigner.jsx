@@ -438,55 +438,23 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleTileSizeChange = useCallback((axis, value) => {
     setCurrentPattern((prev) => {
       const normalized = normalizeTileSize(prev.tileSize);
-      const oldTileSize = { ...normalized };
       const newTileSize = {
         ...normalized,
         [axis]: value
       };
       
-      // Filter out stitches that fall outside the new tile bounds
-      // Pattern stitches (repeat !== false) should have normalized coordinates within [0, tileSize]
-      // But we need to be careful: only filter if we're SHRINKING and coordinates exceed new bounds
+      // Filter out stitches whose START point (anchor) leaves the tile area
+      // Since start point is guaranteed to be closest to tile origin (0,0),
+      // we only need to check if it exceeds the new tile bounds
       const filteredStitches = prev.stitches.filter(stitch => {
         // Absolute stitches (repeat: false) are always kept - they use artboard coordinates
         if (stitch.repeat === false) return true;
         
-        // For pattern stitches: start point should be within [0, tileSize] range
-        // But during resize, only remove if shrinking would make coordinates invalid
+        // Pattern stitches: check if start point is within new tile bounds [0, newTileSize]
+        const startXValid = stitch.start.x >= 0 && stitch.start.x <= newTileSize.x;
+        const startYValid = stitch.start.y >= 0 && stitch.start.y <= newTileSize.y;
         
-        // Only filter when SHRINKING the relevant axis
-        if (axis === 'x' && value < oldTileSize.x) {
-          // Shrinking X: remove if start.x or end.x touches/exceeds old boundary
-          if (stitch.start.x === oldTileSize.x || stitch.end.x === oldTileSize.x) {
-            return false;
-          }
-          // Also remove if start.x would be outside new bounds
-          if (stitch.start.x > newTileSize.x) {
-            return false;
-          }
-          // Remove if end.x extends too far beyond new bounds
-          if (stitch.end.x > newTileSize.x + 1) {
-            return false;
-          }
-        }
-        
-        if (axis === 'y' && value < oldTileSize.y) {
-          // Shrinking Y: remove if start.y or end.y touches/exceeds old boundary
-          if (stitch.start.y === oldTileSize.y || stitch.end.y === oldTileSize.y) {
-            return false;
-          }
-          // Also remove if start.y would be outside new bounds
-          if (stitch.start.y > newTileSize.y) {
-            return false;
-          }
-          // Remove if end.y extends too far beyond new bounds
-          if (stitch.end.y > newTileSize.y + 1) {
-            return false;
-          }
-        }
-        
-        // Keep the stitch (either growing, or shrinking but stitch is within bounds)
-        return true;
+        return startXValid && startYValid;
       });
       
       // If we removed stitches, also clean up their colors
