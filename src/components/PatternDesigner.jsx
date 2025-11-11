@@ -443,18 +443,25 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         [axis]: value
       };
       
-      // Filter out stitches whose START point (anchor) leaves the tile area
-      // Since start point is guaranteed to be closest to tile origin (0,0),
-      // we only need to check if it exceeds the new tile bounds
+      // Filter out stitches that would be completely outside the new tile bounds
+      // Keep stitches if ANY part of the line would be visible within [0, tileSize]
       const filteredStitches = prev.stitches.filter(stitch => {
         // Absolute stitches (repeat: false) are always kept - they use artboard coordinates
         if (stitch.repeat === false) return true;
         
-        // Pattern stitches: check if start point is within new tile bounds [0, newTileSize]
-        const startXValid = stitch.start.x >= 0 && stitch.start.x <= newTileSize.x;
-        const startYValid = stitch.start.y >= 0 && stitch.start.y <= newTileSize.y;
+        // Pattern stitches: Keep if any endpoint or the line itself intersects [0, newTileSize]
+        // Check if at least one endpoint is within valid range, OR line crosses through valid range
         
-        return startXValid && startYValid;
+        const startXValid = stitch.start.x >= -1 && stitch.start.x <= newTileSize.x + 1;
+        const startYValid = stitch.start.y >= -1 && stitch.start.y <= newTileSize.y + 1;
+        const endXValid = stitch.end.x >= -1 && stitch.end.x <= newTileSize.x + 1;
+        const endYValid = stitch.end.y >= -1 && stitch.end.y <= newTileSize.y + 1;
+        
+        // Keep if at least one endpoint has both coordinates in valid range
+        const startValid = startXValid && startYValid;
+        const endValid = endXValid && endYValid;
+        
+        return startValid || endValid;
       });
       
       // If we removed stitches, also clean up their colors
@@ -718,6 +725,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
               onRedo={handleRedo}
               canUndo={historyManager.canUndo}
               canRedo={historyManager.canRedo}
+              selectedStitch={selectedStitchIds.size === 1 ? currentPattern.stitches.find(s => selectedStitchIds.has(s.id)) : null}
             />
             <HelpButton />
           </div>

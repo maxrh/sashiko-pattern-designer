@@ -1,4 +1,4 @@
-import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2, ChevronDown } from 'lucide-react';
+import { MousePointer, Edit3, Hand, Grip, Eye, EyeOff, Undo2, Redo2, ChevronDown, Settings2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { Button } from './ui/button';
@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
+import { Label } from './ui/label';
 import { ColorPicker } from './ui/color-picker';
 import { STITCH_WIDTHS } from './Stitches.jsx';
 import { formatValueNumber } from '../lib/unitConverter.js';
@@ -34,6 +35,7 @@ export function Toolbar({
   onRedo,
   canUndo,
   canRedo,
+  selectedStitch,
 }) {
   // Memoize gap size callback to prevent recreating on every render
   const handleGapSizeChange = useCallback((value) => {
@@ -51,6 +53,16 @@ export function Toolbar({
     }
     return value;
   }, [gapSize, displayUnit]);
+
+  // Calculate stitch preview parameters
+  const stitchPreviewParams = useMemo(() => {
+    const sizeMultipliers = { small: 0.25, medium: 1.25, large: 2.5 };
+    const baseDashLength = 8 * sizeMultipliers[stitchSize];
+    const baseGapLength = gapSize * 1; // Scale down gap for preview
+    const strokeWidth = STITCH_WIDTHS[stitchWidth];
+    
+    return { baseDashLength, baseGapLength, strokeWidth };
+  }, [stitchSize, gapSize, stitchWidth]);
 
   return (
     <TooltipProvider>
@@ -123,47 +135,61 @@ export function Toolbar({
             tooltip="Stitch Color"
           />
 
-          <Select value={stitchSize} onValueChange={onStitchSizeChange}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <SelectTrigger className="hover:bg-accent hover:text-accent-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Stitch Length</p>
-              </TooltipContent>
-            </Tooltip>
-            <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
-              <SelectItem value="small">
-                Small (≈{displayUnit === 'px' ? '5px' : displayUnit === 'mm' ? '1.3mm' : '0.13cm'})
-              </SelectItem>
-              <SelectItem value="medium">
-                Medium (≈{displayUnit === 'px' ? '16px' : displayUnit === 'mm' ? '4.2mm' : '0.42cm'})
-              </SelectItem>
-              <SelectItem value="large">
-                Large (≈{displayUnit === 'px' ? '28px' : displayUnit === 'mm' ? '7.4mm' : '0.74cm'})
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="font-normal justify-between">
-                    {`${gapDisplayValue}${displayUnit}`}
-                    <ChevronDown className="text-muted-foreground h-4 w-4 opacity-50" />
+                  <Button variant="outline"  className="w-20 px-2 justify-center">
+                    <svg width="56" height="16" viewBox="0 0 56 16" preserveAspectRatio="none" className="!w-full overflow-visible">
+                      <line
+                        x1="0"
+                        y1="8"
+                        x2="56"
+                        y2="8"
+                        stroke="currentColor"
+                        strokeWidth={stitchPreviewParams.strokeWidth}
+                        strokeDasharray={`${stitchPreviewParams.baseDashLength} ${stitchPreviewParams.baseGapLength}`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Stitch Gap</p>
+                <p>Stitch Settings</p>
               </TooltipContent>
             </Tooltip>
-            <PopoverContent className="w-64">
+            <PopoverContent className="w-80">
               <div className="space-y-4">
                 <div className="space-y-2">
+                  <Label className="">Stitch Length</Label>
+                  <ButtonGroup className="w-full">
+                    <Button
+                      variant={stitchSize === 'small' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => onStitchSizeChange('small')}
+                    >
+                      Small
+                    </Button>
+                    <Button
+                      variant={stitchSize === 'medium' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => onStitchSizeChange('medium')}
+                    >
+                      Medium
+                    </Button>
+                    <Button
+                      variant={stitchSize === 'large' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => onStitchSizeChange('large')}
+                    >
+                      Large
+                    </Button>
+                  </ButtonGroup>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="">Stitch Gap: {gapDisplayValue}{displayUnit}</Label>
                   <Slider
                     id="gap-size-slider"
                     min={1}
@@ -172,50 +198,46 @@ export function Toolbar({
                     value={[gapSize]}
                     onValueChange={handleGapSizeChange}
                   />
-               
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="">Stitch Width</Label>
+                  <ButtonGroup className="w-full">
+                    <Button
+                      variant={stitchWidth === 'thin' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => onStitchWidthChange('thin')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
+                        <span>Thin</span>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={stitchWidth === 'normal' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => onStitchWidthChange('normal')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
+                        <span>Medium</span>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={stitchWidth === 'bold' ? 'default' : 'outline'}
+                      className="flex-1"
+                      onClick={() => onStitchWidthChange('bold')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />
+                        <span>Bold</span>
+                      </div>
+                    </Button>
+                  </ButtonGroup>
                 </div>
               </div>
             </PopoverContent>
           </Popover>
-
-          <Select value={stitchWidth} onValueChange={onStitchWidthChange}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <SelectTrigger className="hover:bg-accent hover:text-accent-foreground">
-                  <SelectValue>
-                    {stitchWidth === 'thin' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />}
-                    {stitchWidth === 'normal' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />}
-                    {stitchWidth === 'bold' && <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />}
-                  </SelectValue>
-                </SelectTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Stitch Width</p>
-              </TooltipContent>
-            </Tooltip>
-            <SelectContent onCloseAutoFocus={e => e.preventDefault()}>
-              <SelectItem value="thin">
-                <div className="flex items-center gap-2">
-                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
-                  <span>Thin</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="normal">
-                <div className="flex items-center gap-2">
-                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
-                  <span>Medium</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="bold">
-                <div className="flex items-center gap-2">
-                  <span className="block w-4 bg-foreground rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />
-                  <span>Bold</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -289,6 +311,16 @@ export function Toolbar({
             </TooltipContent>
           </Tooltip>
         </ButtonGroup>
+
+        {selectedStitch && (
+          <>
+            <ButtonGroupSeparator />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Start: ({selectedStitch.start.x}, {selectedStitch.start.y})</span>
+              <span>End: ({selectedStitch.end.x}, {selectedStitch.end.y})</span>
+            </div>
+          </>
+        )}
       </div>
     </TooltipProvider>
   );
