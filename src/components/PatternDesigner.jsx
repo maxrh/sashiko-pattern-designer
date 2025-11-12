@@ -253,7 +253,10 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   }, [selectedStitchIds, currentPattern, stitchColors]);
 
   // Save state to history whenever pattern or colors change (for undo/redo)
+  // History is now persisted to IndexedDB, so we can record from the start
   useEffect(() => {
+    if (!hasInitialized.current) return;
+    
     historyManager.pushHistory({
       pattern: currentPattern,
       stitchColors,
