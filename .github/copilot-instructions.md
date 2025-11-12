@@ -84,14 +84,16 @@ Each hook encapsulates a specific concern and is composed in `PatternDesigner.js
 
 ### PWA & Offline-First
 - **@vite-pwa/astro** - PWA integration configured in `astro.config.mjs`
-- **Service Worker**: Auto-generated with cache-first strategy for static assets
+- **Service Worker**: Auto-generated with Workbox, manually registered in `index.astro`
 - **Offline Capability**: App works without internet after first visit
-- **Auto-Update**: Service worker updates cached assets automatically when online
+- **Smart Auto-Update**: When reconnecting online, service worker force-checks for updates and reloads page if new version available
 - **Installable**: Users can install app to home screen/desktop
 - **Cache Strategy**:
-  - Static assets (JS, CSS, fonts, images): Cache-first
-  - Google Fonts: Cache-first with 1-year expiration
-  - Pattern data: IndexedDB (Dexie.js) - already offline-capable
+  - HTML pages: NetworkFirst with 3s timeout (checks for updates online, falls back to cache)
+  - JS/CSS: StaleWhileRevalidate (serves cache immediately, updates in background)
+  - Images/fonts: CacheFirst with 1-year expiration
+  - Pattern data: IndexedDB (Dexie.js) - persists offline
+- **OfflineIndicator Component**: Shows connection status in header with auto-update trigger on reconnect
 
 ### Component Hierarchy
 ```
@@ -102,6 +104,7 @@ PatternDesigner.jsx (root state container)
 ├── Toolbar.jsx (tool buttons, stitch controls, undo/redo)
 ├── CanvasViewport.jsx (pan/zoom container with scroll)
 │   └── PatternCanvas.jsx (canvas rendering & drawing logic)
+├── OfflineIndicator.jsx (connection status with auto-update on reconnect)
 └── HelpButton.jsx (help dialog)
 ```
 
