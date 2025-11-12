@@ -63,7 +63,7 @@ export default function OfflineIndicator() {
             aria-label={isOnline ? 'Online' : 'Offline'}
           >
             {isOnline ? (
-              <Wifi className="h-5 w-5" />
+              <Wifi className="h-5 w-5 text-ring" />
             ) : (
               <WifiOff className="h-5 w-5 text-red-500" />
             )}
