@@ -102,8 +102,8 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   ]);
 
   const [sidebarTab, setSidebarTab] = useState('controls');
-  const [isInitialized, setIsInitialized] = useState(false);
   const canvasRef = useRef(null);
+  const hasInitialized = useRef(false); // Track if initial load is complete
 
   // Initialize database and load saved state
   useEffect(() => {
@@ -138,11 +138,12 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
           }
         }
         
-        setIsInitialized(true);
+        // Mark initialization as complete
+        hasInitialized.current = true;
       } catch (error) {
         console.error('Failed to initialize database:', error);
         toast.error('Failed to load saved data. Using defaults.');
-        setIsInitialized(true);
+        hasInitialized.current = true;
       }
     };
 
@@ -262,9 +263,9 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
 
   // Auto-save to database whenever pattern, colors, or settings change
   // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
-  // Only save after initialization is complete
+  // Only save after initial load is complete to avoid overwriting saved data
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!hasInitialized.current) return;
     
     saveCurrentPattern(currentPattern, stitchColors, {
       patternTiles,
@@ -283,7 +284,6 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
       colorPresets,
     });
   }, [
-    isInitialized,
     currentPattern,
     stitchColors,
     patternTiles,
@@ -751,7 +751,6 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
 
         <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
         
-
           <CanvasViewport
             ref={canvasRef}
             patternTiles={patternTiles}
