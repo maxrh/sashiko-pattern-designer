@@ -4,6 +4,7 @@ import { CanvasViewport } from './CanvasViewport.jsx';
 import { Toolbar } from './Toolbar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
 import { HelpButton } from './HelpButton.jsx';
+import OfflineIndicator from './OfflineIndicator.jsx';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
@@ -770,6 +771,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         </div>
       </main>
       <Toaster />
+      <OfflineIndicator />
     </SidebarProvider>
   );
 }

@@ -10,6 +10,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **shadcn/ui** - Component library built on Radix UI primitives
 - **Lucide React** v0.552.0 - Modern icon library ([Reference](https://lucide.dev/))
 - **Dexie.js** v4.0.10 - IndexedDB wrapper for robust data persistence
+- **@vite-pwa/astro** - PWA integration for offline-first functionality
 
 ## Features
 
@@ -41,6 +42,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Export/Import**: Export patterns as JSON files for sharing or backup
 - **Export Images**: Export your design as PNG image
 - **Undo/Redo**: Full history support with keyboard shortcuts (Ctrl+Z / Ctrl+Y)
+- **Offline-First**: Works without internet after first visit (PWA with service worker)
 
 ### Canvas Configuration
 - **Dynamic Canvas Sizing**: Canvas auto-resizes based on pattern configuration
@@ -233,10 +235,28 @@ For complete technical specifications, architecture details, and coordinate syst
 
 ## Deployment
 
-This project is configured for **Cloudflare Pages** deployment:
+This project is configured for **Cloudflare Pages** deployment with **offline-first PWA** capabilities:
+
+### Building & Deploying
 1. Build the static site: `npm run build`
 2. Deploy the `./dist/` directory to Cloudflare Pages
 3. Configuration: See `wrangler.jsonc` for deployment settings
+
+### PWA (Progressive Web App) Features
+- **Offline-First**: Service worker caches all static assets on first visit
+- **Works Offline**: App functions normally without internet connection after initial load
+- **Auto-Updates**: Service worker automatically updates cached assets when online
+- **Installable**: Users can install the app to their home screen/desktop
+- **Fast Loading**: Assets served from cache for instant load times
+
+### How It Works
+1. **First Visit**: Browser downloads and caches all app assets (HTML, JS, CSS, fonts, images)
+2. **Subsequent Visits**: App loads instantly from cache, even with poor/no connection
+3. **Background Updates**: Service worker checks for updates and refreshes cache automatically
+4. **Data Persistence**: IndexedDB (Dexie.js) stores all pattern data locally
+5. **Full Offline**: Draw, edit, save patterns without internet connection
+
+The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with cache-first strategies for optimal offline performance.
 
 ## Learn More
 
