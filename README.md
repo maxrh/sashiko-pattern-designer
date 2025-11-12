@@ -66,6 +66,28 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Hitomezashi Cross**: Cross variation using Hitomezashi technique
 - **Hitomezashi Kuchi**: Mouth pattern with Hitomezashi style
 
+### PWA (Progressive Web App) Features
+- **Offline-First**: Service worker caches all assets on first visit, works without internet after
+- **Smart Auto-Update**: When reconnecting online, automatically checks for and installs new versions
+- **Connection Indicator**: Visual status icon (green online, red offline) in app header
+- **Installable**: Add to home screen/desktop for native app-like experience
+- **Fast Loading**: Assets served from cache for instant load times
+- **Multiple Cache Strategies**:
+  - HTML: NetworkFirst (checks for updates when online, 3s timeout)
+  - JS/CSS: StaleWhileRevalidate (instant cache, updates in background)
+  - Images/Fonts: CacheFirst (long-lived, 1-year expiration)
+
+## How It Works
+1. **First Visit**: Browser downloads and caches all app assets (HTML, JS, CSS, fonts, images)
+2. **Subsequent Visits**: App loads instantly from cache, even with poor/no connection
+3. **Smart Updates**: When online, checks for new version; when reconnecting, forces update check and reloads if available
+4. **Data Persistence**: IndexedDB (Dexie.js) stores all pattern data locally
+5. **Full Offline**: Draw, edit, save patterns without internet connection
+6. **Visual Feedback**: Connection indicator shows online/offline status
+
+The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with Workbox strategies optimized for both offline performance and freshness when online.
+
+
 ## Project Structure
 
 ```text
@@ -135,12 +157,6 @@ Your current work is automatically saved to IndexedDB (via Dexie.js) whenever yo
 - Changing stitch colors
 - Adjusting canvas settings (tiles, colors, etc.)
 - Updating tool settings
-
-Benefits over localStorage:
-- **Larger storage capacity**: ~50MB+ vs localStorage's ~5-10MB limit
-- **Better performance**: Async operations don't block the UI
-- **Structured data**: No JSON stringify/parse overhead
-- **Future-ready**: Easily extensible to cloud sync with Dexie Cloud
 
 Your work persists across page refreshes and browser sessions.
 
@@ -241,27 +257,6 @@ This project is configured for **Cloudflare Pages** deployment with **offline-fi
 1. Build the static site: `npm run build`
 2. Deploy the `./dist/` directory to Cloudflare Pages
 3. Configuration: See `wrangler.jsonc` for deployment settings
-
-### PWA (Progressive Web App) Features
-- **Offline-First**: Service worker caches all assets on first visit, works without internet after
-- **Smart Auto-Update**: When reconnecting online, automatically checks for and installs new versions
-- **Connection Indicator**: Visual status icon (green online, red offline) in app header
-- **Installable**: Add to home screen/desktop for native app-like experience
-- **Fast Loading**: Assets served from cache for instant load times
-- **Multiple Cache Strategies**:
-  - HTML: NetworkFirst (checks for updates when online, 3s timeout)
-  - JS/CSS: StaleWhileRevalidate (instant cache, updates in background)
-  - Images/Fonts: CacheFirst (long-lived, 1-year expiration)
-
-### How It Works
-1. **First Visit**: Browser downloads and caches all app assets (HTML, JS, CSS, fonts, images)
-2. **Subsequent Visits**: App loads instantly from cache, even with poor/no connection
-3. **Smart Updates**: When online, checks for new version; when reconnecting, forces update check and reloads if available
-4. **Data Persistence**: IndexedDB (Dexie.js) stores all pattern data locally
-5. **Full Offline**: Draw, edit, save patterns without internet connection
-6. **Visual Feedback**: Connection indicator shows online/offline status
-
-The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with Workbox strategies optimized for both offline performance and freshness when online.
 
 ## Learn More
 
