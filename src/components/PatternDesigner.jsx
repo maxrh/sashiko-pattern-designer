@@ -4,6 +4,7 @@ import { CanvasViewport } from './CanvasViewport.jsx';
 import { Toolbar } from './Toolbar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
 import { HelpButton } from './HelpButton.jsx';
+import OfflineIndicator from './OfflineIndicator.jsx';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ import {
   saveCurrentPattern, 
   loadCurrentPattern,
 } from '../lib/patternStorage.js';
+import { initializeDatabase } from '../lib/db.js';
 
 const COLOR_PRESETS = [
   { label: 'Indigo', value: '#6366f1' },
@@ -73,70 +75,79 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const historyManager = useHistory(10);
   // Use constant for default stitch color (fallback for rendering)
   const defaultStitchColor = DEFAULT_STITCH_COLOR;
-  const [backgroundColor, setBackgroundColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR;
-  });
-  const [selectedStitchColor, setSelectedStitchColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.selectedStitchColor ?? DEFAULT_STITCH_COLOR;
-  });
-  const [stitchSize, setStitchSize] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.stitchSize ?? DEFAULT_STITCH_SIZE;
-  });
-  const [stitchWidth, setStitchWidth] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.stitchWidth ?? DEFAULT_STITCH_WIDTH;
-  });
-  const [gapSize, setGapSize] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.gapSize ?? DEFAULT_GAP_SIZE;
-  });
-  const [repeatPattern, setRepeatPattern] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.repeatPattern ?? DEFAULT_REPEAT_PATTERN;
-  });
-  const [showGrid, setShowGrid] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.showGrid ?? DEFAULT_SHOW_GRID;
-  });
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
+  const [selectedStitchColor, setSelectedStitchColor] = useState(DEFAULT_STITCH_COLOR);
+  const [stitchSize, setStitchSize] = useState(DEFAULT_STITCH_SIZE);
+  const [stitchWidth, setStitchWidth] = useState(DEFAULT_STITCH_WIDTH);
+  const [gapSize, setGapSize] = useState(DEFAULT_GAP_SIZE);
+  const [repeatPattern, setRepeatPattern] = useState(DEFAULT_REPEAT_PATTERN);
+  const [showGrid, setShowGrid] = useState(DEFAULT_SHOW_GRID);
 
   // Grid and outline appearance settings
-  const [gridColor, setGridColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.gridColor ?? DEFAULT_GRID_COLOR;
-  });
-  const [tileOutlineColor, setTileOutlineColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.tileOutlineColor ?? DEFAULT_TILE_OUTLINE_COLOR;
-  });
-  const [artboardOutlineColor, setArtboardOutlineColor] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.artboardOutlineColor ?? DEFAULT_ARTBOARD_OUTLINE_COLOR;
-  });
+  const [gridColor, setGridColor] = useState(DEFAULT_GRID_COLOR);
+  const [tileOutlineColor, setTileOutlineColor] = useState(DEFAULT_TILE_OUTLINE_COLOR);
+  const [artboardOutlineColor, setArtboardOutlineColor] = useState(DEFAULT_ARTBOARD_OUTLINE_COLOR);
   
   // Unit preference for display (px or mm)
-  const [displayUnit, setDisplayUnit] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.displayUnit ?? DEFAULT_UNIT;
-  });
+  const [displayUnit, setDisplayUnit] = useState(DEFAULT_UNIT);
 
   // Color presets for SketchPicker
-  const [colorPresets, setColorPresets] = useState(() => {
-    const saved = loadCurrentPattern();
-    return saved?.uiState?.colorPresets ?? [
-      '#6366f1', // Indigo
-      '#f5f5f5', // White
-      '#ef4444', // Red
-      '#14b8a6', // Teal
-      '#fb7185', // Coral
-      '#0b1120', // Black
-    ];
-  });
+  const [colorPresets, setColorPresets] = useState([
+    '#6366f1', // Indigo
+    '#f5f5f5', // White
+    '#ef4444', // Red
+    '#14b8a6', // Teal
+    '#fb7185', // Coral
+    '#0b1120', // Black
+  ]);
 
   const [sidebarTab, setSidebarTab] = useState('controls');
+  const [isInitialized, setIsInitialized] = useState(false);
   const canvasRef = useRef(null);
+
+  // Initialize database and load saved state
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        // Initialize Dexie database
+        await initializeDatabase();
+        
+        // Load saved current pattern and UI state
+        const saved = await loadCurrentPattern();
+        if (saved) {
+          if (saved.pattern) {
+            setCurrentPattern(saved.pattern);
+          }
+          if (saved.stitchColors) {
+            setStitchColors(saved.stitchColors);
+          }
+          if (saved.uiState) {
+            const ui = saved.uiState;
+            if (ui.backgroundColor) setBackgroundColor(ui.backgroundColor);
+            if (ui.selectedStitchColor) setSelectedStitchColor(ui.selectedStitchColor);
+            if (ui.stitchSize) setStitchSize(ui.stitchSize);
+            if (ui.stitchWidth) setStitchWidth(ui.stitchWidth);
+            if (ui.gapSize !== undefined) setGapSize(ui.gapSize);
+            if (ui.repeatPattern !== undefined) setRepeatPattern(ui.repeatPattern);
+            if (ui.showGrid !== undefined) setShowGrid(ui.showGrid);
+            if (ui.gridColor) setGridColor(ui.gridColor);
+            if (ui.tileOutlineColor) setTileOutlineColor(ui.tileOutlineColor);
+            if (ui.artboardOutlineColor) setArtboardOutlineColor(ui.artboardOutlineColor);
+            if (ui.displayUnit) setDisplayUnit(ui.displayUnit);
+            if (ui.colorPresets) setColorPresets(ui.colorPresets);
+          }
+        }
+        
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        toast.error('Failed to load saved data. Using defaults.');
+        setIsInitialized(true);
+      }
+    };
+
+    initialize();
+  }, [setCurrentPattern, setStitchColors]);
 
   // Pattern import/export operations
   const { exportPattern, importPattern, exportImage, copyPatternToClipboard } = usePatternImportExport({
@@ -249,9 +260,12 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPattern, stitchColors]);
 
-  // Auto-save to local storage whenever pattern, colors, or settings change
+  // Auto-save to database whenever pattern, colors, or settings change
   // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
+  // Only save after initialization is complete
   useEffect(() => {
+    if (!isInitialized) return;
+    
     saveCurrentPattern(currentPattern, stitchColors, {
       patternTiles,
       defaultThreadColor: defaultStitchColor,
@@ -269,6 +283,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
       colorPresets,
     });
   }, [
+    isInitialized,
     currentPattern,
     stitchColors,
     patternTiles,
@@ -756,6 +771,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         </div>
       </main>
       <Toaster />
+      <OfflineIndicator />
     </SidebarProvider>
   );
 }

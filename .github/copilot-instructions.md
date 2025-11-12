@@ -1,7 +1,7 @@
 # Sashiko Pattern Designer - AI Agent Instructions
 
 ## Project Overview
-A web-based interactive tool for designing Sashiko embroidery patterns using **Astro 5** (static site) + **React 19** + **Tailwind CSS 4**. The app features a tile-based repeating pattern system with a dynamic canvas that auto-resizes based on pattern configuration.
+A web-based interactive tool for designing Sashiko embroidery patterns using **Astro 5** (static site) + **React 19** + **Tailwind CSS 4**. The app features a tile-based repeating pattern system with a dynamic canvas that auto-resizes based on pattern configuration. Includes **offline-first PWA** capabilities for use without internet connection.
 
 ## UI Component Library
 **Use shadcn/ui components wherever possible** - the project uses shadcn/ui component library built on Radix UI primitives. Components are located in `src/components/ui/` and include:
@@ -66,12 +66,32 @@ Three distinct coordinate systems exist:
 ### State Management (Custom Hooks Pattern)
 - `src/hooks/usePatternState.js` - Core pattern state (currentPattern, stitchColors, selection)
 - `src/hooks/useHistory.js` - Undo/redo with debounced property editing
-- `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (localStorage)
+- `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (Dexie/IndexedDB)
 - `src/hooks/usePatternImportExport.js` - JSON export/import, PNG export
 - `src/hooks/usePropertyEditor.js` - Batch property editing for selected stitches
 - `src/hooks/useKeyboardShortcuts.js` - Keyboard event handlers
 
 Each hook encapsulates a specific concern and is composed in `PatternDesigner.jsx`.
+
+### Data Persistence (Dexie.js / IndexedDB)
+- `src/lib/db.js` - Dexie database configuration and initialization
+- `src/lib/patternStorage.js` - Pattern CRUD operations using Dexie
+- **Database Schema**:
+  - `patterns` table: User-saved patterns with indexing on name, createdAt, updatedAt
+  - `currentPattern` table: Active working pattern (auto-save)
+  - `settings` table: User preferences and UI state
+- **Benefits**: ~50MB+ storage, async operations, structured querying, future cloud sync ready
+
+### PWA & Offline-First
+- **@vite-pwa/astro** - PWA integration configured in `astro.config.mjs`
+- **Service Worker**: Auto-generated with cache-first strategy for static assets
+- **Offline Capability**: App works without internet after first visit
+- **Auto-Update**: Service worker updates cached assets automatically when online
+- **Installable**: Users can install app to home screen/desktop
+- **Cache Strategy**:
+  - Static assets (JS, CSS, fonts, images): Cache-first
+  - Google Fonts: Cache-first with 1-year expiration
+  - Pattern data: IndexedDB (Dexie.js) - already offline-capable
 
 ### Component Hierarchy
 ```
@@ -88,7 +108,7 @@ PatternDesigner.jsx (root state container)
 ### Data Flow
 1. **User draws line** → `PatternCanvas.jsx` calculates grid coordinates → calls `onAddStitch`
 2. **PatternDesigner** updates `currentPattern.stitches` + `stitchColors` Map
-3. **Auto-save** triggers via `useEffect` → `patternStorage.js` saves to localStorage
+3. **Auto-save** triggers via `useEffect` → `patternStorage.js` saves to Dexie (IndexedDB)
 4. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
 
 ### Color System (THREE CATEGORIES)
@@ -121,6 +141,13 @@ npm run preview          # Preview production build locally
 ```
 
 **Deployment**: Built for Cloudflare Pages (see `wrangler.jsonc`). Run `npm run build` then deploy `./dist/`.
+
+**PWA Features**: 
+- Service worker caches all static assets on first visit
+- App works offline after initial load
+- Auto-updates in background when online
+- Installable to home screen/desktop
+- Pattern data persists in IndexedDB (Dexie.js)
 
 ## Code Conventions
 

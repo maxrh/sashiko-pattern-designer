@@ -1,23 +1,16 @@
 /**
- * Local storage utilities for saving and loading patterns
+ * Pattern storage utilities using Dexie (IndexedDB)
  */
 
-const STORAGE_KEYS = {
-  CURRENT_PATTERN: 'sashiko_current_pattern',
-  SAVED_PATTERNS: 'sashiko_saved_patterns',
-  UI_STATE: 'sashiko_ui_state',
-};
+import db from './db.js';
 
 /**
- * Save current pattern to local storage (auto-save on changes)
+ * Save current pattern to database (auto-save on changes)
  */
-export function saveCurrentPattern(pattern, stitchColors, uiState) {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return false;
-  }
-  
+export async function saveCurrentPattern(pattern, stitchColors, uiState) {
   try {
     const data = {
+      key: 'current',
       pattern: {
         id: pattern.id,
         name: pattern.name,
@@ -46,7 +39,8 @@ export function saveCurrentPattern(pattern, stitchColors, uiState) {
       },
       timestamp: Date.now(),
     };
-    localStorage.setItem(STORAGE_KEYS.CURRENT_PATTERN, JSON.stringify(data));
+    
+    await db.currentPattern.put(data);
     return true;
   } catch (error) {
     console.error('Failed to save current pattern:', error);
@@ -55,29 +49,23 @@ export function saveCurrentPattern(pattern, stitchColors, uiState) {
 }
 
 /**
- * Load current pattern from local storage
+ * Load current pattern from database
  */
-export function loadCurrentPattern() {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return null;
-  }
-  
+export async function loadCurrentPattern() {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.CURRENT_PATTERN);
+    const data = await db.currentPattern.get('current');
     if (!data) return null;
-
-    const parsed = JSON.parse(data);
     
     // Validate the data structure
-    if (!parsed.pattern || !Array.isArray(parsed.pattern.stitches)) {
+    if (!data.pattern || !Array.isArray(data.pattern.stitches)) {
       return null;
     }
 
     return {
-      pattern: parsed.pattern,
-      stitchColors: new Map(parsed.stitchColors || []),
-      uiState: parsed.uiState || {},
-      timestamp: parsed.timestamp,
+      pattern: data.pattern,
+      stitchColors: new Map(data.stitchColors || []),
+      uiState: data.uiState || {},
+      timestamp: data.timestamp,
     };
   } catch (error) {
     console.error('Failed to load current pattern:', error);
@@ -86,15 +74,11 @@ export function loadCurrentPattern() {
 }
 
 /**
- * Clear current pattern from local storage
+ * Clear current pattern from database
  */
-export function clearCurrentPattern() {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return false;
-  }
-  
+export async function clearCurrentPattern() {
   try {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_PATTERN);
+    await db.currentPattern.delete('current');
     return true;
   } catch (error) {
     console.error('Failed to clear current pattern:', error);
@@ -105,17 +89,12 @@ export function clearCurrentPattern() {
 /**
  * Save a pattern to the user's saved patterns collection
  */
-export function saveToPatternLibrary(pattern, stitchColors, uiState) {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return { success: false, error: 'localStorage not available' };
-  }
-  
+export async function saveToPatternLibrary(pattern, stitchColors, uiState) {
   try {
-    const savedPatterns = loadSavedPatterns();
-    const builtInIds = ['blank', 'asanoha', 'simple-cross', 'diagonal-flow', 'hitomezashi-cross', 'hitomezashi-kuchi'];
+    const builtInIds = ['blank', 'asanoha', 'simple-cross', 'diagonal-flow', 'hitomezashi-cross', 'hitomezashi-kuchi', 'ajiro-wickerwork'];
     
     // Check if this is an existing saved pattern
-    const existingPattern = savedPatterns.find(p => p.id === pattern.id);
+    const existingPattern = await db.patterns.get(pattern.id);
     
     // Generate new ID if:
     // 1. Pattern is based on a built-in, OR
@@ -160,21 +139,14 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
         displayUnit: uiState.displayUnit,
         colorPresets: uiState.colorPresets,
       } : undefined,
-      savedAt: Date.now(),
+      createdAt: existingPattern?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+      isStarterPattern: false,
     };
 
-    // Check if pattern already exists (by id)
-    const existingIndex = savedPatterns.findIndex(p => p.id === patternToSave.id);
+    // Use put() to either insert or update
+    await db.patterns.put(patternToSave);
     
-    if (existingIndex >= 0 && !isNewPattern) {
-      // Update existing pattern (only if we're not creating a new one)
-      savedPatterns[existingIndex] = patternToSave;
-    } else {
-      // Add new pattern
-      savedPatterns.push(patternToSave);
-    }
-
-    localStorage.setItem(STORAGE_KEYS.SAVED_PATTERNS, JSON.stringify(savedPatterns));
     return { success: true, pattern: patternToSave, isNewPattern };
   } catch (error) {
     console.error('Failed to save pattern to library:', error);
@@ -183,19 +155,12 @@ export function saveToPatternLibrary(pattern, stitchColors, uiState) {
 }
 
 /**
- * Load all saved patterns from local storage
+ * Load all saved patterns from database
  */
-export function loadSavedPatterns() {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return [];
-  }
-  
+export async function loadSavedPatterns() {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.SAVED_PATTERNS);
-    if (!data) return [];
-
-    const patterns = JSON.parse(data);
-    return Array.isArray(patterns) ? patterns : [];
+    const patterns = await db.patterns.toArray();
+    return patterns;
   } catch (error) {
     console.error('Failed to load saved patterns:', error);
     return [];
@@ -205,15 +170,9 @@ export function loadSavedPatterns() {
 /**
  * Delete a pattern from saved patterns
  */
-export function deletePattern(patternId) {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return false;
-  }
-  
+export async function deletePattern(patternId) {
   try {
-    const savedPatterns = loadSavedPatterns();
-    const filtered = savedPatterns.filter(p => p.id !== patternId);
-    localStorage.setItem(STORAGE_KEYS.SAVED_PATTERNS, JSON.stringify(filtered));
+    await db.patterns.delete(patternId);
     return true;
   } catch (error) {
     console.error('Failed to delete pattern:', error);
