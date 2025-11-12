@@ -1,29 +1,47 @@
 import { useEffect, useState } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Button } from './ui/button';
 
 /**
- * OfflineIndicator - Shows connection status to user
- * Displays when offline or connection restored
+ * OfflineIndicator - Shows connection status icon in header
+ * Always visible, shows offline state with red icon
  */
 export default function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(true);
-  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    // Initial state
+    // Initial state - check on mount
     setIsOnline(navigator.onLine);
 
-    // Handle online event
-    const handleOnline = () => {
+    // Handle online event - update service worker and reload
+    const handleOnline = async () => {
       setIsOnline(true);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      
+      // Force service worker to check for updates
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            // Force update check
+            await registration.update();
+            
+            // If there's a waiting service worker, activate it immediately
+            if (registration.waiting) {
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              // Reload page to get latest version
+              window.location.reload();
+            }
+          }
+        } catch (error) {
+          console.error('Error updating service worker:', error);
+        }
+      }
     };
 
     // Handle offline event
     const handleOffline = () => {
       setIsOnline(false);
-      setShowToast(true);
     };
 
     window.addEventListener('online', handleOnline);
@@ -35,27 +53,26 @@ export default function OfflineIndicator() {
     };
   }, []);
 
-  if (!showToast) return null;
-
   return (
-    <div
-      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg transition-all"
-      style={{
-        backgroundColor: isOnline ? '#10b981' : '#ef4444',
-        color: 'white',
-      }}
-    >
-      {isOnline ? (
-        <>
-          <Wifi className="h-5 w-5" />
-          <span className="font-medium">Back online</span>
-        </>
-      ) : (
-        <>
-          <WifiOff className="h-5 w-5" />
-          <span className="font-medium">Working offline</span>
-        </>
-      )}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={isOnline ? 'Online' : 'Offline'}
+          >
+            {isOnline ? (
+              <Wifi className="h-5 w-5" />
+            ) : (
+              <WifiOff className="h-5 w-5 text-red-500" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{isOnline ? 'Online' : 'Working offline'}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

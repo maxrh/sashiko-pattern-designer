@@ -742,7 +742,10 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
               canRedo={historyManager.canRedo}
               selectedStitch={selectedStitchIds.size === 1 ? currentPattern.stitches.find(s => selectedStitchIds.has(s.id)) : null}
             />
-            <HelpButton />
+            <div className="ml-auto flex items-center gap-2">
+              <OfflineIndicator />
+              <HelpButton />
+            </div>
           </div>
         </header>
 
@@ -771,7 +774,6 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
         </div>
       </main>
       <Toaster />
-      <OfflineIndicator />
     </SidebarProvider>
   );
 }
