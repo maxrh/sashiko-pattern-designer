@@ -24,6 +24,17 @@ db.version(1).stores({
   currentPattern: 'key',
 });
 
+// Version 2: Add history table for undo/redo persistence
+db.version(2).stores({
+  // Keep existing tables
+  patterns: '++id, name, createdAt, updatedAt, isStarterPattern',
+  settings: 'key',
+  currentPattern: 'key',
+  
+  // New: History table - stores undo/redo history
+  history: 'key', // Single entry with key 'undoRedo'
+});
+
 // Pattern data model
 export class Pattern {
   constructor(data) {
