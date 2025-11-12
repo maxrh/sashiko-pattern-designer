@@ -248,8 +248,6 @@ Your work persists across page refreshes and browser sessions.
 - **Export**: JSON format for patterns, PNG for images
 - **Benefits**: ~50MB+ capacity, async operations, structured querying, cloud sync ready
 
-For complete technical specifications, architecture details, and coordinate system documentation, see [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md).
-
 ## Deployment
 
 This project is configured for **Cloudflare Pages** deployment with **offline-first PWA** capabilities:
@@ -270,4 +268,4 @@ This project is configured for **Cloudflare Pages** deployment with **offline-fi
 
 ---
 
-Made by **Monsun** • [monsun.dk](https://monsun.dk) • [max@monsun.dk](mailto:max@monsun.dk)
+Made by [**Monsun**](https://monsun.dk) • [max@monsun.dk](mailto:max@monsun.dk)
