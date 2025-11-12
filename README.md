@@ -69,7 +69,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 ### PWA (Progressive Web App) Features
 - **Offline-First**: Service worker caches all assets on first visit, works without internet after
 - **Smart Auto-Update**: When reconnecting online, automatically checks for and installs new versions
-- **Connection Indicator**: Visual status icon (green online, red offline) in app header
+- **Connection Indicator**: Visual status icon (gray online, red offline) in app header
 - **Installable**: Add to home screen/desktop for native app-like experience
 - **Fast Loading**: Assets served from cache for instant load times
 - **Multiple Cache Strategies**:
@@ -77,7 +77,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
   - JS/CSS: StaleWhileRevalidate (instant cache, updates in background)
   - Images/Fonts: CacheFirst (long-lived, 1-year expiration)
 
-## How It Works
+#### How It Works
 1. **First Visit**: Browser downloads and caches all app assets (HTML, JS, CSS, fonts, images)
 2. **Subsequent Visits**: App loads instantly from cache, even with poor/no connection
 3. **Smart Updates**: When online, checks for new version; when reconnecting, forces update check and reloads if available
