@@ -41,7 +41,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Load Patterns**: Switch between built-in patterns and your custom saved patterns
 - **Export/Import**: Export patterns as JSON files for sharing or backup
 - **Export Images**: Export your design as PNG image
-- **Undo/Redo**: Full history support with keyboard shortcuts (Ctrl+Z / Ctrl+Y)
+- **Undo/Redo**: Full history support with keyboard shortcuts (Ctrl+Z / Ctrl+Y), persisted across page reloads
 - **Offline-First**: Works without internet after first visit (PWA with service worker)
 
 ### Canvas Configuration
@@ -110,7 +110,7 @@ The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with Workbox
 │   ├── data/
 │   │   └── patterns.json            # Built-in pattern definitions
 │   ├── hooks/
-│   │   ├── useHistory.js            # Undo/redo with debouncing
+│   │   ├── useHistory.js            # Undo/redo with IndexedDB persistence
 │   │   ├── useKeyboardShortcuts.js  # Keyboard event handlers
 │   │   ├── usePatternImportExport.js # JSON/PNG export, JSON import
 │   │   ├── usePatternLibrary.js     # Saved patterns CRUD (localStorage)
@@ -229,6 +229,7 @@ Your work persists across page refreshes and browser sessions.
 - **Tile Boundaries**: Shared coordinates between adjacent tiles with duplication prevention
 - **Error Handling**: ErrorBoundary component with user-friendly error messages and recovery options
 - **Data Persistence**: Dexie.js for IndexedDB with structured storage and async operations
+- **Undo/Redo History**: Persisted to IndexedDB with duplicate state prevention, survives page refreshes
 
 ### Canvas System
 - **Canvas**: Artboard + 40-cell margin on all sides

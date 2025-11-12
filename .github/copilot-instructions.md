@@ -65,7 +65,7 @@ Three distinct coordinate systems exist:
 
 ### State Management (Custom Hooks Pattern)
 - `src/hooks/usePatternState.js` - Core pattern state (currentPattern, stitchColors, selection)
-- `src/hooks/useHistory.js` - Undo/redo with debounced property editing
+- `src/hooks/useHistory.js` - Undo/redo with IndexedDB persistence and duplicate state prevention
 - `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (Dexie/IndexedDB)
 - `src/hooks/usePatternImportExport.js` - JSON export/import, PNG export
 - `src/hooks/usePropertyEditor.js` - Batch property editing for selected stitches
@@ -157,7 +157,7 @@ npm run preview          # Preview production build locally
 ### State Updates
 - **Immutable updates**: Always spread previous state for patterns/stitches
 - **Map updates**: Clone Map for stitchColors: `const next = new Map(prev); next.set(...)`
-- **History**: Undo/redo handled by `useHistory` hook - don't push history manually in components
+- **History**: Undo/redo handled by `useHistory` hook with IndexedDB persistence - survives page refreshes, prevents duplicate entries
 
 ### Stitch Data Structure
 ```javascript
