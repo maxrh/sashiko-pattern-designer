@@ -77,7 +77,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
   - JS/CSS: StaleWhileRevalidate (instant cache, updates in background)
   - Images/Fonts: CacheFirst (long-lived, 1-year expiration)
 
-## How It Works
+#### How It Works
 1. **First Visit**: Browser downloads and caches all app assets (HTML, JS, CSS, fonts, images)
 2. **Subsequent Visits**: App loads instantly from cache, even with poor/no connection
 3. **Smart Updates**: When online, checks for new version; when reconnecting, forces update check and reloads if available
