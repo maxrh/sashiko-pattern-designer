@@ -67,18 +67,25 @@ export default function OfflineIndicator() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Periodic connectivity check as fallback (browser events can be unreliable)
+    // Periodic connectivity check ONLY when offline (to detect when back online)
     const interval = setInterval(async () => {
-      const connected = await testConnectivity();
-      setIsOnline(prev => prev !== connected ? connected : prev); // Only update if changed
-    }, 10000); // Check every 10 seconds
+      // Only check if we think we're offline
+      if (!isOnline) {
+        const connected = await testConnectivity();
+        if (connected) {
+          setIsOnline(true);
+          // Trigger online handler when we detect we're back online
+          handleOnline();
+        }
+      }
+    }, 5000); // Check every 5 seconds when offline
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
     };
-  }, [updateConnectionStatus, testConnectivity]);
+  }, [updateConnectionStatus, testConnectivity, isOnline]); // Add isOnline to dependencies
 
   return (
     <TooltipProvider>
