@@ -17,10 +17,11 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 ### Pattern Creation
 - **Tile-Based Repeating System**: Design a single tile that automatically repeats across the canvas
 - **Interactive Drawing**: Click and drag to create stitch lines on a grid with intelligent anchor point orientation
-- **Multiple Drawing Tools**:
+- **Multiple Tools**:
+  - Select Tool: Select and manipulate existing stitches
   - Line Draw Tool: Create straight stitch lines
   - Pan Tool: Navigate the canvas (spacebar shortcut)
-  - Select Tool: Select and manipulate existing stitches
+  - (Curve/Circle tool planned)
 - **Grid Snapping**: Automatic snapping to grid points for precise alignment
 - **Real-time Preview**: See your pattern repeat instantly as you draw
 - **Cross-Tile Lines**: Draw lines that span across tile boundaries for complex patterns
