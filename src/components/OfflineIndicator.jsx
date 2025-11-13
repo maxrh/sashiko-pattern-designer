@@ -8,14 +8,47 @@ import { Button } from './ui/button';
  * Always visible, shows offline state with red icon
  */
 export default function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true);
+  // Initialize with actual connection state to avoid flash
+  const [isOnline, setIsOnline] = useState(() => {
+    // Check if navigator is available (SSR safety)
+    const initialState = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    console.log('🌐 OfflineIndicator INITIAL STATE:', initialState, 'navigator.onLine:', typeof navigator !== 'undefined' ? navigator.onLine : 'undefined');
+    return initialState;
+  });
 
   useEffect(() => {
-    // Initial state - check on mount
-    setIsOnline(navigator.onLine);
+    // Perform a real network test to verify connection status
+    const testConnection = async () => {
+      try {
+        // Try to fetch a small resource with no-cache to test real connectivity
+        const response = await fetch('/favicon.svg', {
+          method: 'HEAD',
+          cache: 'no-store',
+          mode: 'no-cors'
+        });
+        console.log('🌐 Network test PASSED - setting online');
+        setIsOnline(true);
+      } catch (error) {
+        console.log('🌐 Network test FAILED - setting offline');
+        setIsOnline(false);
+      }
+    };
+
+    // Initial network test
+    testConnection();
+
+    // Also sync with navigator.onLine as backup
+    const currentState = navigator.onLine;
+    console.log('🌐 OfflineIndicator MOUNT CHECK:', currentState, 'current isOnline state:', isOnline);
+    
+    // If navigator says offline, trust it immediately
+    if (!currentState) {
+      setIsOnline(false);
+    }
 
     // Handle online event - update service worker and reload
     const handleOnline = async () => {
+      console.log('🌐 ONLINE EVENT FIRED');
       setIsOnline(true);
       
       // Force service worker to check for updates
@@ -41,6 +74,7 @@ export default function OfflineIndicator() {
 
     // Handle offline event
     const handleOffline = () => {
+      console.log('🌐 OFFLINE EVENT FIRED');
       setIsOnline(false);
     };
 
@@ -52,6 +86,8 @@ export default function OfflineIndicator() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  console.log('🌐 OfflineIndicator RENDER:', isOnline ? 'ONLINE' : 'OFFLINE');
 
   return (
     <TooltipProvider>
