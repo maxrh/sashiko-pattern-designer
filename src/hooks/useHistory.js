@@ -83,6 +83,32 @@ export function useHistory(maxHistorySize = 10) {
       return;
     }
 
+    // If this is the first entry and history is empty, create an initial empty state
+    if (history.length === 0 && state.pattern.stitches.length > 0) {
+      const emptyState = {
+        pattern: {
+          ...state.pattern,
+          stitches: [],
+        },
+        stitchColors: new Map(),
+        timestamp: Date.now() - 1, // Slightly earlier timestamp
+      };
+      
+      // Create new state for the current action
+      const newState = {
+        pattern: {
+          ...state.pattern,
+          stitches: [...state.pattern.stitches],
+        },
+        stitchColors: new Map(state.stitchColors),
+        timestamp: Date.now(),
+      };
+      
+      setHistory([emptyState, newState]);
+      setHistoryIndex(1); // Point to the new state (can undo to empty state)
+      return;
+    }
+
     // Check if the new state is identical to the current history state
     if (historyIndex >= 0 && historyIndex < history.length) {
       const currentState = history[historyIndex];
@@ -99,7 +125,27 @@ export function useHistory(maxHistorySize = 10) {
                          [...currentIds].every(id => newIds.has(id));
         
         if (idsMatch) {
-          return; // Skip duplicate state
+          // IDs match, but check if stitch properties have changed
+          const propertiesChanged = currentState.pattern.stitches.some((currentStitch, index) => {
+            const newStitch = state.pattern.stitches[index];
+            return newStitch && (
+              currentStitch.stitchSize !== newStitch.stitchSize ||
+              currentStitch.stitchWidth !== newStitch.stitchWidth ||
+              currentStitch.gapSize !== newStitch.gapSize ||
+              currentStitch.color !== newStitch.color
+            );
+          });
+          
+          // Check if stitch colors Map has changed
+          const colorsChanged = [...currentState.stitchColors.entries()].some(([id, color]) => 
+            state.stitchColors.get(id) !== color
+          ) || [...state.stitchColors.entries()].some(([id, color]) => 
+            currentState.stitchColors.get(id) !== color
+          );
+          
+          if (!propertiesChanged && !colorsChanged) {
+            return; // Skip duplicate state
+          }
         }
       }
     }
@@ -178,6 +224,29 @@ export function useHistory(maxHistorySize = 10) {
     }
   }, [pushHistory]);
 
+  /**
+   * Clear all history (used when loading new patterns)
+   * @param {Object} initialState - Optional initial state to set as first history entry
+   */
+  const clearHistory = useCallback((initialState = null) => {
+    if (initialState) {
+      // Set initial state as first history entry
+      const newState = {
+        pattern: {
+          stitches: [...initialState.pattern.stitches],
+        },
+        stitchColors: new Map(initialState.stitchColors),
+        timestamp: Date.now(),
+      };
+      setHistory([newState]);
+      setHistoryIndex(0);
+    } else {
+      // Completely clear history (for new patterns)
+      setHistory([]);
+      setHistoryIndex(-1);
+    }
+  }, []);
+
   return {
     // State
     canUndo: historyIndex > 0,
@@ -188,6 +257,7 @@ export function useHistory(maxHistorySize = 10) {
     pushHistory,
     undo,
     redo,
+    clearHistory,
     
     // Refs for special cases
     isEditingProperties,

@@ -10,7 +10,7 @@ const {
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 ---
 <!doctype html>
-<html lang="en" class="bg-baground">
+<html lang="en" class="bg-background">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -63,7 +63,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 			}, { capture: true, passive: false });
 		</script>
 	</head>
-	<body class="min-h-screen bg-baground text-foreground antialiased">
+	<body class="min-h-screen bg-background text-foreground antialiased">
 		<slot />
 	</body>
 </html>

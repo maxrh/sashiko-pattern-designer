@@ -111,8 +111,12 @@ PatternDesigner.jsx (root state container)
 ### Data Flow
 1. **User draws line** → `PatternCanvas.jsx` calculates grid coordinates → calls `onAddStitch`
 2. **PatternDesigner** updates `currentPattern.stitches` + `stitchColors` Map
-3. **Auto-save** triggers via `useEffect` → `patternStorage.js` saves to Dexie (IndexedDB)
-4. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
+3. **Main History Effect** triggers → `historyManager.pushHistory()` saves to `useHistory` hook
+4. **Auto-save** triggers via separate `useEffect` → `patternStorage.js` saves to Dexie (IndexedDB)
+5. **Property Changes** → Temporary states (`tempGapSize`, `tempStitchColor`) → Live preview via Canvas Effects
+6. **Property Completion** → `isEditingProperties = false` → Property History Effect → Batched save (100ms timeout)
+7. **Pattern Loading** → `clearHistory(initialState)` → Creates baseline history entry with loaded stitches
+8. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
 
 ### Color System (THREE CATEGORIES)
 **Fabric Colors** (Left Sidebar → CanvasSettings.jsx):
@@ -158,6 +162,14 @@ npm run preview          # Preview production build locally
 - **Immutable updates**: Always spread previous state for patterns/stitches
 - **Map updates**: Clone Map for stitchColors: `const next = new Map(prev); next.set(...)`
 - **History**: Undo/redo handled by `useHistory` hook with IndexedDB persistence - survives page refreshes, prevents duplicate entries
+- **Dual History Effects**: Separate useEffect hooks prevent property editing interference:
+  - **Property History Effect**: 100ms timeout batching for gap/color changes
+  - **Main History Effect**: Skips during property editing to prevent conflicts
+- **Temporary States**: `tempGapSize`, `tempStitchColor`, `isEditingProperties` for live preview without history pollution
+- **Pattern-Scoped History**: Each pattern load resets history with loaded pattern as baseline
+  - **Loading Existing Pattern**: `clearHistory(initialState)` creates baseline entry
+  - **New Pattern**: `clearHistory()` starts with empty history
+  - **Cross-Pattern Protection**: Cannot undo back to previously loaded patterns
 
 ### Stitch Data Structure
 ```javascript
@@ -188,10 +200,15 @@ npm run preview          # Preview production build locally
 3. **gridSize is CELLS not POINTS** - valid coordinates are 0 to gridSize (inclusive), not gridSize-1
 4. **Selection uses visibleStitchInstancesRef** - populated during rendering to ensure click/drag selection matches visible stitches
 5. **Color overrides in stitchColors Map** - NOT stored in stitch.color field directly
-6. **Auto-save triggers on ANY state change** - be careful with useEffect dependencies
-7. **Boundary crossing detection is simple** - only check if endpoint exceeds [0, tileSize] bounds, NOT line length or distance
-8. **Tile resizing removes invalid stitches** - only if start point leaves [0, tileSize] bounds
-9. **Anchor auto-orientation** - anchor (start) is always the endpoint closest to tile origin (0,0)
+6. **History timing is critical** - dual useEffect system prevents property editing conflicts:
+   - Property changes use timeout-based batching (100ms)
+   - Main history effect skips during property editing
+   - Never manually call pushHistory during property editing
+7. **Pattern loading requires history reset** - use `clearHistory(initialState)` for existing patterns, `clearHistory()` for new
+8. **History saves only stitches data** - canvas config (gridSize, tileSize, etc.) not included in history
+9. **Boundary crossing detection is simple** - only check if endpoint exceeds [0, tileSize] bounds, NOT line length or distance
+10. **Tile resizing removes invalid stitches** - only if start point leaves [0, tileSize] bounds
+11. **Anchor auto-orientation** - anchor (start) is always the endpoint closest to tile origin (0,0)
 
 ## Boundary Line Logic (CRITICAL - UPDATED)
 

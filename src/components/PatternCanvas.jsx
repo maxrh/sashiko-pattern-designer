@@ -95,6 +95,8 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
   artboardHeight,    // Height of artboard (total pattern tile area)
   pattern,
   stitchColors,
+  tempStitchColor,
+  tempGapSize,
   selectedStitchIds,
   onSelectStitchIds,
   onAddStitch,
@@ -293,7 +295,9 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
 
     ctx.lineCap = 'round'; // Use butt to get precise pixel alignment
     stitches.forEach((stitch) => {
-      const colorOverride = stitchColors.get(stitch.id) ?? stitch.color ?? defaultStitchColor;
+      const isSelected = selectedStitchIds.has(stitch.id);
+      const tempColor = tempStitchColor && isSelected ? tempStitchColor : null;
+      const colorOverride = tempColor || (stitchColors.get(stitch.id) ?? stitch.color ?? defaultStitchColor);
       
       // Check if this is a repeatable pattern line vs absolute positioned line
       // Pattern lines have start point WITHIN first tile (0 to tileSize.x/y)
@@ -445,8 +449,8 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
             const isSelected = selectedStitchIds.has(stitch.id);
             const stitchSizeForLine = stitch.stitchSize || 'small';
             const stitchWidthValue = stitch.stitchWidth || 'normal';
-            const stitchGapSize = stitch.gapSize;
-            const stitchGapOffset = calculateStitchOffset(stitchGapSize);
+            const currentGapSize = (tempGapSize !== null && isSelected) ? tempGapSize : stitch.gapSize;
+            const stitchGapOffset = calculateStitchOffset(currentGapSize);
 
             // Render the stitch using shared rendering function
             const rendered = renderStitch(
@@ -456,7 +460,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
               endX,
               endY,
               stitchGapOffset,
-              stitchGapSize,
+              currentGapSize,
               stitchSizeForLine,
               stitchWidthValue,
               colorOverride ?? defaultStitchColor,
@@ -488,8 +492,8 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
         const isSelected = selectedStitchIds.has(stitch.id);
         const stitchSizeForLine = stitch.stitchSize || 'small';
         const stitchWidthValue = stitch.stitchWidth || 'normal';
-        const stitchGapSize = stitch.gapSize;
-        const stitchGapOffset = calculateStitchOffset(stitchGapSize);
+        const currentGapSize = (tempGapSize !== null && isSelected) ? tempGapSize : stitch.gapSize;
+        const stitchGapOffset = calculateStitchOffset(currentGapSize);
 
         // Render the stitch using shared rendering function
         const rendered = renderStitch(
@@ -499,7 +503,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
           endX,
           endY,
           stitchGapOffset,
-          stitchGapSize,
+          currentGapSize,
           stitchSizeForLine,
           stitchWidthValue,
           colorOverride ?? defaultStitchColor,

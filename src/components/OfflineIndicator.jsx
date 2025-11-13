@@ -1,93 +1,84 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Button } from './ui/button';
 
 /**
  * OfflineIndicator - Shows connection status icon in header
- * Always visible, shows offline state with red icon
+ * Uses navigator.onLine + periodic connectivity tests for accuracy
  */
 export default function OfflineIndicator() {
-  // Initialize with actual connection state to avoid flash
-  const [isOnline, setIsOnline] = useState(() => {
-    // Check if navigator is available (SSR safety)
-    const initialState = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    console.log('🌐 OfflineIndicator INITIAL STATE:', initialState, 'navigator.onLine:', typeof navigator !== 'undefined' ? navigator.onLine : 'undefined');
-    return initialState;
-  });
+  const [isOnline, setIsOnline] = useState(() => 
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+
+  // Test actual network connectivity (not just navigator.onLine)
+  const testConnectivity = useCallback(async () => {
+    if (!navigator.onLine) return false;
+    
+    try {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 2000);
+      
+      await fetch('/favicon.svg', {
+        method: 'HEAD',
+        cache: 'no-cache',
+        signal: controller.signal
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Update connection status
+  const updateConnectionStatus = useCallback(async () => {
+    const connected = await testConnectivity();
+    setIsOnline(connected);
+    return connected;
+  }, [testConnectivity]);
 
   useEffect(() => {
-    // Perform a real network test to verify connection status
-    const testConnection = async () => {
-      try {
-        // Try to fetch a small resource with no-cache to test real connectivity
-        const response = await fetch('/favicon.svg', {
-          method: 'HEAD',
-          cache: 'no-store',
-          mode: 'no-cors'
-        });
-        console.log('🌐 Network test PASSED - setting online');
-        setIsOnline(true);
-      } catch (error) {
-        console.log('🌐 Network test FAILED - setting offline');
-        setIsOnline(false);
-      }
-    };
+    // Test connectivity on mount
+    updateConnectionStatus();
 
-    // Initial network test
-    testConnection();
-
-    // Also sync with navigator.onLine as backup
-    const currentState = navigator.onLine;
-    console.log('🌐 OfflineIndicator MOUNT CHECK:', currentState, 'current isOnline state:', isOnline);
-    
-    // If navigator says offline, trust it immediately
-    if (!currentState) {
-      setIsOnline(false);
-    }
-
-    // Handle online event - update service worker and reload
+    // Handle browser online/offline events
     const handleOnline = async () => {
-      console.log('🌐 ONLINE EVENT FIRED');
-      setIsOnline(true);
+      const actuallyOnline = await updateConnectionStatus();
       
-      // Force service worker to check for updates
-      if ('serviceWorker' in navigator) {
+      // Auto-update service worker when back online
+      if (actuallyOnline && 'serviceWorker' in navigator) {
         try {
           const registration = await navigator.serviceWorker.getRegistration();
-          if (registration) {
-            // Force update check
-            await registration.update();
-            
-            // If there's a waiting service worker, activate it immediately
-            if (registration.waiting) {
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              // Reload page to get latest version
-              window.location.reload();
-            }
+          if (registration?.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            window.location.reload();
+          } else {
+            await registration?.update();
           }
         } catch (error) {
-          console.error('Error updating service worker:', error);
+          console.error('Service worker update failed:', error);
         }
       }
     };
 
-    // Handle offline event
-    const handleOffline = () => {
-      console.log('🌐 OFFLINE EVENT FIRED');
-      setIsOnline(false);
-    };
+    const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Periodic connectivity check as fallback (browser events can be unreliable)
+    const interval = setInterval(async () => {
+      const connected = await testConnectivity();
+      setIsOnline(prev => prev !== connected ? connected : prev); // Only update if changed
+    }, 10000); // Check every 10 seconds
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
     };
-  }, []);
-
-  console.log('🌐 OfflineIndicator RENDER:', isOnline ? 'ONLINE' : 'OFFLINE');
+  }, [updateConnectionStatus, testConnectivity]);
 
   return (
     <TooltipProvider>

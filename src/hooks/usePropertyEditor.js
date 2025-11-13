@@ -2,15 +2,15 @@ import { useCallback } from 'react';
 
 /**
  * Custom hook for property editor handlers
- * Handles changing stitch properties (size, width, gap) for selected stitches or defaults
+ * Handles changing stitch properties (size, width) for selected stitches or defaults
+ * Note: Gap size is now handled directly in PatternDesigner with live preview
  */
 export function usePropertyEditor({
   selectedStitchIds,
   setCurrentPattern,
   setStitchSize,
   setStitchWidth,
-  setGapSize,
-  historyManager,
+  setIsEditingProperties,
 }) {
   /**
    * Change stitch size for selected stitches or update default
@@ -18,6 +18,9 @@ export function usePropertyEditor({
    */
   const handleChangeSelectedStitchSize = useCallback((newSize) => {
     if (selectedStitchIds.size > 0) {
+      // Mark that we're editing properties to prevent history saves
+      setIsEditingProperties(true);
+      
       // Update selected stitches
       setCurrentPattern((prev) => ({
         ...prev,
@@ -27,11 +30,14 @@ export function usePropertyEditor({
             : stitch
         ),
       }));
+      
+      // Mark editing complete after applying change
+      setTimeout(() => setIsEditingProperties(false), 0);
     } else {
       // Update default for draw tool
       setStitchSize(newSize);
     }
-  }, [selectedStitchIds, setCurrentPattern, setStitchSize]);
+  }, [selectedStitchIds, setCurrentPattern, setStitchSize, setIsEditingProperties]);
 
   /**
    * Change stitch width for selected stitches or update default
@@ -39,6 +45,9 @@ export function usePropertyEditor({
    */
   const handleChangeSelectedStitchWidth = useCallback((newWidth) => {
     if (selectedStitchIds.size > 0) {
+      // Mark that we're editing properties to prevent history saves
+      setIsEditingProperties(true);
+      
       // Update selected stitches
       setCurrentPattern((prev) => ({
         ...prev,
@@ -48,42 +57,17 @@ export function usePropertyEditor({
             : stitch
         ),
       }));
+      
+      // Mark editing complete after applying change
+      setTimeout(() => setIsEditingProperties(false), 0);
     } else {
       // Update default for draw tool
       setStitchWidth(newWidth);
     }
-  }, [selectedStitchIds, setCurrentPattern, setStitchWidth]);
-
-  /**
-   * Change gap size for selected stitches or update default
-   * Marks as editing to prevent history spam during slider drag
-   * @param {number} newGapSize - New gap size value
-   */
-  const handleChangeSelectedGapSize = useCallback((newGapSize) => {
-    if (selectedStitchIds.size > 0) {
-      // Mark that we're editing properties to prevent history spam
-      historyManager.isEditingProperties.current = true;
-      
-      // Update selected stitches
-      setCurrentPattern((prev) => ({
-        ...prev,
-        stitches: prev.stitches.map((stitch) =>
-          selectedStitchIds.has(stitch.id)
-            ? { ...stitch, gapSize: newGapSize }
-            : stitch
-        ),
-      }));
-      // Also update the UI state so slider stays in sync
-      setGapSize(newGapSize);
-    } else {
-      // Update default for draw tool
-      setGapSize(newGapSize);
-    }
-  }, [selectedStitchIds, setCurrentPattern, setGapSize, historyManager]);
+  }, [selectedStitchIds, setCurrentPattern, setStitchWidth, setIsEditingProperties]);
 
   return {
     handleChangeSelectedStitchSize,
     handleChangeSelectedStitchWidth,
-    handleChangeSelectedGapSize,
   };
 }

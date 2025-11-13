@@ -83,12 +83,20 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: false
       }
     })
   ],
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    server: {
+      hmr: {
+        overlay: false
+      }
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom']
+    }
   }
 });
