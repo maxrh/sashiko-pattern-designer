@@ -140,7 +140,7 @@ export function Toolbar({
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <Button variant="outline"  className="w-20 px-2 justify-center">
-                    <svg width="56" height="16" viewBox="0 0 56 16" preserveAspectRatio="none" className="!w-full overflow-visible">
+                    <svg width="56" height="16" viewBox="0 0 56 16" preserveAspectRatio="none" className="w-full! overflow-visible">
                       <line
                         x1="0"
                         y1="8"

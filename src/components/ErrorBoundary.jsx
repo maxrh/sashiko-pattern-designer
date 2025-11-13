@@ -45,7 +45,7 @@ class ErrorBoundary extends React.Component {
         <div className="flex items-center justify-center min-h-screen bg-background p-4">
           <div className="max-w-2xl w-full bg-card border border-destructive/50 rounded-lg shadow-lg p-6">
             <div className="flex items-start gap-4 mb-4">
-              <AlertCircle className="h-8 w-8 text-destructive flex-shrink-0 mt-1" />
+              <AlertCircle className="h-8 w-8 text-destructive shrink-0 mt-1" />
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-foreground mb-2">
                   Something went wrong
