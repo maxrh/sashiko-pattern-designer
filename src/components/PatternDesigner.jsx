@@ -34,15 +34,6 @@ import {
 } from '../lib/patternStorage.js';
 import { initializeDatabase } from '../lib/db.js';
 
-const COLOR_PRESETS = [
-  { label: 'Indigo', value: '#6366f1' },
-  { label: 'White', value: '#f5f5f5' },
-  { label: 'Red', value: '#ef4444' },
-  { label: 'Teal', value: '#14b8a6' },
-  { label: 'Coral', value: '#fb7185' },
-  { label: 'Black', value: '#0b1120' },
-];
-
 // Default settings constants (non-stitch related)
 export const DEFAULT_PATTERN_TILES = 4;
 export const DEFAULT_BACKGROUND_COLOR = '#0f172a'; // Dark slate with full opacity (8-char hex)
@@ -52,8 +43,7 @@ export const DEFAULT_GRID_COLOR = '#94a3b840'; // Grid color with 25% alpha
 export const DEFAULT_TILE_OUTLINE_COLOR = '#94a3b826'; // Tile outline with 15% alpha
 export const DEFAULT_ARTBOARD_OUTLINE_COLOR = '#3b82f680'; // Artboard outline with 50% alpha
 
-// Memoize built-in patterns to prevent repeated cloning
-const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function PatternDesigner() {
+export default function PatternDesigner() {
   // Pattern library management
   const { savedPatterns, saveState, savePattern, removePattern } = usePatternLibrary();
 
@@ -77,6 +67,11 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const defaultStitchColor = DEFAULT_STITCH_COLOR;
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
   const [selectedStitchColor, setSelectedStitchColor] = useState(DEFAULT_STITCH_COLOR);
+  const [isEditingProperties, setIsEditingProperties] = useState(false);
+  const [tempStitchColor, setTempStitchColor] = useState(null);
+  const [tempGapSize, setTempGapSize] = useState(null);
+  const isColorPickerOpenRef = useRef(false);
+  const isGapSliderActiveRef = useRef(false);
   const [stitchSize, setStitchSize] = useState(DEFAULT_STITCH_SIZE);
   const [stitchWidth, setStitchWidth] = useState(DEFAULT_STITCH_WIDTH);
   const [gapSize, setGapSize] = useState(DEFAULT_GAP_SIZE);
@@ -173,21 +168,49 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     setTileOutlineColor,
     setArtboardOutlineColor,
     canvasRef,
+    historyManager, // Add history manager for reset on import
   });
 
-  // Property editor handlers
+  // Property editor handlers - only for stitch size/width that don't have live preview yet
   const {
     handleChangeSelectedStitchSize,
     handleChangeSelectedStitchWidth,
-    handleChangeSelectedGapSize,
   } = usePropertyEditor({
     selectedStitchIds,
     setCurrentPattern,
     setStitchSize,
     setStitchWidth,
-    setGapSize,
-    historyManager,
+    setIsEditingProperties,
   });
+
+  // Handle gap size changes with temporary state for live preview
+  const handleChangeSelectedGapSize = useCallback((newGapSize) => {
+    if (isGapSliderActiveRef.current) {
+      // During slider drag - just update temporary state
+      setTempGapSize(newGapSize);
+      setIsEditingProperties(true);
+    } else {
+      // Direct change (not slider) - apply immediately
+      setTempGapSize(newGapSize);
+      setGapSize(newGapSize);
+    }
+  }, []);
+
+  // Handle gap slider start/stop
+  const handleGapSliderStart = useCallback(() => {
+    isGapSliderActiveRef.current = true;
+  }, []);
+
+  const handleGapSliderCommit = useCallback(() => {
+    // Mark slider as inactive and allow history to be saved
+    isGapSliderActiveRef.current = false;
+    setIsEditingProperties(false);
+    
+    // Commit the temporary gap size to global state
+    if (tempGapSize !== null) {
+      setGapSize(tempGapSize);
+    }
+  }, [tempGapSize]);
 
   // Sync pattern tiles with current pattern
   useEffect(() => {
@@ -243,26 +266,77 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     // Don't reset it to defaultStitchColor to maintain user's color choice
   }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultStitchColor]);
 
-  // Save to history when selection changes (after property editing is done)
+  // Canvas update effect - applies temporary values immediately to canvas for live preview
   useEffect(() => {
-    historyManager.saveAfterPropertyEdit({
-      pattern: currentPattern,
-      stitchColors,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStitchIds, currentPattern, stitchColors]);
+    if (tempGapSize !== null && selectedStitchIds.size > 0) {
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, gapSize: tempGapSize }
+            : stitch
+        ),
+      }));
+    }
+  }, [tempGapSize, selectedStitchIds]);
+
+  // Canvas update effect for colors - applies temporary colors for live preview
+  useEffect(() => {
+    if (tempStitchColor && selectedStitchIds.size > 0) {
+      setStitchColors((prev) => {
+        const next = new Map(prev);
+        selectedStitchIds.forEach((id) => next.set(id, tempStitchColor));
+        return next;
+      });
+    }
+  }, [tempStitchColor, selectedStitchIds]);
+
+  // History update effect - saves to history when property editing ends
+  useEffect(() => {
+    // Only save to history when we just finished editing properties
+    if (!isEditingProperties && (tempGapSize !== null || tempStitchColor !== null)) {
+      // Use a timeout to batch the history save after property changes settle
+      const timeoutId = setTimeout(() => {
+        // Save current state to history after property editing is complete
+        historyManager.pushHistory({
+          pattern: {
+            stitches: currentPattern.stitches, // Only save stitches, not config
+          },
+          stitchColors,
+        });
+        
+        // Clear temporary states
+        setTempGapSize(null);
+        setTempStitchColor(null);
+      }, 100); // Small delay to ensure all state updates are complete
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isEditingProperties, tempGapSize, tempStitchColor, currentPattern, stitchColors, historyManager]);
 
   // Save state to history whenever pattern or colors change (for undo/redo)
   // History is now persisted to IndexedDB, so we can record from the start
+  // Only skip if we're during the initial database load (first few renders)
   useEffect(() => {
-    if (!hasInitialized.current) return;
+    // Allow history recording once we have any pattern data (even defaults)
+    const shouldSkip = currentPattern.stitches.length === 0 && !hasInitialized.current;
+    
+    if (shouldSkip) return;
+    
+    // Skip if actively editing properties (gap size, stitch size, etc.)
+    if (isEditingProperties) return;
+    
+    // Skip if we have temporary property changes pending (they'll be saved separately)
+    if (tempGapSize !== null || tempStitchColor !== null) return;
     
     historyManager.pushHistory({
-      pattern: currentPattern,
+      pattern: {
+        stitches: currentPattern.stitches, // Only save stitches, not config
+      },
       stitchColors,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPattern, stitchColors]);
+  }, [currentPattern.stitches, stitchColors]); // Only trigger on stitches or colors, NOT config changes
 
   // Auto-save to database whenever pattern, colors, or settings change
   // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
@@ -351,7 +425,11 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleUndo = useCallback(() => {
     const prevState = historyManager.undo();
     if (prevState) {
-      setCurrentPattern(prevState.pattern);
+      // Only restore stitches, preserve current canvas settings
+      setCurrentPattern(prev => ({
+        ...prev, // Keep current config (gridSize, tileSize, patternTiles, etc.)
+        stitches: prevState.pattern.stitches, // Restore only stitches
+      }));
       setStitchColors(prevState.stitchColors);
       setSelectedStitchIds(new Set()); // Clear selection on undo
     }
@@ -360,7 +438,11 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
   const handleRedo = useCallback(() => {
     const nextState = historyManager.redo();
     if (nextState) {
-      setCurrentPattern(nextState.pattern);
+      // Only restore stitches, preserve current canvas settings
+      setCurrentPattern(prev => ({
+        ...prev, // Keep current config (gridSize, tileSize, patternTiles, etc.)
+        stitches: nextState.pattern.stitches, // Restore only stitches
+      }));
       setStitchColors(nextState.stitchColors);
       setSelectedStitchIds(new Set()); // Clear selection on redo
     }
@@ -552,9 +634,16 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     if (!pattern) return;
     const cloned = clonePattern(pattern);
     setCurrentPattern(cloned);
-    setStitchColors(deriveColorMap(cloned));
+    const colorMap = deriveColorMap(cloned);
+    setStitchColors(colorMap);
     setSelectedStitchIds(new Set());
     setDrawingState((prev) => ({ ...prev, firstPoint: null }));
+    
+    // Reset history with loaded pattern as initial state
+    historyManager.clearHistory({
+      pattern: { stitches: cloned.stitches },
+      stitchColors: colorMap,
+    });
     
     // Restore UI state if saved with the pattern
     if (pattern.uiState) {
@@ -564,7 +653,7 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
       if (pattern.uiState.artboardOutlineColor) setArtboardOutlineColor(pattern.uiState.artboardOutlineColor);
       if (pattern.uiState.displayUnit) setDisplayUnit(pattern.uiState.displayUnit);
     }
-  }, []);
+  }, [historyManager]);
 
   const handleSavePattern = useCallback(async () => {
     const uiState = {
@@ -613,17 +702,38 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
     // Update the selected stitch color state (used for drawing new stitches)
     setSelectedStitchColor(color);
     
-    // Auto-apply the color to selected stitches
-    if (selectedStitchIds.size > 0) {
+    // If color picker is open, only store temporarily - don't commit to stitchColors yet
+    if (isColorPickerOpenRef.current && selectedStitchIds.size > 0) {
+      setTempStitchColor(color);
+      setIsEditingProperties(true);
+    } else if (selectedStitchIds.size > 0) {
+      // Picker is closed, apply immediately (this handles direct color preset clicks)
       setStitchColors((prev) => {
         const next = new Map(prev);
         selectedStitchIds.forEach((id) => next.set(id, color));
         return next;
       });
     }
-    // When no selection, just updating selectedStitchColor is enough
-    // This will be used for the next drawn stitch
   }, [selectedStitchIds]);
+
+  const handleColorPickerOpenChange = useCallback((isOpen) => {
+    isColorPickerOpenRef.current = isOpen;
+    
+    if (!isOpen && tempStitchColor && selectedStitchIds.size > 0) {
+      // Color picker just closed - commit the temporary color
+      setStitchColors((prev) => {
+        const next = new Map(prev);
+        selectedStitchIds.forEach((id) => next.set(id, tempStitchColor));
+        return next;
+      });
+      
+      // Mark editing as complete
+      setIsEditingProperties(false);
+      
+      // Clear temporary color
+      setTempStitchColor(null);
+    }
+  }, [tempStitchColor, selectedStitchIds]);
 
   const handleAddColorPreset = useCallback((color) => {
     if (!color) return;
@@ -637,17 +747,6 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
 
   const handleRemoveColorPreset = useCallback((color) => {
     setColorPresets((prev) => prev.filter(c => c !== color));
-  }, []);
-
-  const handleResetColorPresets = useCallback(() => {
-    setColorPresets([
-      '#6366f1', // Indigo
-      '#f5f5f5', // White
-      '#ef4444', // Red
-      '#14b8a6', // Teal
-      '#fb7185', // Coral
-      '#0b1120', // Black
-    ]);
   }, []);
 
   // Keyboard shortcuts
@@ -725,7 +824,9 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
               repeatPattern={repeatPattern}
               onRepeatPatternChange={handleChangeRepeatPattern}
               selectedStitchColor={selectedStitchColor}
+              tempStitchColor={tempStitchColor}
               onSelectedStitchColorChange={handleColorChange}
+              onColorPickerOpenChange={handleColorPickerOpenChange}
               colorPresets={colorPresets}
               onAddColorPreset={handleAddColorPreset}
               onRemoveColorPreset={handleRemoveColorPreset}
@@ -734,7 +835,10 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
               stitchWidth={stitchWidth}
               onStitchWidthChange={handleChangeSelectedStitchWidth}
               gapSize={gapSize}
+              tempGapSize={tempGapSize}
               onGapSizeChange={handleChangeSelectedGapSize}
+              onGapSliderStart={handleGapSliderStart}
+              onGapSliderCommit={handleGapSliderCommit}
               showGrid={showGrid}
               onShowGridChange={setShowGrid}
               displayUnit={displayUnit}
@@ -759,6 +863,8 @@ const BUILT_IN_PATTERNS = patternsData.map(clonePattern);export default function
             patternTiles={patternTiles}
             pattern={currentPattern}
             stitchColors={stitchColors}
+            tempStitchColor={tempStitchColor}
+            tempGapSize={tempGapSize}
             selectedStitchIds={selectedStitchIds}
             onSelectStitchIds={setSelectedStitchIds}
             onAddStitch={handleAddStitch}

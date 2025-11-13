@@ -9,7 +9,7 @@ import ErrorBoundary from '../components/ErrorBoundary.jsx';
 		<PatternDesigner client:only="react" />
 	</ErrorBoundary>
 	
-	<!-- Service Worker Registration -->
+	<!-- PWA Service Worker Registration -->
 	<script is:inline>
 		if ('serviceWorker' in navigator) {
 			window.addEventListener('load', () => {

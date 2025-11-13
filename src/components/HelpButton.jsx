@@ -48,7 +48,7 @@ export function HelpButton() {
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-medium min-w-30">Stitch Settings:</span>
-                <span className="text-muted-foreground">Opens a popover to adjust stitch length (Small/Medium/Large), gap spacing, and width (Thin/Medium/Bold).</span>
+                <span className="text-muted-foreground">Opens a popover to adjust stitch length (Small/Medium/Large), gap spacing, and width (Thin/Medium/Thick).</span>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-medium min-w-30">Repeat Pattern (R):</span>

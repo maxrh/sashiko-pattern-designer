@@ -18,7 +18,9 @@ export function Toolbar({
   repeatPattern,
   onRepeatPatternChange,
   selectedStitchColor,
+  tempStitchColor,
   onSelectedStitchColorChange,
+  onColorPickerOpenChange,
   colorPresets,
   onAddColorPreset,
   onRemoveColorPreset,
@@ -27,7 +29,10 @@ export function Toolbar({
   stitchWidth,
   onStitchWidthChange,
   gapSize,
+  tempGapSize,
   onGapSizeChange,
+  onGapSliderStart,
+  onGapSliderCommit,
   showGrid,
   onShowGridChange,
   displayUnit,
@@ -44,7 +49,8 @@ export function Toolbar({
 
   // Memoize display values to avoid recalculating on every render
   const gapDisplayValue = useMemo(() => {
-    const value = formatValueNumber(gapSize, displayUnit, displayUnit === 'cm' ? 2 : 1);
+    const currentGap = tempGapSize ?? gapSize;
+    const value = formatValueNumber(currentGap, displayUnit, displayUnit === 'cm' ? 2 : 1);
     // Format to always show decimals
     if (displayUnit === 'mm') {
       return Number(value).toFixed(1);
@@ -52,7 +58,7 @@ export function Toolbar({
       return Number(value).toFixed(2);
     }
     return value;
-  }, [gapSize, displayUnit]);
+  }, [gapSize, tempGapSize, displayUnit]);
 
   // Calculate stitch preview parameters
   const stitchPreviewParams = useMemo(() => {
@@ -127,8 +133,9 @@ export function Toolbar({
         <ButtonGroup>
 
           <ColorPicker
-            value={selectedStitchColor}
+            value={tempStitchColor || selectedStitchColor}
             onChange={onSelectedStitchColorChange}
+            onOpenChange={onColorPickerOpenChange}
             presetColors={colorPresets}
             onAddPreset={onAddColorPreset}
             onRemovePreset={onRemoveColorPreset}
@@ -140,7 +147,7 @@ export function Toolbar({
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <Button variant="outline"  className="w-20 px-2 justify-center">
-                    <svg width="56" height="16" viewBox="0 0 56 16" preserveAspectRatio="none" className="!w-full overflow-visible">
+                    <svg width="56" height="16" viewBox="0 0 56 16" preserveAspectRatio="none" className="w-full! overflow-visible">
                       <line
                         x1="0"
                         y1="8"
@@ -167,21 +174,27 @@ export function Toolbar({
                     <Button
                       variant={stitchSize === 'small' ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => onStitchSizeChange('small')}
+                      onClick={() => {
+                        onStitchSizeChange('small');
+                      }}
                     >
                       Small
                     </Button>
                     <Button
                       variant={stitchSize === 'medium' ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => onStitchSizeChange('medium')}
+                      onClick={() => {
+                        onStitchSizeChange('medium');
+                      }}
                     >
                       Medium
                     </Button>
                     <Button
                       variant={stitchSize === 'large' ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => onStitchSizeChange('large')}
+                      onClick={() => {
+                        onStitchSizeChange('large');
+                      }}
                     >
                       Large
                     </Button>
@@ -195,8 +208,10 @@ export function Toolbar({
                     min={1}
                     max={30}
                     step={1}
-                    value={[gapSize]}
+                    value={[tempGapSize ?? gapSize]}
                     onValueChange={handleGapSizeChange}
+                    onPointerDown={onGapSliderStart}
+                    onValueCommit={onGapSliderCommit}
                   />
                 </div>
 
@@ -206,7 +221,9 @@ export function Toolbar({
                     <Button
                       variant={stitchWidth === 'thin' ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => onStitchWidthChange('thin')}
+                      onClick={() => {
+                        onStitchWidthChange('thin');
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
@@ -216,7 +233,9 @@ export function Toolbar({
                     <Button
                       variant={stitchWidth === 'normal' ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => onStitchWidthChange('normal')}
+                      onClick={() => {
+                        onStitchWidthChange('normal');
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
@@ -224,13 +243,15 @@ export function Toolbar({
                       </div>
                     </Button>
                     <Button
-                      variant={stitchWidth === 'bold' ? 'default' : 'outline'}
+                      variant={stitchWidth === 'thick' ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => onStitchWidthChange('bold')}
+                      onClick={() => {
+                        onStitchWidthChange('thick');
+                      }}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.bold}px` }} />
-                        <span>Bold</span>
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thick}px` }} />
+                        <span>Thick</span>
                       </div>
                     </Button>
                   </ButtonGroup>

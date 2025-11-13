@@ -9,6 +9,7 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  onValueCommit,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const _values = React.useMemo(
@@ -28,6 +29,7 @@ function Slider({
       value={value}
       min={min}
       max={max}
+      onValueCommit={onValueCommit}
       className={cn(
         "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
         className

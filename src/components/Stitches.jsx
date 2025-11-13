@@ -20,7 +20,7 @@ export const STITCH_SIZE_RATIOS = {
 export const STITCH_WIDTHS = {
   thin: 2,
   normal: 3,
-  bold: 4
+  thick: 4
 };
 
 // Gap size between stitches (in pixels)

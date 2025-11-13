@@ -27,6 +27,7 @@ export function usePatternImportExport({
   setTileOutlineColor,
   setArtboardOutlineColor,
   canvasRef,
+  historyManager, // Add history manager parameter
 }) {
   /**
    * Export current pattern as JSON file
@@ -112,9 +113,16 @@ export function usePatternImportExport({
         });
         
         setCurrentPattern(normalized);
-        setStitchColors(deriveColorMap(normalized));
+        const colorMap = deriveColorMap(normalized);
+        setStitchColors(colorMap);
         setSelectedStitchIds(new Set());
         setDrawingState((prev) => ({ ...prev, firstPoint: null }));
+        
+        // Reset history with imported pattern as initial state
+        historyManager.clearHistory({
+          pattern: { stitches: normalized.stitches },
+          stitchColors: colorMap,
+        });
         
         // Restore UI state if included in the imported pattern
         if (parsed.uiState) {

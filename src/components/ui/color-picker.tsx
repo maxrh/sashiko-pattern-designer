@@ -8,6 +8,8 @@ import { Pipette, Plus, X } from 'lucide-react';
 interface ColorPickerProps {
   value: string;
   onChange: (value: string) => void;
+  onClose?: () => void; // Called when color picker closes
+  onOpenChange?: (open: boolean) => void; // Called when open state changes
   presetColors?: string[];
   onAddPreset?: (color: string) => void;
   onRemovePreset?: (color: string) => void;
@@ -96,6 +98,8 @@ function hsvToRgb(h: number, s: number, v: number): { r: number; g: number; b: n
 export function ColorPicker({
   value,
   onChange,
+  onClose,
+  onOpenChange,
   presetColors,
   onAddPreset,
   onRemovePreset,
@@ -269,7 +273,17 @@ export function ColorPicker({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(newOpen) => {
+      setOpen(newOpen);
+      // Call external onOpenChange handler
+      if (onOpenChange) {
+        onOpenChange(newOpen);
+      }
+      // Call onClose when popover closes
+      if (!newOpen && onClose) {
+        onClose();
+      }
+    }}>
       {tooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>

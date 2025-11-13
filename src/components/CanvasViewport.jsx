@@ -11,6 +11,8 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   patternTiles,
   pattern,
   stitchColors,
+  tempStitchColor,
+  tempGapSize,
   selectedStitchIds,
   onSelectStitchIds,
   onAddStitch,
@@ -224,6 +226,8 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           artboardHeight={artboardHeight}
           pattern={pattern}
           stitchColors={stitchColors}
+          tempStitchColor={tempStitchColor}
+          tempGapSize={tempGapSize}
           selectedStitchIds={selectedStitchIds}
           onSelectStitchIds={onSelectStitchIds}
           onAddStitch={onAddStitch}
