@@ -64,11 +64,11 @@ export function Toolbar({
   const stitchPreviewParams = useMemo(() => {
     const sizeMultipliers = { small: 0.25, medium: 1.25, large: 2.5 };
     const baseDashLength = 8 * sizeMultipliers[stitchSize];
-    const baseGapLength = gapSize * 1; // Scale down gap for preview
+    const baseGapLength = (tempGapSize ?? gapSize) * 1; // Use temp value for live preview
     const strokeWidth = STITCH_WIDTHS[stitchWidth];
     
     return { baseDashLength, baseGapLength, strokeWidth };
-  }, [stitchSize, gapSize, stitchWidth]);
+  }, [stitchSize, gapSize, stitchWidth, tempGapSize]);
 
   return (
     <TooltipProvider>
