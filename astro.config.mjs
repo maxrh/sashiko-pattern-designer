@@ -9,61 +9,40 @@ import AstroPWA from '@vite-pwa/astro';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://sashiko.design',
+  site: 'https://sashiko-pattern-designer.pages.dev',
   integrations: [
     react(),
     AstroPWA({
       registerType: 'autoUpdate',
-      manifest: {
-        name: 'Sashiko Pattern Designer',
-        short_name: 'Sashiko',
-        description: 'Interactive tool for designing traditional Japanese Sashiko embroidery patterns',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
-        display: 'standalone',
-        start_url: '/',
-        scope: '/',
-        icons: [
-          {
-            src: '/android/android-launchericon-192-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/android/android-launchericon-512-512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        cleanupOutdatedCaches: true,
-        // Skip waiting - update immediately when new version available
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
-            // HTML pages - Network first (always check for updates when online)
+            // HTML pages - Serve from cache immediately, update in background
             urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'pages-cache',
-              networkTimeoutSeconds: 3, // Fallback to cache after 3 seconds
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
               }
             }
           },
           {
-            // JS and CSS - Stale-while-revalidate (serve cache but update in background)
+            // JS and CSS - Serve from cache, update in background
             urlPattern: /\.(?:js|css)$/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'static-assets-cache',
               expiration: {
-                maxEntries: 100,
+                maxEntries: 60,
                 maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
               }
             }
@@ -82,6 +61,28 @@ export default defineConfig({
           }
         ]
       },
+      manifest: {
+        name: 'Sashiko Pattern Designer',
+        short_name: 'Sashiko',
+        description: 'Interactive tool for designing traditional Japanese Sashiko embroidery patterns',
+        theme_color: '#fafafa',
+        background_color: '#fafafa',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          {
+            src: '/android/android-launchericon-192-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/android/android-launchericon-512-512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      },
       devOptions: {
         enabled: false
       }
@@ -92,11 +93,15 @@ export default defineConfig({
     plugins: [tailwindcss()],
     server: {
       hmr: {
-        overlay: false
+        overlay: false,
+        port: 4321
       }
     },
     optimizeDeps: {
       include: ['react', 'react-dom']
+    },
+    build: {
+      minify: 'esbuild'
     }
   }
 });
