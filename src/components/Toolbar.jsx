@@ -5,7 +5,6 @@ import { Button } from './ui/button';
 import { SidebarTrigger } from './ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
 import { Label } from './ui/label';
 import { ColorPicker } from './ui/color-picker';
@@ -25,8 +24,10 @@ export function Toolbar({
   onAddColorPreset,
   onRemoveColorPreset,
   stitchSize,
+  tempStitchSize,
   onStitchSizeChange,
   stitchWidth,
+  tempStitchWidth,
   onStitchWidthChange,
   gapSize,
   tempGapSize,
@@ -63,12 +64,15 @@ export function Toolbar({
   // Calculate stitch preview parameters
   const stitchPreviewParams = useMemo(() => {
     const sizeMultipliers = { small: 0.25, medium: 1.25, large: 2.5 };
-    const baseDashLength = 8 * sizeMultipliers[stitchSize];
+    const currentStitchSize = tempStitchSize ?? stitchSize;
+    const currentStitchWidth = tempStitchWidth ?? stitchWidth;
+    
+    const baseDashLength = 8 * sizeMultipliers[currentStitchSize];
     const baseGapLength = (tempGapSize ?? gapSize) * 1; // Use temp value for live preview
-    const strokeWidth = STITCH_WIDTHS[stitchWidth];
+    const strokeWidth = STITCH_WIDTHS[currentStitchWidth];
     
     return { baseDashLength, baseGapLength, strokeWidth };
-  }, [stitchSize, gapSize, stitchWidth, tempGapSize]);
+  }, [stitchSize, tempStitchSize, gapSize, tempGapSize, stitchWidth, tempStitchWidth]);
 
   return (
     <TooltipProvider>
@@ -332,16 +336,6 @@ export function Toolbar({
             </TooltipContent>
           </Tooltip>
         </ButtonGroup>
-
-        {selectedStitch && (
-          <>
-            <ButtonGroupSeparator />
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Start: ({selectedStitch.start.x}, {selectedStitch.start.y})</span>
-              <span>End: ({selectedStitch.end.x}, {selectedStitch.end.y})</span>
-            </div>
-          </>
-        )}
       </div>
     </TooltipProvider>
   );

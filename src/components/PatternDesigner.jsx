@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import patternsData from '../data/patterns.json';
 import { CanvasViewport } from './CanvasViewport.jsx';
 import { Toolbar } from './Toolbar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
@@ -70,6 +69,8 @@ export default function PatternDesigner() {
   const [isEditingProperties, setIsEditingProperties] = useState(false);
   const [tempStitchColor, setTempStitchColor] = useState(null);
   const [tempGapSize, setTempGapSize] = useState(null);
+  const [tempStitchSize, setTempStitchSize] = useState(null);
+  const [tempStitchWidth, setTempStitchWidth] = useState(null);
   const isColorPickerOpenRef = useRef(false);
   const isGapSliderActiveRef = useRef(false);
   const [stitchSize, setStitchSize] = useState(DEFAULT_STITCH_SIZE);
@@ -88,12 +89,18 @@ export default function PatternDesigner() {
 
   // Color presets for SketchPicker
   const [colorPresets, setColorPresets] = useState([
-    '#6366f1', // Indigo
-    '#f5f5f5', // White
-    '#ef4444', // Red
-    '#14b8a6', // Teal
-    '#fb7185', // Coral
-    '#0b1120', // Black
+    '#0f172a', // slate-900
+    '#f5f5f5', // neutral-100
+    '#a8a29e', // stone-400
+    '#475569', // slate-600
+    '#14b8a6', // teal-500
+    '#fbbf24', // amber-400
+    '#fb7185', // rose-400
+    '#9f1239', // rose-900
+    '#15803d', // green-700
+    '#064e3b', // emerald-900
+    '#0c4a6e', // sky-900
+    '#1e1b4b', // indigo-900
   ]);
 
   const [sidebarTab, setSidebarTab] = useState('controls');
@@ -171,7 +178,7 @@ export default function PatternDesigner() {
     historyManager, // Add history manager for reset on import
   });
 
-  // Property editor handlers - only for stitch size/width that don't have live preview yet
+  // Property editor handlers - stitch size/width with temporary state system
   const {
     handleChangeSelectedStitchSize,
     handleChangeSelectedStitchWidth,
@@ -180,6 +187,8 @@ export default function PatternDesigner() {
     setCurrentPattern,
     setStitchSize,
     setStitchWidth,
+    setTempStitchSize,
+    setTempStitchWidth,
     setIsEditingProperties,
   });
 
@@ -291,10 +300,38 @@ export default function PatternDesigner() {
     }
   }, [tempStitchColor, selectedStitchIds]);
 
+  // Canvas update effect for stitch size - applies temporary size for live preview
+  useEffect(() => {
+    if (tempStitchSize !== null && selectedStitchIds.size > 0) {
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, stitchSize: tempStitchSize }
+            : stitch
+        ),
+      }));
+    }
+  }, [tempStitchSize, selectedStitchIds]);
+
+  // Canvas update effect for stitch width - applies temporary width for live preview
+  useEffect(() => {
+    if (tempStitchWidth !== null && selectedStitchIds.size > 0) {
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, stitchWidth: tempStitchWidth }
+            : stitch
+        ),
+      }));
+    }
+  }, [tempStitchWidth, selectedStitchIds]);
+
   // History update effect - saves to history when property editing ends
   useEffect(() => {
     // Only save to history when we just finished editing properties
-    if (!isEditingProperties && (tempGapSize !== null || tempStitchColor !== null)) {
+    if (!isEditingProperties && (tempGapSize !== null || tempStitchColor !== null || tempStitchSize !== null || tempStitchWidth !== null)) {
       // Use a timeout to batch the history save after property changes settle
       const timeoutId = setTimeout(() => {
         // Save current state to history after property editing is complete
@@ -308,11 +345,13 @@ export default function PatternDesigner() {
         // Clear temporary states
         setTempGapSize(null);
         setTempStitchColor(null);
+        setTempStitchSize(null);
+        setTempStitchWidth(null);
       }, 100); // Small delay to ensure all state updates are complete
       
       return () => clearTimeout(timeoutId);
     }
-  }, [isEditingProperties, tempGapSize, tempStitchColor, currentPattern, stitchColors, historyManager]);
+  }, [isEditingProperties, tempGapSize, tempStitchColor, tempStitchSize, tempStitchWidth, currentPattern, stitchColors, historyManager]);
 
   // Save state to history whenever pattern or colors change (for undo/redo)
   // History is now persisted to IndexedDB, so we can record from the start
@@ -327,7 +366,7 @@ export default function PatternDesigner() {
     if (isEditingProperties) return;
     
     // Skip if we have temporary property changes pending (they'll be saved separately)
-    if (tempGapSize !== null || tempStitchColor !== null) return;
+    if (tempGapSize !== null || tempStitchColor !== null || tempStitchSize !== null || tempStitchWidth !== null) return;
     
     historyManager.pushHistory({
       pattern: {
@@ -831,8 +870,10 @@ export default function PatternDesigner() {
               onAddColorPreset={handleAddColorPreset}
               onRemoveColorPreset={handleRemoveColorPreset}
               stitchSize={stitchSize}
+              tempStitchSize={tempStitchSize}
               onStitchSizeChange={handleChangeSelectedStitchSize}
               stitchWidth={stitchWidth}
+              tempStitchWidth={tempStitchWidth}
               onStitchWidthChange={handleChangeSelectedStitchWidth}
               gapSize={gapSize}
               tempGapSize={tempGapSize}
