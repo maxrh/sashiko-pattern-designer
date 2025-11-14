@@ -4,6 +4,8 @@ import { Toolbar } from './Toolbar.jsx';
 import { AppSidebar } from './AppSidebar.jsx';
 import { HelpButton } from './HelpButton.jsx';
 import OfflineIndicator from './OfflineIndicator.jsx';
+import { Badge } from './ui/badge.tsx';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip.tsx';
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
@@ -104,8 +106,24 @@ export default function PatternDesigner() {
   ]);
 
   const [sidebarTab, setSidebarTab] = useState('controls');
+  const [appVersion, setAppVersion] = useState(null);
+  const [buildTime, setBuildTime] = useState(null);
   const canvasRef = useRef(null);
   const hasInitialized = useRef(false); // Track if initial load is complete
+
+  // Load app version from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('app_version');
+      if (stored) {
+        const versionData = JSON.parse(stored);
+        setAppVersion(versionData.version);
+        setBuildTime(versionData.buildTime);
+      }
+    } catch (e) {
+      console.log('Could not read version');
+    }
+  }, []);
 
   // Initialize database and load saved state
   useEffect(() => {
@@ -891,6 +909,23 @@ export default function PatternDesigner() {
               selectedStitch={selectedStitchIds.size === 1 ? currentPattern.stitches.find(s => selectedStitchIds.has(s.id)) : null}
             />
             <div className="ml-auto flex items-center gap-2">
+              {appVersion && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs font-mono cursor-help">
+                        v{appVersion}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs">
+                        <div>Build: {buildTime ? new Date(buildTime).toLocaleString() : 'Unknown'}</div>
+                        <div className="text-muted-foreground mt-1">Timestamp: {buildTime ? new Date(buildTime).getTime() : 'N/A'}</div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <OfflineIndicator />
               <HelpButton />
             </div>

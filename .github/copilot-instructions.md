@@ -147,7 +147,12 @@ npm run build            # Build to ./dist/ (static output)
 npm run preview          # Preview production build locally
 ```
 
-**Deployment**: Built for Cloudflare Pages (see `wrangler.jsonc`). Run `npm run build` then deploy `./dist/`.
+**Deployment**: 
+- **Platform**: Cloudflare Pages
+- **Production URL**: https://sashiko-pattern-designer.pages.dev/
+- **Build Command**: `npm run build`
+- **Output Directory**: `./dist/`
+- **Configuration**: See `wrangler.jsonc` and `astro.config.mjs`
 
 **PWA Features**: 
 - Service worker caches all static assets on first visit

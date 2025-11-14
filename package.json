@@ -1,9 +1,10 @@
 {
   "name": "magenta-meteor",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.7.1",
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node scripts/update-version.js",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
