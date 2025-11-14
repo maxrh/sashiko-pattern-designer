@@ -1,17 +1,17 @@
-# Service Worker files - never cache to ensure updates
+# Service Worker files - cache for 1 hour, revalidate after
 /sw.js
-  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
 /workbox-*.js
-  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
-# Version file - never cache to ensure update checks work
+# Version file - cache for 1 hour, revalidate after
 /version.json
-  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
-# App shell - short cache, revalidate frequently
+# HTML - serve fresh but allow stale-while-revalidate
 /*.html
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=0, stale-while-revalidate=3600
 
 # Static assets - cache but revalidate
 /_astro/*
