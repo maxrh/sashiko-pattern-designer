@@ -1,0 +1,18 @@
+# Service Worker files - never cache to ensure updates
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+
+/workbox-*.js
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+
+# Version file - never cache to ensure update checks work
+/version.json
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+
+# App shell - short cache, revalidate frequently
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Static assets - cache but revalidate
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
