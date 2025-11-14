@@ -920,7 +920,6 @@ export default function PatternDesigner() {
                     <TooltipContent>
                       <div className="text-xs">
                         <div>Build: {buildTime ? new Date(buildTime).toLocaleString() : 'Unknown'}</div>
-                        <div className="text-muted-foreground mt-1">Timestamp: {buildTime ? new Date(buildTime).getTime() : 'N/A'}</div>
                       </div>
                     </TooltipContent>
                   </Tooltip>
