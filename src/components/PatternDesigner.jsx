@@ -89,18 +89,18 @@ export default function PatternDesigner() {
 
   // Color presets for SketchPicker
   const [colorPresets, setColorPresets] = useState([
-    '#0f172a', // slate-900
+    '#0a0a0a', // neutral-950
     '#f5f5f5', // neutral-100
     '#a8a29e', // stone-400
-    '#475569', // slate-600
-    '#14b8a6', // teal-500
     '#fbbf24', // amber-400
+    '#ca8a04', // yellow-600
     '#fb7185', // rose-400
-    '#9f1239', // rose-900
-    '#15803d', // green-700
+    '#b91c1c', // red-700
+    '#10b981', // emerald-500
     '#064e3b', // emerald-900
+    '#475569', // slate-600
     '#0c4a6e', // sky-900
-    '#1e1b4b', // indigo-900
+    '#0f172a', // slate-900
   ]);
 
   const [sidebarTab, setSidebarTab] = useState('controls');
