@@ -38,6 +38,37 @@ import ErrorBoundary from '../components/ErrorBoundary.jsx';
 					// Store version for UI display
 					setTimeout(storeVersion, 1000);
 					
+					// Manual cache clear shortcut (Ctrl+Shift+U)
+					window.addEventListener('keydown', async (e) => {
+						if (e.ctrlKey && e.shiftKey && e.key === 'U') {
+							e.preventDefault();
+							console.log('🔄 Manual cache clear triggered...');
+							
+							try {
+								// Unregister all service workers
+								const registrations = await navigator.serviceWorker.getRegistrations();
+								for (let reg of registrations) {
+									await reg.unregister();
+									console.log('✅ Service worker unregistered');
+								}
+								
+								// Clear all cache storage (preserves localStorage/IndexedDB)
+								if ('caches' in window) {
+									const cacheNames = await caches.keys();
+									await Promise.all(cacheNames.map(name => caches.delete(name)));
+									console.log('✅ All caches cleared:', cacheNames);
+								}
+								
+								// Hard reload to get fresh content
+								console.log('🔄 Reloading with fresh content...');
+								window.location.reload(true);
+							} catch (error) {
+								console.error('❌ Cache clear failed:', error);
+								alert('Failed to clear cache. Check console for details.');
+							}
+						}
+					});
+					
 				} catch (error) {
 					console.log('SW registration failed:', error);
 				}
