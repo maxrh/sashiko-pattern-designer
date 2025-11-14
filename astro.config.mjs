@@ -28,7 +28,7 @@ export default defineConfig({
               cacheName: 'pages-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 // 1 hour
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -43,7 +43,7 @@ export default defineConfig({
               cacheName: 'static-assets-cache',
               expiration: {
                 maxEntries: 60,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 // 1 hour
               }
             }
           },
@@ -55,7 +55,7 @@ export default defineConfig({
               cacheName: 'media-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
               }
             }
           }
