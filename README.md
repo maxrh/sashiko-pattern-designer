@@ -218,8 +218,6 @@ All commands are run from the root of the project, from a terminal:
 - **Export**: JSON format for patterns, PNG for images
 - **Benefits**: ~50MB+ capacity, async operations, structured querying, cloud sync ready
 
-For complete technical specifications, architecture details, and coordinate system documentation, see [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md).
-
 ## Usage Tips
 
 ### Getting Started
