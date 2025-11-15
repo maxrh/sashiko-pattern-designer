@@ -1,94 +1,93 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Button } from './ui/button';
 
 /**
  * OfflineIndicator - Shows connection status icon in header
- * Uses navigator.onLine + periodic connectivity tests for accuracy
+ * Uses browser events + periodic checks when offline for reliable detection
  */
 export default function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(() => 
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
-  const isOnlineRef = useRef(isOnline);
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    isOnlineRef.current = isOnline;
-  }, [isOnline]);
-
-  // Test actual network connectivity (not just navigator.onLine)
-  const testConnectivity = useCallback(async () => {
-    if (!navigator.onLine) return false;
-    
-    try {
-      const controller = new AbortController();
-      setTimeout(() => controller.abort(), 2000);
-      
-      await fetch('/favicon.svg', {
-        method: 'HEAD',
-        cache: 'no-cache',
-        signal: controller.signal
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
-    // Test connectivity on mount
+    // Verify actual connectivity
     const checkConnection = async () => {
-      const connected = await testConnectivity();
-      setIsOnline(connected);
-    };
-    checkConnection();
-
-    // Handle browser online/offline events
-    const handleOnline = async () => {
-      const connected = await testConnectivity();
-      setIsOnline(connected);
+      if (!navigator.onLine) {
+        setIsOnline(false);
+        return false;
+      }
       
-      // Auto-update service worker when back online
-      if (connected && 'serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.getRegistration();
-          if (registration?.waiting) {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            window.location.reload();
-          } else {
-            await registration?.update();
-          }
-        } catch (error) {
-          console.error('Service worker update failed:', error);
-        }
+      try {
+        await fetch('/favicon.svg', { 
+          method: 'HEAD', 
+          cache: 'no-cache',
+          signal: AbortSignal.timeout(2000)
+        });
+        setIsOnline(true);
+        return true;
+      } catch {
+        setIsOnline(false);
+        return false;
       }
     };
 
-    const handleOffline = () => setIsOnline(false);
+    // Start/stop polling based on connection status
+    const startPolling = () => {
+      if (intervalRef.current) return; // Already polling
+      intervalRef.current = setInterval(async () => {
+        const connected = await checkConnection();
+        if (connected) {
+          stopPolling(); // Stop polling once back online
+        }
+      }, 3000); // Check every 3 seconds when offline
+    };
+
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    // Check on mount and start polling if offline
+    checkConnection().then(connected => {
+      if (!connected) startPolling();
+    });
+
+    const handleOnline = async () => {
+      stopPolling();
+      await checkConnection();
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      startPolling();
+    };
+
+    // Check when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkConnection().then(connected => {
+          if (!connected && !intervalRef.current) startPolling();
+        });
+      }
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Periodic connectivity check ONLY when offline (to detect when back online)
-    const interval = setInterval(async () => {
-      // Use ref to get current online status without dependency issues
-      if (!isOnlineRef.current) {
-        const connected = await testConnectivity();
-        if (connected) {
-          setIsOnline(true);
-          handleOnline();
-        }
-      }
-    }, 5000); // Check every 5 seconds when offline
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      stopPolling();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [testConnectivity])
+  }, []);
 
   return (
     <TooltipProvider>
