@@ -19,8 +19,4 @@ const version = {
 const versionPath = join(__dirname, '..', 'public', 'version.json');
 writeFileSync(versionPath, JSON.stringify(version, null, 2));
 
-// Format build time for readable logging
-const buildDate = new Date(version.buildTime).toLocaleString();
-
-console.log(`✅ Version ${version.version} built at ${buildDate}`);
-
+console.log(`✅ Version ${version.version}`);

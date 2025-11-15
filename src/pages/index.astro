@@ -28,7 +28,12 @@ import ErrorBoundary from '../components/ErrorBoundary.jsx';
 							if (response.ok) {
 								const versionData = await response.json();
 								localStorage.setItem('app_version', JSON.stringify(versionData));
-								console.log('Version:', versionData.version);
+								console.log(`Version ${versionData.version} built at ${versionData.buildTime}`);
+								
+								// Trigger custom event so React component can update
+								window.dispatchEvent(new CustomEvent('versionUpdated', { 
+									detail: versionData 
+								}));
 							}
 						} catch (error) {
 							console.log('Could not load version:', error.message);
