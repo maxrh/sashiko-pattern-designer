@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Button } from './ui/button';
@@ -11,6 +11,12 @@ export default function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(() => 
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+  const isOnlineRef = useRef(isOnline);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
 
   // Test actual network connectivity (not just navigator.onLine)
   const testConnectivity = useCallback(async () => {
@@ -31,23 +37,21 @@ export default function OfflineIndicator() {
     }
   }, []);
 
-  // Update connection status
-  const updateConnectionStatus = useCallback(async () => {
-    const connected = await testConnectivity();
-    setIsOnline(connected);
-    return connected;
-  }, [testConnectivity]);
-
   useEffect(() => {
     // Test connectivity on mount
-    updateConnectionStatus();
+    const checkConnection = async () => {
+      const connected = await testConnectivity();
+      setIsOnline(connected);
+    };
+    checkConnection();
 
     // Handle browser online/offline events
     const handleOnline = async () => {
-      const actuallyOnline = await updateConnectionStatus();
+      const connected = await testConnectivity();
+      setIsOnline(connected);
       
       // Auto-update service worker when back online
-      if (actuallyOnline && 'serviceWorker' in navigator) {
+      if (connected && 'serviceWorker' in navigator) {
         try {
           const registration = await navigator.serviceWorker.getRegistration();
           if (registration?.waiting) {
@@ -69,12 +73,11 @@ export default function OfflineIndicator() {
 
     // Periodic connectivity check ONLY when offline (to detect when back online)
     const interval = setInterval(async () => {
-      // Only check if we think we're offline
-      if (!isOnline) {
+      // Use ref to get current online status without dependency issues
+      if (!isOnlineRef.current) {
         const connected = await testConnectivity();
         if (connected) {
           setIsOnline(true);
-          // Trigger online handler when we detect we're back online
           handleOnline();
         }
       }
@@ -85,7 +88,7 @@ export default function OfflineIndicator() {
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
     };
-  }, [updateConnectionStatus, testConnectivity, isOnline]); // Add isOnline to dependencies
+  }, [testConnectivity])
 
   return (
     <TooltipProvider>

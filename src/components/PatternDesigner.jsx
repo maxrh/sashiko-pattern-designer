@@ -378,44 +378,35 @@ export default function PatternDesigner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPattern.stitches, stitchColors]); // Only trigger on stitches or colors, NOT config changes
 
-  // Auto-save to database whenever pattern, colors, or settings change
-  // This triggers when: stitches added/removed/modified, colors changed, or UI settings changed
-  // Only save after initial load is complete to avoid overwriting saved data
+  // Auto-save to database whenever pattern or colors change (throttled)
+  // Only save stitches and colors - UI settings saved separately on user action
   useEffect(() => {
     if (!hasInitialized.current) return;
     
-    saveCurrentPattern(currentPattern, stitchColors, {
-      patternTiles,
-      defaultThreadColor: defaultStitchColor,
-      backgroundColor,
-      selectedStitchColor,
-      stitchSize,
-      stitchWidth,
-      gapSize,
-      repeatPattern,
-      showGrid,
-      gridColor,
-      tileOutlineColor,
-      artboardOutlineColor,
-      displayUnit,
-      colorPresets,
-    });
+    const timeoutId = setTimeout(() => {
+      saveCurrentPattern(currentPattern, stitchColors, {
+        patternTiles,
+        defaultThreadColor: defaultStitchColor,
+        backgroundColor,
+        selectedStitchColor,
+        stitchSize,
+        stitchWidth,
+        gapSize,
+        repeatPattern,
+        showGrid,
+        gridColor,
+        tileOutlineColor,
+        artboardOutlineColor,
+        displayUnit,
+        colorPresets,
+      });
+    }, 500); // Debounce saves by 500ms to avoid excessive writes
+    
+    return () => clearTimeout(timeoutId);
   }, [
-    currentPattern,
+    currentPattern.stitches, // Only trigger on stitch changes, not config
     stitchColors,
-    patternTiles,
-    backgroundColor,
-    selectedStitchColor,
-    stitchSize,
-    stitchWidth,
-    gapSize,
-    repeatPattern,
-    showGrid,
-    gridColor,
-    tileOutlineColor,
-    artboardOutlineColor,
-    displayUnit,
-    colorPresets,
+    // UI settings removed from dependencies to reduce save frequency
   ]);
 
   // Artboard = the total area containing all pattern tiles
