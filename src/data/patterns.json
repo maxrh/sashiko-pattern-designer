@@ -1,21 +1,5 @@
 [
   {
-    "id": "blank",
-    "name": "Blank Canvas",
-    "description": "Start with a clean canvas",
-    "isStarterPattern": true,
-    "tileSize": {"x":10,"y":10},
-    "gridSize": 20,
-    "patternTiles": {"x":4,"y":4},
-    "stitches": [],
-    "uiState": {
-      "backgroundColor": "#0f172a",
-      "gridColor": "#94a3b840",
-      "tileOutlineColor": "#94a3b826",
-      "artboardOutlineColor": "#3b82f680"
-    }
-  },
-  {
     "id": "asanoha",
     "name": "Asanoha",
     "description": "Hemp leaf pattern",

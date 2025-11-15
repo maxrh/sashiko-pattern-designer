@@ -1,21 +1,24 @@
 import { useState } from 'react';
-import patternsData from '../data/patterns.json';
 import { 
   normalizePatternTiles,
-  clonePattern,
 } from '../lib/patternUtils.js';
-import { DEFAULT_PATTERN_TILES } from './useUiState.js';
+import { DEFAULT_PATTERN_TILES, DEFAULT_TILE_SIZE, DEFAULT_GRID_SIZE } from './useUiState.js';
 
 /**
  * Custom hook for managing pattern state
  * Handles currentPattern, stitchColors, selection, and drawing state
  */
 export function usePatternState() {
-  // Initialize pattern from defaults (will be loaded from IndexedDB in PatternDesigner useEffect)
-  const [currentPattern, setCurrentPattern] = useState(() => {
-    const fallback = patternsData.find((pattern) => pattern.id === 'blank') ?? patternsData[0];
-    return clonePattern(fallback);
-  });
+  // Initialize with empty "Untitled Pattern" (will be loaded from IndexedDB in PatternDesigner useEffect)
+  const [currentPattern, setCurrentPattern] = useState(() => ({
+    id: `pattern-${Date.now()}`,
+    name: 'Untitled Pattern',
+    description: '',
+    tileSize: DEFAULT_TILE_SIZE,
+    gridSize: DEFAULT_GRID_SIZE,
+    patternTiles: { x: DEFAULT_PATTERN_TILES, y: DEFAULT_PATTERN_TILES },
+    stitches: [],
+  }));
 
   // Initialize stitch colors from pattern (will be loaded from IndexedDB in PatternDesigner useEffect)
   const [stitchColors, setStitchColors] = useState(() => new Map());

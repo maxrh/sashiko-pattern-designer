@@ -14,6 +14,7 @@ import { usePatternLibrary } from '../hooks/usePatternLibrary.js';
 import { usePatternState } from '../hooks/usePatternState.js';
 import { usePatternImportExport } from '../hooks/usePatternImportExport.js';
 import { usePropertyEditor } from '../hooks/usePropertyEditor.js';
+import { usePatternActions } from '../hooks/usePatternActions.js';
 import { 
   useUiState,
   DEFAULT_STITCH_COLOR,
@@ -79,6 +80,15 @@ export default function PatternDesigner() {
   const canvasRef = useRef(null);
   const hasInitializedRef = useRef(false); // Track if initial load is complete
 
+  // Pattern actions (create new pattern)
+  const { createNewPattern, resetToDefaults } = usePatternActions({
+    uiState,
+    setCurrentPattern,
+    setStitchColors,
+    setSelectedStitchIds,
+    setDrawingState,
+  });
+
   // Initialize database and load saved state
   useEffect(() => {
     // Only initialize once
@@ -91,17 +101,20 @@ export default function PatternDesigner() {
         
         // Load saved current pattern and UI state
         const saved = await loadCurrentPattern();
-        if (saved) {
-          if (saved.pattern) {
-            setCurrentPattern(saved.pattern);
-            // Sync artboard config from saved pattern to uiState
-            if (saved.pattern.gridSize) uiState.setGridSize(saved.pattern.gridSize);
-            if (saved.pattern.tileSize) uiState.setTileSize(saved.pattern.tileSize);
-            if (saved.pattern.patternTiles) uiState.setPatternTiles(saved.pattern.patternTiles);
-          }
+        if (saved && saved.pattern) {
+          // User has saved work - load it
+          setCurrentPattern(saved.pattern);
+          // Sync artboard config from saved pattern to uiState
+          if (saved.pattern.gridSize) uiState.setGridSize(saved.pattern.gridSize);
+          if (saved.pattern.tileSize) uiState.setTileSize(saved.pattern.tileSize);
+          if (saved.pattern.patternTiles) uiState.setPatternTiles(saved.pattern.patternTiles);
+          
           if (saved.stitchColors) {
             setStitchColors(saved.stitchColors);
           }
+        } else {
+          // First-time user - give them "Untitled Pattern" instead of blank canvas
+          createNewPattern();
         }
         
         // Mark initialization as complete
@@ -114,7 +127,7 @@ export default function PatternDesigner() {
     };
 
     initialize();
-  }, [setCurrentPattern, setStitchColors]);
+  }, [setCurrentPattern, setStitchColors, createNewPattern, uiState]);
 
   // Pattern import/export operations
   const { exportPattern, importPattern, exportImage, copyPatternToClipboard } = usePatternImportExport({
@@ -469,22 +482,8 @@ export default function PatternDesigner() {
   }, [selectedStitchIds]);
 
   const handleNewPattern = useCallback(() => {
-    const tileSize = normalizeTileSize(uiState.tileSize);
-    const gridSize = uiState.gridSize || 20;
-    const freshPattern = {
-      id: `pattern-${Date.now()}`,
-      name: 'Untitled Pattern',
-      description: '',
-      tileSize,
-      gridSize,
-      patternTiles: uiState.patternTiles,
-      stitches: [],
-    };
-    setCurrentPattern(freshPattern);
-    setSelectedStitchIds(new Set());
-    setStitchColors(new Map());
-    setDrawingState((prev) => ({ ...prev, firstPoint: null }));
-  }, [uiState.tileSize, uiState.gridSize, uiState.patternTiles]);
+    createNewPattern();
+  }, [createNewPattern]);
 
   const handlePatternNameChange = useCallback((name) => {
     setCurrentPattern((prev) => ({ ...prev, name }));
@@ -574,9 +573,8 @@ export default function PatternDesigner() {
   }, [uiState]);
 
   const handleResetSettings = useCallback(() => {
-    // Reset all settings to their default values (uiState.resetuiState handles all UI state)
-    uiState.resetuiState();
-  }, [uiState]);
+    resetToDefaults();
+  }, [resetToDefaults]);
 
   const handleSelectPattern = useCallback((pattern) => {
     if (!pattern) return;
