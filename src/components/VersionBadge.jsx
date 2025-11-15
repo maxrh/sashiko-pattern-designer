@@ -34,7 +34,7 @@ export default function VersionBadge() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" className="text-xs font-mono">
+          <Badge variant="outline" className="text-xs font-mono cursor-default">
             {appVersion ? `v${appVersion}` : '···'}
           </Badge>
         </TooltipTrigger>

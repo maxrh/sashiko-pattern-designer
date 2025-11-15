@@ -101,6 +101,7 @@ export default function OfflineIndicator() {
             variant="ghost"
             size="icon"
             aria-label={isOnline ? 'Online' : 'Offline'}
+            className='cursor-default hover:bg-transparent'
           >
             {isOnline ? (
               <Wifi className="h-5 w-5 text-ring" />

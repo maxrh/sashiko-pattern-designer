@@ -232,10 +232,18 @@ export default function PatternDesigner() {
       if (uniqueGapSizes.length === 1 && uniqueGapSizes[0] !== undefined) {
         setGapSize(uniqueGapSizes[0]);
       }
+      
+      // Update stitch color if all selected stitches have the same color
+      const selectedIds = Array.from(selectedStitchIds);
+      const colors = selectedIds.map(id => stitchColors.get(id)).filter(Boolean);
+      const uniqueColors = [...new Set(colors)];
+      if (uniqueColors.length === 1 && uniqueColors[0]) {
+        setSelectedStitchColor(uniqueColors[0]);
+      }
     }
     // When nothing selected, preserve the current selectedStitchColor for drawing
     // Don't reset it to defaultStitchColor to maintain user's color choice
-  }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultStitchColor]);
+  }, [selectedStitchIds, currentPattern.stitches, stitchColors, defaultStitchColor, setSelectedStitchColor]);
 
   // Canvas update effect - applies temporary values immediately to canvas for live preview
   useEffect(() => {
