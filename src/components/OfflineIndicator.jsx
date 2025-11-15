@@ -12,12 +12,15 @@ export default function OfflineIndicator() {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   const intervalRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+    
     // Verify actual connectivity
     const checkConnection = async () => {
       if (!navigator.onLine) {
-        setIsOnline(false);
+        if (isMountedRef.current) setIsOnline(false);
         return false;
       }
       
@@ -27,10 +30,10 @@ export default function OfflineIndicator() {
           cache: 'no-cache',
           signal: AbortSignal.timeout(2000)
         });
-        setIsOnline(true);
+        if (isMountedRef.current) setIsOnline(true);
         return true;
       } catch {
-        setIsOnline(false);
+        if (isMountedRef.current) setIsOnline(false);
         return false;
       }
     };
@@ -64,7 +67,7 @@ export default function OfflineIndicator() {
     };
     
     const handleOffline = () => {
-      setIsOnline(false);
+      if (isMountedRef.current) setIsOnline(false);
       startPolling();
     };
 
@@ -82,6 +85,7 @@ export default function OfflineIndicator() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      isMountedRef.current = false;
       stopPolling();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);

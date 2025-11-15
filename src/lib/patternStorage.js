@@ -23,7 +23,6 @@ export async function saveCurrentPattern(pattern, stitchColors, uiState) {
       stitchColors: Array.from(stitchColors.entries()),
       uiState: {
         patternTiles: uiState.patternTiles,
-        defaultThreadColor: uiState.defaultThreadColor,
         backgroundColor: uiState.backgroundColor,
         selectedStitchColor: uiState.selectedStitchColor,
         stitchSize: uiState.stitchSize,

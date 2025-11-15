@@ -30,6 +30,7 @@ export function CanvasSettings({
   onPatternTilesChange,
   backgroundColor,
   onBackgroundColorChange,
+  onBackgroundColorPickerOpenChange,
   patternName,
   onPatternNameChange,
   patternDescription,
@@ -38,6 +39,7 @@ export function CanvasSettings({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
+  onCanvasSliderCommit,
   displayUnit,
   onDisplayUnitChange,
   artboardWidth,
@@ -48,10 +50,13 @@ export function CanvasSettings({
   onResetSettings,
   gridColor,
   onGridColorChange,
+  onGridColorPickerOpenChange,
   tileOutlineColor,
   onTileOutlineColorChange,
+  onTileOutlineColorPickerOpenChange,
   artboardOutlineColor,
   onArtboardOutlineColorChange,
+  onArtboardOutlineColorPickerOpenChange,
   colorPresets,
   onAddColorPreset,
   onRemoveColorPreset,
@@ -170,6 +175,7 @@ export function CanvasSettings({
             step={1}
             value={[patternTiles.x]}
             onValueChange={(value) => onPatternTilesChange('x', value[0])}
+            onValueCommit={onCanvasSliderCommit}
             className="w-full"
           />
         </div>
@@ -195,6 +201,7 @@ export function CanvasSettings({
             step={1}
             value={[patternTiles.y]}
             onValueChange={(value) => onPatternTilesChange('y', value[0])}
+            onValueCommit={onCanvasSliderCommit}
             className="w-full"
           />
         </div>
@@ -272,6 +279,7 @@ export function CanvasSettings({
             step={1}
             value={[gridSize]}
             onValueChange={(value) => onGridSizeChange(value[0])}
+            onValueCommit={onCanvasSliderCommit}
             className="w-full"
           />
         </div>
@@ -282,6 +290,7 @@ export function CanvasSettings({
             <ColorPicker
               value={backgroundColor}
               onChange={onBackgroundColorChange}
+              onOpenChange={onBackgroundColorPickerOpenChange}
               presetColors={colorPresets}
               onAddPreset={onAddColorPreset}
               onRemovePreset={onRemoveColorPreset}
@@ -316,6 +325,7 @@ export function CanvasSettings({
                 <ColorPicker
                   value={gridColor}
                   onChange={onGridColorChange}
+                  onOpenChange={onGridColorPickerOpenChange}
                   showAlpha={true}
                 />
                 <Input
@@ -342,6 +352,7 @@ export function CanvasSettings({
                 <ColorPicker
                   value={tileOutlineColor}
                   onChange={onTileOutlineColorChange}
+                  onOpenChange={onTileOutlineColorPickerOpenChange}
                   showAlpha={true}
                 />
                 <Input
@@ -368,6 +379,7 @@ export function CanvasSettings({
                 <ColorPicker
                   value={artboardOutlineColor}
                   onChange={onArtboardOutlineColorChange}
+                  onOpenChange={onArtboardOutlineColorPickerOpenChange}
                   showAlpha={true}
                 />
                 <Input
