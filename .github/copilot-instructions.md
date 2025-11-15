@@ -65,8 +65,8 @@ Three distinct coordinate systems exist:
 
 ### State Management (Custom Hooks Pattern)
 - `src/hooks/usePatternState.js` - Core pattern state (currentPattern, stitchColors, selection)
-- `src/hooks/useCanvasSettings.js` - Canvas configuration state & handlers (colors, grid, display unit) with temp state system
-- `src/hooks/useAutoSave.js` - Auto-save UI state to IndexedDB (500ms debounce, separate from undo/redo)
+- `src/hooks/useUiState.js` - UI preferences with localStorage persistence (colors, grid, artboard config, stitch defaults)
+- `src/hooks/useAutoSave.js` - Auto-save pattern data to IndexedDB (500ms debounce, separate from undo/redo)
 - `src/hooks/useHistory.js` - Undo/redo with IndexedDB persistence and duplicate state prevention
 - `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (Dexie/IndexedDB)
 - `src/hooks/usePatternImportExport.js` - JSON export/import, PNG export
@@ -75,18 +75,41 @@ Three distinct coordinate systems exist:
 
 Each hook encapsulates a specific concern and is composed in `PatternDesigner.jsx`.
 
-### Auto-Save & History System (CRITICAL ARCHITECTURE)
+### UI State & Persistence Architecture (CRITICAL)
 
-**Two Separate Persistence Systems - DO NOT COMBINE:**
+**Three-Layer Persistence Strategy:**
 
-**useAutoSave (UI State Persistence)**
-- **Purpose**: Save current working state to survive page refreshes (crash recovery)
-- **What it saves**: Stitches + colors + canvas settings (backgroundColor, gridSize, displayUnit, etc.)
-- **When it saves**: After 500ms debounce on ANY change to stitches, colors, or canvas settings
-- **Storage**: Single "current" entry in `db.currentPattern` table (overwrites previous)
-- **Timing**: Debounced to avoid excessive IndexedDB writes
-- **Key features**: Includes full UI state, single snapshot, survives browser close/refresh
-- **Memory optimization**: Uses `stitchColors.size` in dependencies instead of Map reference to prevent infinite loops
+**1. useUiState (localStorage - Synchronous, No Flash)**
+- **Purpose**: UI preferences that load instantly on page load
+- **Storage**: localStorage (synchronous, ~5MB limit)
+- **What it saves**: 
+  - Fabric & grid colors (backgroundColor, gridColor, tileOutlineColor, artboardOutlineColor)
+  - Artboard configuration (gridSize, tileSize, patternTiles)
+  - Stitch defaults (selectedStitchColor, stitchSize, stitchWidth, gapSize, repeatPattern)
+  - Display preferences (showGrid, displayUnit, colorPresets, sidebarTab)
+- **Auto-save**: Saves to localStorage on every state change (no debounce needed)
+- **Key benefit**: Loads synchronously in useState initializer → **zero flash on page load**
+- **Memory optimization**: Uses object properties in deps (tileSize.x/y, patternTiles.x/y, colorPresets.length)
+
+**2. useAutoSave (IndexedDB - Async, Pattern Data)**
+- **Purpose**: Save current working pattern to survive page refreshes (crash recovery)
+- **Storage**: Single "current" entry in `db.currentPattern` table
+- **What it saves**: Stitches + colors + full UI state snapshot
+- **When it saves**: After 500ms debounce on stitches or UI changes
+- **On app load**: Pattern data loads from IndexedDB (async), syncs artboard config to uiState
+
+**3. Pattern Library (IndexedDB - Saved Patterns)**
+- **Purpose**: User's saved pattern collection with pattern-specific UI state
+- **Storage**: `db.patterns` table with indexing
+- **What it saves**: Complete pattern + stitches + UI state (everything from useUiState)
+- **On pattern load**: Restores pattern's saved UI state to uiState (artboard config, colors, preferences)
+- **Key feature**: Each saved pattern remembers its own UI configuration
+
+**Data Flow:**
+1. **Page Load**: uiState loads from localStorage (instant) → pattern loads from IndexedDB (async) → artboard config syncs
+2. **User Edits**: Changes update uiState (localStorage instant) AND currentPattern (IndexedDB debounced)
+3. **Save Pattern**: Captures current uiState + pattern data → saves to pattern library
+4. **Load Pattern**: Restores pattern's saved uiState → overwrites current working preferences
 
 **useHistory (Undo/Redo System)**
 - **Purpose**: Version control for user actions - allows stepping back/forward through editing states
@@ -97,8 +120,10 @@ Each hook encapsulates a specific concern and is composed in `PatternDesigner.js
 - **Key features**: Bidirectional navigation, history index tracking, pattern-scoped (resets on pattern load)
 - **Skips**: During undo/redo operations, during active property editing
 
-**Why They're Separate:**
-- Different responsibilities: User action tracking vs state persistence
+**Why Three Layers:**
+- **localStorage (uiState)**: Instant loading eliminates flash, small data, synchronous
+- **IndexedDB (autoSave)**: Larger storage, async but doesn't affect initial render
+- **IndexedDB (patterns)**: Pattern-specific UI state preservation
 - Different data: Stitches-only (lightweight, multiple versions) vs Full UI state (heavyweight, single version)
 - Different timing: Immediate capture vs debounced saves
 - Independent testing and configuration
@@ -107,16 +132,16 @@ Each hook encapsulates a specific concern and is composed in `PatternDesigner.js
 
 **Purpose**: Prevent auto-save on every slider drag increment or color picker drag
 
-**Implementation in useCanvasSettings:**
+**Implementation in useUiState:**
 - **Temp states**: `tempBackgroundColor`, `tempGridColor`, `tempTileOutlineColor`, `tempArtboardOutlineColor`
 - **Refs track picker state**: `isFabricColorPickerOpenRef`, `isGridColorPickerOpenRef`, etc.
 - **Live preview**: Temp values shown immediately in canvas
 - **Commit on close**: When color picker closes or slider drag stops, temp value commits to actual state
-- **Auto-save trigger**: Only committed values trigger the debounced auto-save
+- **Auto-save trigger**: Only committed values trigger localStorage save
 
 **Event Handlers:**
 - `onValueChange` - Updates temp state during drag (live preview)
-- `onValueCommit` - Commits value when drag stops (triggers auto-save)
+- `onValueCommit` - Commits value when drag stops (triggers localStorage save)
 - `onOpenChange` - Tracks color picker open/close, commits temp on close
 
 **Similar Pattern in usePropertyEditor:**
@@ -124,15 +149,15 @@ Each hook encapsulates a specific concern and is composed in `PatternDesigner.js
 - `isEditingProperties` flag prevents history saves during editing
 - 100ms timeout batches property changes into single history entry
 
-### Data Persistence (Dexie.js / IndexedDB)
+### Data Persistence (Dexie.js / IndexedDB + localStorage)
 - `src/lib/db.js` - Dexie database configuration and initialization
 - `src/lib/patternStorage.js` - Pattern CRUD operations using Dexie
+- **localStorage**: UI state (useUiState) - synchronous, instant loading
 - **Database Schema**:
-  - `patterns` table: User-saved patterns with indexing on name, createdAt, updatedAt
-  - `currentPattern` table: Active working pattern (auto-save)
-  - `history` table: Undo/redo snapshots (up to 10 states)
-  - `settings` table: User preferences and UI state
-- **Benefits**: ~50MB+ storage, async operations, structured querying, future cloud sync ready
+  - `patterns` table: User-saved patterns with indexing on name, createdAt, updatedAt (includes UI state)
+  - `currentPattern` table: Active working pattern auto-save (includes UI state snapshot)
+  - `history` table: Undo/redo snapshots (up to 10 states, stitches only)
+- **Benefits**: IndexedDB ~50MB+ storage for patterns, localStorage instant UI loading, async operations, structured querying, future cloud sync ready
 
 ### PWA & Offline-First
 - **@vite-pwa/astro** - PWA integration configured in `astro.config.mjs`
@@ -166,11 +191,12 @@ PatternDesigner.jsx (root state container)
 2. **PatternDesigner** updates `currentPattern.stitches` + `stitchColors` Map
 3. **Main History Effect** triggers → `historyManager.pushHistory()` saves to `useHistory` hook (stitches only)
 4. **Auto-save Effect** triggers → `useAutoSave` saves to Dexie (stitches + colors + canvas settings, 500ms debounce)
-5. **Property Changes** → Temporary states (`tempGapSize`, `tempStitchColor`) → Live preview via Canvas Effects
-6. **Property Completion** → `isEditingProperties = false` → Property History Effect → Batched save (100ms timeout)
-7. **Canvas Settings Changes** → Temporary states (`tempBackgroundColor`, etc.) → Commit on picker close/slider stop → Auto-save triggers
-8. **Pattern Loading** → `clearHistory(initialState)` → Creates baseline history entry with loaded stitches
-9. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
+5. **UI State Changes** → `useUiState` saves to localStorage (instant, synchronous)
+6. **Property Changes** → Temporary states (`tempGapSize`, `tempStitchColor`) → Live preview via Canvas Effects
+7. **Property Completion** → `isEditingProperties = false` → Property History Effect → Batched save (100ms timeout)
+8. **Canvas Settings Changes** → Temporary states (`tempBackgroundColor`, etc.) → Commit on picker close/slider stop → localStorage save
+9. **Pattern Loading** → `clearHistory(initialState)` → Creates baseline history entry with loaded stitches → Restores UI state from pattern
+10. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
 
 ### Color System (THREE CATEGORIES)
 **Fabric Colors** (Left Sidebar → CanvasSettings.jsx):
@@ -266,6 +292,11 @@ npm run preview          # Preview production build locally
 7. **Pattern loading requires history reset** - use `clearHistory(initialState)` for existing patterns, `clearHistory()` for new
 8. **History saves only stitches data** - canvas config (gridSize, tileSize, etc.) not included in history
 9. **Boundary crossing detection is simple** - only check if endpoint exceeds [0, tileSize] bounds, NOT line length or distance
+10. **Tile resizing removes invalid stitches** - only if start point leaves [0, tileSize] bounds
+11. **Anchor auto-orientation** - anchor (start) is always the endpoint closest to tile origin (0,0)
+12. **Object dependencies cause infinite loops** - use object properties (tileSize.x/y, patternTiles.x/y) in useEffect dependencies instead of object references
+13. **UI state source of truth** - uiState (localStorage) is primary, currentPattern mirrors config for IndexedDB persistence
+14. **Memory optimization** - avoid object/Map references in dependencies, use .size or specific properties
 10. **Tile resizing removes invalid stitches** - only if start point leaves [0, tileSize] bounds
 11. **Anchor auto-orientation** - anchor (start) is always the endpoint closest to tile origin (0,0)
 

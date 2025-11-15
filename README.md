@@ -90,8 +90,26 @@ The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with Workbox
 
 ## Data Persistence
 
+### Three-Layer Storage Architecture
+
+**1. localStorage (UI Preferences - Instant Loading)**
+- UI settings load synchronously on page load → zero flash/blink
+- Stores: Canvas colors, grid settings, artboard configuration, stitch defaults, display preferences
+- Benefits: Instant access, no loading delay, ~5-10MB capacity
+
+**2. IndexedDB (Pattern Data - Crash Recovery)**
+- Auto-saves current working pattern to IndexedDB (via Dexie.js) whenever you make changes
+- Stores: Complete pattern data (stitches, colors, UI state snapshot)
+- Debounced: 500ms delay to batch rapid changes
+- Benefits: Large storage (~50MB+), survives page refreshes and crashes
+
+**3. IndexedDB (Pattern Library & History)**
+- **Pattern Library**: Your saved patterns with metadata
+- **Undo/Redo History**: Up to 10 snapshots for time-travel editing
+- Benefits: Structured querying, cloud sync ready
+
 ### Auto-Save
-Your current work is automatically saved to IndexedDB (via Dexie.js) whenever you make changes. This includes:
+Your current work is automatically saved whenever you make changes:
 - Adding, removing, or modifying stitches
 - Changing stitch colors
 - Adjusting canvas settings (tiles, colors, etc.)
@@ -135,14 +153,14 @@ Your work persists across page refreshes and browser sessions.
 │   ├── data/
 │   │   └── patterns.json            # Built-in pattern definitions
 │   ├── hooks/
-│   │   ├── useAutoSave.js           # Auto-save UI state to IndexedDB (debounced)
-│   │   ├── useCanvasSettings.js     # Canvas configuration state & handlers
+│   │   ├── useAutoSave.js           # Auto-save pattern to IndexedDB (debounced)
 │   │   ├── useHistory.js            # Undo/redo with IndexedDB persistence
 │   │   ├── useKeyboardShortcuts.js  # Keyboard event handlers
 │   │   ├── usePatternImportExport.js # JSON/PNG export, JSON import
 │   │   ├── usePatternLibrary.js     # Saved patterns CRUD (Dexie/IndexedDB)
 │   │   ├── usePatternState.js       # Core pattern state management
-│   │   └── usePropertyEditor.js     # Batch property editing
+│   │   ├── usePropertyEditor.js     # Batch property editing
+│   │   └── useUiState.js            # UI preferences with localStorage persistence
 │   ├── layouts/
 │   │   └── Layout.astro
 │   ├── lib/
@@ -183,8 +201,8 @@ All commands are run from the root of the project, from a terminal:
 ### Architecture
 - **Custom Hooks Pattern**: State management split into focused hooks:
   - `usePatternState` - Core pattern & stitch state
-  - `useCanvasSettings` - Canvas configuration (colors, grid, display unit) with temp state for live preview
-  - `useAutoSave` - Debounced auto-save to IndexedDB (separate from undo/redo)
+  - `useUiState` - UI preferences with localStorage persistence (instant loading, no flash)
+  - `useAutoSave` - Debounced auto-save to IndexedDB (crash recovery, 500ms delay)
   - `useHistory` - Undo/redo state management with IndexedDB persistence
   - `usePatternLibrary` - Saved patterns CRUD operations
   - `usePropertyEditor` - Batch editing for selected stitches
@@ -194,12 +212,12 @@ All commands are run from the root of the project, from a terminal:
 - **Coordinate Systems**: Three distinct systems (Canvas, Artboard-Relative, Pattern-Relative)
 - **Tile Boundaries**: Shared coordinates between adjacent tiles with duplication prevention
 - **Error Handling**: ErrorBoundary component with user-friendly error messages and recovery options
-- **Data Persistence**: Dexie.js for IndexedDB with structured storage and async operations
-- **Auto-Save System**: Two separate systems:
-  - `useAutoSave` - UI state persistence (500ms debounce, includes stitches + canvas settings)
-  - `useHistory` - Undo/redo snapshots (stitches only, persisted to IndexedDB)
-- **Temporary State Pattern**: Color pickers and sliders use temp state during drag for live preview without triggering auto-save
-- **Memory Optimizations**: Map size tracking, mounted component checks, proper event listener cleanup
+- **Data Persistence**: Three-layer strategy:
+  - localStorage: UI preferences (synchronous, instant loading)
+  - IndexedDB (Dexie.js): Pattern data, library, history (async, large capacity)
+  - Hybrid approach eliminates flash on page load
+- **Temporary State Pattern**: Color pickers and sliders use temp state during drag for live preview without triggering save
+- **Memory Optimizations**: Object property dependencies, mounted component checks, proper event listener cleanup
 
 ### Canvas System
 - **Canvas**: Artboard + 40-cell margin on all sides
@@ -208,10 +226,13 @@ All commands are run from the root of the project, from a terminal:
 - **Dynamic Sizing**: Recalculates when gridSize, tileSize, or patternTiles change
 
 ### Storage Format
-- **Database**: Dexie.js wrapper around IndexedDB with 3 tables:
-  - `patterns`: User-saved patterns with indexing (name, createdAt, updatedAt)
-  - `currentPattern`: Active working pattern (auto-save)
-  - `settings`: User preferences and UI state
+- **localStorage**: UI preferences stored as JSON object (`sashiko_ui_state` key)
+  - Instant loading eliminates flash on page load
+  - Synchronous access
+- **IndexedDB Database**: Dexie.js wrapper with 3 tables:
+  - `patterns`: User-saved patterns with indexing (name, createdAt, updatedAt) + UI state
+  - `currentPattern`: Active working pattern (auto-save) + UI state snapshot
+  - `history`: Undo/redo snapshots (stitches only, up to 10 states)
 - **Pattern Data**: Stored as structured objects with tile-relative coordinates
 - **Stitch Format**: Start/end points, color, size, width, gapSize, repeat flag
 - **Auto-Save**: Triggers on any pattern change via async Dexie operations
@@ -257,7 +278,8 @@ All commands are run from the root of the project, from a terminal:
 - **Batch Editing**: Select multiple stitches and edit properties all at once
 
 ### Pattern Management
-- **Auto-Save**: Current pattern automatically saves to IndexedDB (Dexie.js)
+- **Auto-Save**: Current pattern automatically saves to IndexedDB via Dexie.js (500ms debounce)
+- **UI Preferences**: Colors, grid settings, artboard config load instantly from localStorage (no flash)
 - **Pattern Library**: Access saved patterns and built-in patterns via left sidebar
 - **Keyboard Shortcuts**:
   - `Ctrl+Z` / `Cmd+Z`: Undo

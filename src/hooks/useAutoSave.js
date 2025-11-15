@@ -40,7 +40,7 @@ export function useAutoSave({
     return () => clearTimeout(timeoutId);
   }, [
     currentPattern.stitches, // Trigger on stitch changes
-    stitchColors.size, // Track Map size instead of Map reference to avoid infinite loops
+    stitchColors, // Map reference changes on any color update
     // Canvas settings - included so they trigger auto-save when changed
     uiState.patternTiles?.x,
     uiState.patternTiles?.y,
@@ -49,9 +49,6 @@ export function useAutoSave({
     uiState.gridColor,
     uiState.tileOutlineColor,
     uiState.artboardOutlineColor,
-    currentPattern,
-    stitchColors,
-    uiState,
     debounceMs,
   ]);
 

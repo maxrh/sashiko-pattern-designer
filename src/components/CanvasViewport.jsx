@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { PatternCanvas } from './PatternCanvas.jsx';
-import { normalizeTileSize, DEFAULT_GRID_SIZE } from '../lib/patternUtils.js';
+import { normalizeTileSize } from '../lib/patternUtils.js';
+import { DEFAULT_GRID_SIZE } from '../hooks/useUiState.js';
 
 // Canvas terminology:
 // - "canvas" = the entire grid area where drawing happens (with margin around artboard)
@@ -20,6 +21,8 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   onDrawingStateChange,
   defaultStitchColor,
   backgroundColor,
+  gridSize,
+  tileSize,
   stitchSize,
   repeatPattern,
   showGrid,
@@ -33,8 +36,8 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   
-  const patternTileSize = normalizeTileSize(pattern?.tileSize);
-  const patternGridSize = pattern?.gridSize ?? DEFAULT_GRID_SIZE;
+  const patternTileSize = normalizeTileSize(tileSize);
+  const patternGridSize = gridSize ?? DEFAULT_GRID_SIZE;
   // Artboard = the total area containing all pattern tiles (separate width and height for non-square tiles)
   const artboardWidth = patternTiles.x * patternTileSize.x * patternGridSize;
   const artboardHeight = patternTiles.y * patternTileSize.y * patternGridSize;

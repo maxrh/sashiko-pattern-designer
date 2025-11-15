@@ -1,3 +1,11 @@
+import { 
+  DEFAULT_GAP_SIZE,
+  DEFAULT_STITCH_COLOR,
+  DEFAULT_STITCH_SIZE,
+  DEFAULT_STITCH_WIDTH,
+  DEFAULT_SELECTED_COLOR,
+} from '../hooks/useUiState.js';
+
 // ===================================
 // STITCH APPEARANCE CONFIGURATION
 // ===================================
@@ -23,18 +31,9 @@ export const STITCH_WIDTHS = {
   thick: 4
 };
 
-// Gap size between stitches (in pixels)
-export const DEFAULT_GAP_SIZE = 9; // Space between adjacent dashes
-
 // Stitch offset from grid points (in pixels)
 // This is calculated as gapSize / 2 to center gaps on grid dots
 export const calculateStitchOffset = (gapSize) => gapSize / 2;
-
-// Default stitch appearance settings
-export const DEFAULT_STITCH_COLOR = '#f5f5f5'; // Light gray color for stitches
-export const DEFAULT_STITCH_SIZE = 'medium';
-export const DEFAULT_STITCH_WIDTH = 'normal';
-export const DEFAULT_SELECTED_COLOR = '#0000FF'; // Blue color for selected stitches
 
 export const STITCH_DEFAULTS = {
   size: DEFAULT_STITCH_SIZE,
