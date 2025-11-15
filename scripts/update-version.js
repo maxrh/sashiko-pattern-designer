@@ -23,4 +23,3 @@ writeFileSync(versionPath, JSON.stringify(version, null, 2));
 const buildDate = new Date(version.buildTime).toLocaleString();
 
 console.log(`✅ Version ${version.version} built at ${buildDate}`);
-
