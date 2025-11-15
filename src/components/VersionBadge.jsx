@@ -30,19 +30,17 @@ export default function VersionBadge() {
     return () => window.removeEventListener('versionUpdated', handleVersionUpdate);
   }, []);
 
-  if (!appVersion) return null;
-
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" className="text-xs font-mono cursor-help">
-            v{appVersion}
+          <Badge variant="outline" className="text-xs font-mono">
+            {appVersion ? `v${appVersion}` : '···'}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
           <div className="text-xs">
-            <div>Build: {buildTime ? new Date(buildTime).toLocaleString() : 'Unknown'}</div>
+            <div>Build: {buildTime ? new Date(buildTime).toLocaleString() : '···'}</div>
           </div>
         </TooltipContent>
       </Tooltip>
