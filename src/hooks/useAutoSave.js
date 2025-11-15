@@ -49,9 +49,6 @@ export function useAutoSave({
     uiState.gridColor,
     uiState.tileOutlineColor,
     uiState.artboardOutlineColor,
-    currentPattern,
-    stitchColors,
-    uiState,
     debounceMs,
   ]);
 

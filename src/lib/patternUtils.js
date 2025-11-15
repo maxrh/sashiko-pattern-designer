@@ -1,7 +1,5 @@
 // Pattern utility functions for normalization and manipulation
-
-// Default grid cell size in pixels
-export const DEFAULT_GRID_SIZE = 20;
+import { DEFAULT_GAP_SIZE, DEFAULT_GRID_SIZE, DEFAULT_TILE_SIZE, DEFAULT_PATTERN_TILES } from '../hooks/useUiState.js';
 
 /**
  * Normalize tileSize to {x, y} format
@@ -10,7 +8,7 @@ export function normalizeTileSize(tileSize) {
   if (tileSize && typeof tileSize === 'object' && typeof tileSize.x === 'number' && typeof tileSize.y === 'number') {
     return { x: tileSize.x, y: tileSize.y };
   }
-  return { x: 10, y: 10 }; // Default
+  return DEFAULT_TILE_SIZE;
 }
 
 /**
@@ -20,20 +18,20 @@ export function normalizePatternTiles(patternTiles) {
   if (patternTiles && typeof patternTiles === 'object' && typeof patternTiles.x === 'number' && typeof patternTiles.y === 'number') {
     return { x: patternTiles.x, y: patternTiles.y };
   }
-  return { x: 4, y: 4 }; // Default
+  return { x: DEFAULT_PATTERN_TILES, y: DEFAULT_PATTERN_TILES };
 }
 
 /**
  * Clone a pattern with normalization
  */
-export function clonePattern(pattern, DEFAULT_GAP_SIZE = 9) {
+export function clonePattern(pattern) {
   const defaultPattern = {
     id: 'pattern-blank',
     name: 'Untitled Pattern',
     description: '',
-    tileSize: { x: 10, y: 10 },
-    gridSize: 20,
-    patternTiles: { x: 4, y: 4 },
+    tileSize: DEFAULT_TILE_SIZE,
+    gridSize: DEFAULT_GRID_SIZE,
+    patternTiles: { x: DEFAULT_PATTERN_TILES, y: DEFAULT_PATTERN_TILES },
     stitches: [],
   };
 
@@ -47,8 +45,8 @@ export function clonePattern(pattern, DEFAULT_GAP_SIZE = 9) {
   return {
     ...pattern,
     tileSize: normalizedTileSize,
-    gridSize: pattern.gridSize ?? 20,
-    patternTiles: normalizePatternTiles(pattern.patternTiles ?? { x: 4, y: 4 }),
+    gridSize: pattern.gridSize ?? DEFAULT_GRID_SIZE,
+    patternTiles: normalizePatternTiles(pattern.patternTiles ?? { x: DEFAULT_PATTERN_TILES, y: DEFAULT_PATTERN_TILES }),
     stitches: (pattern.stitches ?? []).map((stitch) => ({
       ...stitch,
       start: { ...stitch.start },

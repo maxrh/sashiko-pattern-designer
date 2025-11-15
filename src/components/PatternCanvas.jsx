@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, memo } from 'react';
-import { renderStitch, DEFAULT_GAP_SIZE, calculateStitchOffset } from './Stitches';
-import { DEFAULT_GRID_COLOR, DEFAULT_TILE_OUTLINE_COLOR, DEFAULT_ARTBOARD_OUTLINE_COLOR } from './PatternDesigner';
+import { renderStitch, calculateStitchOffset } from './Stitches';
+import { DEFAULT_GRID_COLOR, DEFAULT_TILE_OUTLINE_COLOR, DEFAULT_ARTBOARD_OUTLINE_COLOR, DEFAULT_GAP_SIZE } from '../hooks/useUiState';
 
 const SNAP_THRESHOLD = 15;
 const SELECT_THRESHOLD = 5;
