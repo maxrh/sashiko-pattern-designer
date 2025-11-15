@@ -285,4 +285,4 @@ This project is configured for **Cloudflare Pages** deployment with **offline-fi
 
 ---
 
-Made by **Monsun** • [monsun.dk](https://monsun.dk) • [max@monsun.dk](mailto:max@monsun.dk)
+Made by [**Monsun**](https://monsun.dk) • [max@monsun.dk](mailto:max@monsun.dk)
