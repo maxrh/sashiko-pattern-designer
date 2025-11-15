@@ -23,6 +23,7 @@ export function AppSidebar({
   onPatternTilesChange,
   backgroundColor,
   onBackgroundColorChange,
+  onBackgroundColorPickerOpenChange,
   patternName,
   onPatternNameChange,
   patternDescription,
@@ -31,11 +32,11 @@ export function AppSidebar({
   onTileSizeChange,
   gridSize,
   onGridSizeChange,
+  onCanvasSliderCommit,
   displayUnit,
   onDisplayUnitChange,
   artboardWidth,
   artboardHeight,
-  canvasInfo,
   onNewPattern,
   onSavePattern,
   saveState,
@@ -50,15 +51,16 @@ export function AppSidebar({
   onDeletePattern,
   gridColor,
   onGridColorChange,
+  onGridColorPickerOpenChange,
   tileOutlineColor,
   onTileOutlineColorChange,
+  onTileOutlineColorPickerOpenChange,
   artboardOutlineColor,
   onArtboardOutlineColorChange,
+  onArtboardOutlineColorPickerOpenChange,
   colorPresets,
   onAddColorPreset,
   onRemoveColorPreset,
-  currentPattern,
-  stitchColors,
 }) {
   return (
       <Sidebar>
@@ -96,6 +98,7 @@ export function AppSidebar({
                     onPatternTilesChange={onPatternTilesChange}
                     backgroundColor={backgroundColor}
                     onBackgroundColorChange={onBackgroundColorChange}
+                    onBackgroundColorPickerOpenChange={onBackgroundColorPickerOpenChange}
                     patternName={patternName}
                     onPatternNameChange={onPatternNameChange}
                     patternDescription={patternDescription}
@@ -104,21 +107,24 @@ export function AppSidebar({
                     onTileSizeChange={onTileSizeChange}
                     gridSize={gridSize}
                     onGridSizeChange={onGridSizeChange}
+                    onCanvasSliderCommit={onCanvasSliderCommit}
                     displayUnit={displayUnit}
                     onDisplayUnitChange={onDisplayUnitChange}
                     artboardWidth={artboardWidth}
                     artboardHeight={artboardHeight}
-                    canvasInfo={canvasInfo}
                     onNewPattern={onNewPattern}
                     onSavePattern={onSavePattern}
                     saveState={saveState}
                     onResetSettings={onResetSettings}
                     gridColor={gridColor}
                     onGridColorChange={onGridColorChange}
+                    onGridColorPickerOpenChange={onGridColorPickerOpenChange}
                     tileOutlineColor={tileOutlineColor}
                     onTileOutlineColorChange={onTileOutlineColorChange}
+                    onTileOutlineColorPickerOpenChange={onTileOutlineColorPickerOpenChange}
                     artboardOutlineColor={artboardOutlineColor}
                     onArtboardOutlineColorChange={onArtboardOutlineColorChange}
+                    onArtboardOutlineColorPickerOpenChange={onArtboardOutlineColorPickerOpenChange}
                     colorPresets={colorPresets}
                     onAddColorPreset={onAddColorPreset}
                     onRemoveColorPreset={onRemoveColorPreset}
@@ -126,8 +132,6 @@ export function AppSidebar({
                     onImportPattern={onImportPattern}
                     onExportImage={onExportImage}
                     onCopyPatternToClipboard={onCopyPatternToClipboard}
-                    currentPattern={currentPattern}
-                    stitchColors={stitchColors}
                   />
                 </SidebarGroupContent>
               </SidebarGroup>
