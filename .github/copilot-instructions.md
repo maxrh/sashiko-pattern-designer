@@ -65,6 +65,8 @@ Three distinct coordinate systems exist:
 
 ### State Management (Custom Hooks Pattern)
 - `src/hooks/usePatternState.js` - Core pattern state (currentPattern, stitchColors, selection)
+- `src/hooks/useCanvasSettings.js` - Canvas configuration state & handlers (colors, grid, display unit) with temp state system
+- `src/hooks/useAutoSave.js` - Auto-save UI state to IndexedDB (500ms debounce, separate from undo/redo)
 - `src/hooks/useHistory.js` - Undo/redo with IndexedDB persistence and duplicate state prevention
 - `src/hooks/usePatternLibrary.js` - Saved patterns CRUD (Dexie/IndexedDB)
 - `src/hooks/usePatternImportExport.js` - JSON export/import, PNG export
@@ -73,12 +75,62 @@ Three distinct coordinate systems exist:
 
 Each hook encapsulates a specific concern and is composed in `PatternDesigner.jsx`.
 
+### Auto-Save & History System (CRITICAL ARCHITECTURE)
+
+**Two Separate Persistence Systems - DO NOT COMBINE:**
+
+**useAutoSave (UI State Persistence)**
+- **Purpose**: Save current working state to survive page refreshes (crash recovery)
+- **What it saves**: Stitches + colors + canvas settings (backgroundColor, gridSize, displayUnit, etc.)
+- **When it saves**: After 500ms debounce on ANY change to stitches, colors, or canvas settings
+- **Storage**: Single "current" entry in `db.currentPattern` table (overwrites previous)
+- **Timing**: Debounced to avoid excessive IndexedDB writes
+- **Key features**: Includes full UI state, single snapshot, survives browser close/refresh
+- **Memory optimization**: Uses `stitchColors.size` in dependencies instead of Map reference to prevent infinite loops
+
+**useHistory (Undo/Redo System)**
+- **Purpose**: Version control for user actions - allows stepping back/forward through editing states
+- **What it saves**: Stitches + colors only (NOT canvas settings)
+- **When it saves**: Immediately on stitch add/delete/modify, after property edits complete (batched)
+- **Storage**: Multiple snapshots (up to 10 states) in `db.history` table
+- **Timing**: No debounce - captures immediately for instant undo
+- **Key features**: Bidirectional navigation, history index tracking, pattern-scoped (resets on pattern load)
+- **Skips**: During undo/redo operations, during active property editing
+
+**Why They're Separate:**
+- Different responsibilities: User action tracking vs state persistence
+- Different data: Stitches-only (lightweight, multiple versions) vs Full UI state (heavyweight, single version)
+- Different timing: Immediate capture vs debounced saves
+- Independent testing and configuration
+
+### Temporary State Pattern (CRITICAL FOR PERFORMANCE)
+
+**Purpose**: Prevent auto-save on every slider drag increment or color picker drag
+
+**Implementation in useCanvasSettings:**
+- **Temp states**: `tempBackgroundColor`, `tempGridColor`, `tempTileOutlineColor`, `tempArtboardOutlineColor`
+- **Refs track picker state**: `isFabricColorPickerOpenRef`, `isGridColorPickerOpenRef`, etc.
+- **Live preview**: Temp values shown immediately in canvas
+- **Commit on close**: When color picker closes or slider drag stops, temp value commits to actual state
+- **Auto-save trigger**: Only committed values trigger the debounced auto-save
+
+**Event Handlers:**
+- `onValueChange` - Updates temp state during drag (live preview)
+- `onValueCommit` - Commits value when drag stops (triggers auto-save)
+- `onOpenChange` - Tracks color picker open/close, commits temp on close
+
+**Similar Pattern in usePropertyEditor:**
+- `tempGapSize`, `tempStitchColor`, `tempStitchSize`, `tempStitchWidth`
+- `isEditingProperties` flag prevents history saves during editing
+- 100ms timeout batches property changes into single history entry
+
 ### Data Persistence (Dexie.js / IndexedDB)
 - `src/lib/db.js` - Dexie database configuration and initialization
 - `src/lib/patternStorage.js` - Pattern CRUD operations using Dexie
 - **Database Schema**:
   - `patterns` table: User-saved patterns with indexing on name, createdAt, updatedAt
   - `currentPattern` table: Active working pattern (auto-save)
+  - `history` table: Undo/redo snapshots (up to 10 states)
   - `settings` table: User preferences and UI state
 - **Benefits**: ~50MB+ storage, async operations, structured querying, future cloud sync ready
 
@@ -105,18 +157,20 @@ PatternDesigner.jsx (root state container)
 ├── CanvasViewport.jsx (pan/zoom container with scroll)
 │   └── PatternCanvas.jsx (canvas rendering & drawing logic)
 ├── OfflineIndicator.jsx (connection status with auto-update on reconnect)
+├── VersionBadge.jsx (app version display)
 └── HelpButton.jsx (help dialog)
 ```
 
 ### Data Flow
 1. **User draws line** → `PatternCanvas.jsx` calculates grid coordinates → calls `onAddStitch`
 2. **PatternDesigner** updates `currentPattern.stitches` + `stitchColors` Map
-3. **Main History Effect** triggers → `historyManager.pushHistory()` saves to `useHistory` hook
-4. **Auto-save** triggers via separate `useEffect` → `patternStorage.js` saves to Dexie (IndexedDB)
+3. **Main History Effect** triggers → `historyManager.pushHistory()` saves to `useHistory` hook (stitches only)
+4. **Auto-save Effect** triggers → `useAutoSave` saves to Dexie (stitches + colors + canvas settings, 500ms debounce)
 5. **Property Changes** → Temporary states (`tempGapSize`, `tempStitchColor`) → Live preview via Canvas Effects
 6. **Property Completion** → `isEditingProperties = false` → Property History Effect → Batched save (100ms timeout)
-7. **Pattern Loading** → `clearHistory(initialState)` → Creates baseline history entry with loaded stitches
-8. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
+7. **Canvas Settings Changes** → Temporary states (`tempBackgroundColor`, etc.) → Commit on picker close/slider stop → Auto-save triggers
+8. **Pattern Loading** → `clearHistory(initialState)` → Creates baseline history entry with loaded stitches
+9. **Rendering** loops through stitches, detects pattern vs absolute coordinates, applies tile offsets
 
 ### Color System (THREE CATEGORIES)
 **Fabric Colors** (Left Sidebar → CanvasSettings.jsx):

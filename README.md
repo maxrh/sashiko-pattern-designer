@@ -21,7 +21,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
   - Select Tool: Select and manipulate existing stitches
   - Line Draw Tool: Create straight stitch lines
   - Pan Tool: Navigate the canvas (spacebar shortcut)
-  - (Curve/Circle tool planned)
+  - (Curve/Circle Tool coming)
 - **Grid Snapping**: Automatic snapping to grid points for precise alignment
 - **Real-time Preview**: See your pattern repeat instantly as you draw
 - **Cross-Tile Lines**: Draw lines that span across tile boundaries for complex patterns
@@ -88,6 +88,28 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 
 The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with Workbox strategies optimized for both offline performance and freshness when online.
 
+## Data Persistence
+
+### Auto-Save
+Your current work is automatically saved to IndexedDB (via Dexie.js) whenever you make changes. This includes:
+- Adding, removing, or modifying stitches
+- Changing stitch colors
+- Adjusting canvas settings (tiles, colors, etc.)
+- Updating tool settings
+
+Your work persists across page refreshes and browser sessions.
+
+### Pattern Library
+- Click **"Save Pattern"** to add your current design to your personal library
+- Saved patterns are stored in IndexedDB with metadata (name, timestamps, etc.)
+- Patterns are indexed for fast searching and filtering
+- Edit and re-save patterns to update them
+- Delete unwanted patterns with the Delete button
+
+### Export & Import
+- **Export JSON**: Download your pattern as a `.json` file for sharing or backup
+- **Export PNG**: Download a high-quality image of your design
+- **Import JSON**: Load previously exported pattern files
 
 ## Project Structure
 
@@ -102,25 +124,30 @@ The PWA is configured in `astro.config.mjs` using `@vite-pwa/astro` with Workbox
 │   │   ├── CanvasViewport.jsx       # Pan/zoom container with scroll
 │   │   ├── ErrorBoundary.jsx        # Error handling with user-friendly UI
 │   │   ├── HelpButton.jsx           # Help dialog
+│   │   ├── OfflineIndicator.jsx     # Connection status with auto-update on reconnect
 │   │   ├── PatternCanvas.jsx        # Canvas rendering & drawing logic
 │   │   ├── PatternCard.jsx          # Pattern card component
 │   │   ├── PatternDesigner.jsx      # Root state container
 │   │   ├── PatternSelector.jsx      # Pattern library selector
 │   │   ├── Stitches.jsx             # Stitch rendering component
-│   │   └── Toolbar.jsx              # Tool buttons & stitch controls
+│   │   ├── Toolbar.jsx              # Tool buttons & stitch controls
+│   │   └── VersionBadge.jsx         # App version display component
 │   ├── data/
 │   │   └── patterns.json            # Built-in pattern definitions
 │   ├── hooks/
+│   │   ├── useAutoSave.js           # Auto-save UI state to IndexedDB (debounced)
+│   │   ├── useCanvasSettings.js     # Canvas configuration state & handlers
 │   │   ├── useHistory.js            # Undo/redo with IndexedDB persistence
 │   │   ├── useKeyboardShortcuts.js  # Keyboard event handlers
 │   │   ├── usePatternImportExport.js # JSON/PNG export, JSON import
-│   │   ├── usePatternLibrary.js     # Saved patterns CRUD (localStorage)
+│   │   ├── usePatternLibrary.js     # Saved patterns CRUD (Dexie/IndexedDB)
 │   │   ├── usePatternState.js       # Core pattern state management
 │   │   └── usePropertyEditor.js     # Batch property editing
 │   ├── layouts/
 │   │   └── Layout.astro
 │   ├── lib/
-│   │   ├── patternStorage.js        # localStorage helpers
+│   │   ├── db.js                    # Dexie database configuration
+│   │   ├── patternStorage.js        # Pattern CRUD operations (Dexie/IndexedDB)
 │   │   ├── patternUtils.js          # Pattern manipulation utilities
 │   │   ├── unitConverter.js         # Coordinate conversion utilities
 │   │   └── utils.ts                 # General utilities
@@ -150,28 +177,46 @@ All commands are run from the root of the project, from a terminal:
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
 
-## Data Persistence
 
-### Auto-Save
-Your current work is automatically saved to IndexedDB (via Dexie.js) whenever you make changes. This includes:
-- Adding, removing, or modifying stitches
-- Changing stitch colors
-- Adjusting canvas settings (tiles, colors, etc.)
-- Updating tool settings
+## Technical Details
 
-Your work persists across page refreshes and browser sessions.
+### Architecture
+- **Custom Hooks Pattern**: State management split into focused hooks:
+  - `usePatternState` - Core pattern & stitch state
+  - `useCanvasSettings` - Canvas configuration (colors, grid, display unit) with temp state for live preview
+  - `useAutoSave` - Debounced auto-save to IndexedDB (separate from undo/redo)
+  - `useHistory` - Undo/redo state management with IndexedDB persistence
+  - `usePatternLibrary` - Saved patterns CRUD operations
+  - `usePropertyEditor` - Batch editing for selected stitches
+  - `useKeyboardShortcuts` - Keyboard event handlers
+  - `usePatternImportExport` - JSON/PNG export and import
+- **Canvas System**: Dynamic sizing with artboard + extended drawing area + margin
+- **Coordinate Systems**: Three distinct systems (Canvas, Artboard-Relative, Pattern-Relative)
+- **Tile Boundaries**: Shared coordinates between adjacent tiles with duplication prevention
+- **Error Handling**: ErrorBoundary component with user-friendly error messages and recovery options
+- **Data Persistence**: Dexie.js for IndexedDB with structured storage and async operations
+- **Auto-Save System**: Two separate systems:
+  - `useAutoSave` - UI state persistence (500ms debounce, includes stitches + canvas settings)
+  - `useHistory` - Undo/redo snapshots (stitches only, persisted to IndexedDB)
+- **Temporary State Pattern**: Color pickers and sliders use temp state during drag for live preview without triggering auto-save
+- **Memory Optimizations**: Map size tracking, mounted component checks, proper event listener cleanup
 
-### Pattern Library
-- Click **"Save Pattern"** to add your current design to your personal library
-- Saved patterns are stored in IndexedDB with metadata (name, timestamps, etc.)
-- Patterns are indexed for fast searching and filtering
-- Edit and re-save patterns to update them
-- Delete unwanted patterns with the Delete button
+### Canvas System
+- **Canvas**: Artboard + 40-cell margin on all sides
+- **Extended Area**: Artboard + 1-tile margin for visualizing pattern continuations
+- **Artboard**: Pattern tiles × tileSize × gridSize (in pixels)
+- **Dynamic Sizing**: Recalculates when gridSize, tileSize, or patternTiles change
 
-### Export & Import
-- **Export JSON**: Download your pattern as a `.json` file for sharing or backup
-- **Export PNG**: Download a high-quality image of your design
-- **Import JSON**: Load previously exported pattern files
+### Storage Format
+- **Database**: Dexie.js wrapper around IndexedDB with 3 tables:
+  - `patterns`: User-saved patterns with indexing (name, createdAt, updatedAt)
+  - `currentPattern`: Active working pattern (auto-save)
+  - `settings`: User preferences and UI state
+- **Pattern Data**: Stored as structured objects with tile-relative coordinates
+- **Stitch Format**: Start/end points, color, size, width, gapSize, repeat flag
+- **Auto-Save**: Triggers on any pattern change via async Dexie operations
+- **Export**: JSON format for patterns, PNG for images
+- **Benefits**: ~50MB+ capacity, async operations, structured querying, cloud sync ready
 
 ## Usage Tips
 
@@ -219,35 +264,6 @@ Your work persists across page refreshes and browser sessions.
   - `Ctrl+Y` / `Cmd+Y`: Redo
   - `Delete`: Delete selected stitches
   - `Spacebar`: Pan mode (hold)
-
-
-## Technical Details
-
-### Architecture
-- **Custom Hooks Pattern**: State management split into focused hooks (`usePatternState`, `useHistory`, `usePatternLibrary`, etc.)
-- **Canvas System**: Dynamic sizing with artboard + extended drawing area + margin
-- **Coordinate Systems**: Three distinct systems (Canvas, Artboard-Relative, Pattern-Relative)
-- **Tile Boundaries**: Shared coordinates between adjacent tiles with duplication prevention
-- **Error Handling**: ErrorBoundary component with user-friendly error messages and recovery options
-- **Data Persistence**: Dexie.js for IndexedDB with structured storage and async operations
-- **Undo/Redo History**: Persisted to IndexedDB with duplicate state prevention, survives page refreshes
-
-### Canvas System
-- **Canvas**: Artboard + 40-cell margin on all sides
-- **Extended Area**: Artboard + 1-tile margin for visualizing pattern continuations
-- **Artboard**: Pattern tiles × tileSize × gridSize (in pixels)
-- **Dynamic Sizing**: Recalculates when gridSize, tileSize, or patternTiles change
-
-### Storage Format
-- **Database**: Dexie.js wrapper around IndexedDB with 3 tables:
-  - `patterns`: User-saved patterns with indexing (name, createdAt, updatedAt)
-  - `currentPattern`: Active working pattern (auto-save)
-  - `settings`: User preferences and UI state
-- **Pattern Data**: Stored as structured objects with tile-relative coordinates
-- **Stitch Format**: Start/end points, color, size, width, gapSize, repeat flag
-- **Auto-Save**: Triggers on any pattern change via async Dexie operations
-- **Export**: JSON format for patterns, PNG for images
-- **Benefits**: ~50MB+ capacity, async operations, structured querying, cloud sync ready
 
 ## Deployment
 
