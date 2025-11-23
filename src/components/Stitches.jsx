@@ -40,12 +40,58 @@ export const STITCH_DEFAULTS = {
   width: DEFAULT_STITCH_WIDTH,
   color: DEFAULT_STITCH_COLOR,
   gapSize: DEFAULT_GAP_SIZE,
-  selectedColor: DEFAULT_SELECTED_COLOR
+  selectedColor: DEFAULT_SELECTED_COLOR,
+  curvature: 0
 };
 
 // ===================================
 // STITCH CALCULATION FUNCTIONS
 // ===================================
+
+// Calculate circle parameters from start, end, and bulge (curvature)
+export function getArcParams(x1, y1, x2, y2, bulge) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const chordLength = Math.hypot(dx, dy);
+  
+  if (chordLength === 0 || Math.abs(bulge) < 0.1) return null; // Treat as straight
+
+  // Radius R = ( (L/2)^2 + b^2 ) / (2|b|)
+  const radius = (Math.pow(chordLength / 2, 2) + Math.pow(bulge, 2)) / (2 * Math.abs(bulge));
+
+  // Midpoint of chord
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  
+  // Distance from chord midpoint to center
+  // dist = R - |b| (if bulge < radius)
+  const distToCenter = radius - Math.abs(bulge);
+  
+  // Normal vector to chord (rotated 90 degrees)
+  const nx = -dy / chordLength;
+  const ny = dx / chordLength;
+  
+  // Determine center position
+  // If bulge > 0, center is on one side; if < 0, on the other
+  const sign = bulge > 0 ? 1 : -1;
+  
+  // If bulge is "small" (minor arc), center is away from bulge
+  // If bulge is "large" (major arc), center is towards bulge
+  const centerDir = Math.abs(bulge) > radius ? sign : -sign;
+  
+  const cx = mx + nx * distToCenter * centerDir;
+  const cy = my + ny * distToCenter * centerDir;
+  
+  // Calculate start and end angles
+  const startAngle = Math.atan2(y1 - cy, x1 - cx);
+  const endAngle = Math.atan2(y2 - cy, x2 - cx);
+  
+  // Determine direction
+  // If bulge > 0, we want the arc on the "left" of the vector start->end (counter-clockwise)
+  const counterClockwise = bulge > 0;
+  
+  return { cx, cy, radius, startAngle, endAngle, counterClockwise };
+}
 
 // Calculate dash and gap lengths for stitches with intelligent sizing
 // Returns { dashLength, gapLength } based on stitch size, line length, and gap settings
@@ -169,10 +215,73 @@ export function renderStitch(
   stitchWidthValue,
   colorOverride,
   isSelected,
-  gridSize
+  gridSize,
+  curvature = 0
 ) {
+  // Calculate bulge from curvature percentage
+  // curvature is percentage of chord length (e.g. 25 for 25%)
   const dx = endX - startX;
   const dy = endY - startY;
+  const chordLength = Math.hypot(dx, dy);
+  const bulge = chordLength * (curvature / 100);
+
+  // Check if we should draw an arc
+  const arcParams = getArcParams(startX, startY, endX, endY, bulge);
+
+  if (arcParams) {
+    // === DRAW ARC ===
+    const { cx, cy, radius, startAngle, endAngle, counterClockwise } = arcParams;
+    
+    // Calculate angular offset for the gaps at ends
+    // Arc Length S = R * theta -> theta = S / R
+    const angleOffset = stitchOffset / radius;
+    
+    // Apply offset to angles (shorten the arc)
+    // Direction depends on counterClockwise
+    const direction = counterClockwise ? -1 : 1;
+    const offsetStartAngle = startAngle + (angleOffset * direction);
+    const offsetEndAngle = endAngle - (angleOffset * direction);
+    
+    // Calculate drawable arc length
+    // Total angle difference
+    let angleDiff = offsetEndAngle - offsetStartAngle;
+    // Normalize angle diff
+    if (counterClockwise && angleDiff > 0) angleDiff -= 2 * Math.PI;
+    if (!counterClockwise && angleDiff < 0) angleDiff += 2 * Math.PI;
+    
+    const drawableLength = Math.abs(angleDiff * radius);
+    const totalLength = drawableLength + (2 * stitchOffset); // Approx
+    
+    // Calculate dash and gap pattern
+    const { dashLength, gapLength } = calculateStitchDashPattern(
+      drawableLength, 
+      totalLength, 
+      stitchSizeForLine, 
+      gapBetweenStitches,
+      gridSize
+    );
+    
+    if (dashLength <= 0) return false;
+
+    const lineWidth = calculateLineWidth(stitchWidthValue);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([dashLength, gapLength]);
+    ctx.strokeStyle = isSelected ? DEFAULT_SELECTED_COLOR : colorOverride;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.arc(cx, cy, radius, offsetStartAngle, offsetEndAngle, counterClockwise);
+    
+    ctx.stroke();
+    ctx.restore();
+    return true;
+  }
+
+  // === DRAW STRAIGHT LINE ===
+  // dx and dy are already calculated at the top of the function
   const length = Math.hypot(dx, dy);
   if (length === 0) return false;
 

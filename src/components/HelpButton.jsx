@@ -35,7 +35,7 @@ export function HelpButton() {
                 <span className="text-muted-foreground">Click stitches to select them. Hold Shift/Ctrl to select multiple. Drag to select multiple stitches at once.</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="font-medium min-w-30">Pen Tool (P):</span>
+                <span className="font-medium min-w-30">Stitch Tool (P):</span>
                 <span className="text-muted-foreground">Click on grid points to draw stitches between them.</span>
               </div>
               <div className="flex items-start gap-3">
@@ -122,7 +122,7 @@ export function HelpButton() {
               </div>
               <div className="flex items-start gap-3">
                 <kbd className="min-w-30 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">P</kbd>
-                <span className="text-muted-foreground">Switch to Pen Tool</span>
+                <span className="text-muted-foreground">Switch to Stitch Tool</span>
               </div>
               <div className="flex items-start gap-3">
                 <kbd className="min-w-30 rounded border border-border bg-muted px-2 py-1 font-mono text-xs">R</kbd>

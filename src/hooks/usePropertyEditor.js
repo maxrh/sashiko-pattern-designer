@@ -11,6 +11,7 @@ export function usePropertyEditor({
   setStitchWidth,
   setTempStitchSize,
   setTempStitchWidth,
+  setTempCurvature,
   setIsEditingProperties,
 }) {
   /**

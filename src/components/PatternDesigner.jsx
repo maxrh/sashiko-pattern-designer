@@ -74,8 +74,10 @@ export default function PatternDesigner() {
   const [tempGapSize, setTempGapSize] = useState(null);
   const [tempStitchSize, setTempStitchSize] = useState(null);
   const [tempStitchWidth, setTempStitchWidth] = useState(null);
+  const [tempCurvature, setTempCurvature] = useState(null);
   const isColorPickerOpenRef = useRef(false);
   const isGapSliderActiveRef = useRef(false);
+  const isCurvatureSliderActiveRef = useRef(false);
 
   const canvasRef = useRef(null);
   const hasInitializedRef = useRef(false); // Track if initial load is complete
@@ -166,6 +168,7 @@ export default function PatternDesigner() {
     setStitchWidth,
     setTempStitchSize,
     setTempStitchWidth,
+    setTempCurvature,
     setIsEditingProperties,
   });
 
@@ -197,6 +200,37 @@ export default function PatternDesigner() {
       setGapSize(tempGapSize);
     }
   }, [tempGapSize]);
+
+  // Handle curvature changes with temporary state for live preview
+  const handleChangeSelectedCurvature = useCallback((newCurvature) => {
+    if (isCurvatureSliderActiveRef.current) {
+      // During slider drag - just update temporary state
+      setTempCurvature(newCurvature);
+      setIsEditingProperties(true);
+    } else {
+      // Direct change (not slider) - apply immediately
+      setTempCurvature(newCurvature);
+      // For curvature, we don't have a global default setting, so we just update the stitches
+      // But we need to trigger the effect that updates the pattern
+      setIsEditingProperties(true);
+      setTimeout(() => setIsEditingProperties(false), 0);
+    }
+  }, []);
+
+  // Handle curvature slider start/stop
+  const handleCurvatureSliderStart = useCallback(() => {
+    isCurvatureSliderActiveRef.current = true;
+  }, []);
+
+  const handleCurvatureSliderCommit = useCallback(() => {
+    // Mark slider as inactive and allow history to be saved
+    isCurvatureSliderActiveRef.current = false;
+    setIsEditingProperties(false);
+    
+    // We don't have a global "curvature" state to commit to, 
+    // the effect [tempCurvature, selectedStitchIds] already updated the pattern stitches.
+    // We just need to clear the temp state which happens in the history effect.
+  }, []);
 
   // Update sidebar options when selection changes
   useEffect(() => {
@@ -298,10 +332,24 @@ export default function PatternDesigner() {
     }
   }, [tempStitchWidth, selectedStitchIds]);
 
+  // Canvas update effect for curvature - applies temporary curvature for live preview
+  useEffect(() => {
+    if (tempCurvature !== null && selectedStitchIds.size > 0) {
+      setCurrentPattern((prev) => ({
+        ...prev,
+        stitches: prev.stitches.map((stitch) =>
+          selectedStitchIds.has(stitch.id)
+            ? { ...stitch, curvature: tempCurvature }
+            : stitch
+        ),
+      }));
+    }
+  }, [tempCurvature, selectedStitchIds]);
+
   // History update effect - saves to history when property editing ends
   useEffect(() => {
     // Only save to history when we just finished editing properties
-    if (!isEditingProperties && (tempGapSize !== null || tempStitchColor !== null || tempStitchSize !== null || tempStitchWidth !== null)) {
+    if (!isEditingProperties && (tempGapSize !== null || tempStitchColor !== null || tempStitchSize !== null || tempStitchWidth !== null || tempCurvature !== null)) {
       // Use a timeout to batch the history save after property changes settle
       const timeoutId = setTimeout(() => {
         // Save current state to history after property editing is complete
@@ -317,11 +365,12 @@ export default function PatternDesigner() {
         setTempStitchColor(null);
         setTempStitchSize(null);
         setTempStitchWidth(null);
+        setTempCurvature(null);
       }, 100); // Small delay to ensure all state updates are complete
       
       return () => clearTimeout(timeoutId);
     }
-  }, [isEditingProperties, tempGapSize, tempStitchColor, tempStitchSize, tempStitchWidth, currentPattern, stitchColors, historyManager]);
+  }, [isEditingProperties, tempGapSize, tempStitchColor, tempStitchSize, tempStitchWidth, tempCurvature, currentPattern, stitchColors, historyManager]);
 
   // Save state to history whenever pattern or colors change (for undo/redo)
   // History is now persisted to IndexedDB, so we can record from the start
@@ -336,7 +385,7 @@ export default function PatternDesigner() {
     if (isEditingProperties) return;
     
     // Skip if we have temporary property changes pending (they'll be saved separately)
-    if (tempGapSize !== null || tempStitchColor !== null || tempStitchSize !== null || tempStitchWidth !== null) return;
+    if (tempGapSize !== null || tempStitchColor !== null || tempStitchSize !== null || tempStitchWidth !== null || tempCurvature !== null) return;
     
     historyManager.pushHistory({
       pattern: {
@@ -811,6 +860,10 @@ export default function PatternDesigner() {
               stitchWidth={stitchWidth}
               tempStitchWidth={tempStitchWidth}
               onStitchWidthChange={handleChangeSelectedStitchWidth}
+              tempCurvature={tempCurvature}
+              onCurvatureChange={handleChangeSelectedCurvature}
+              onCurvatureSliderStart={handleCurvatureSliderStart}
+              onCurvatureSliderCommit={handleCurvatureSliderCommit}
               gapSize={gapSize}
               tempGapSize={tempGapSize}
               onGapSizeChange={handleChangeSelectedGapSize}
@@ -843,6 +896,7 @@ export default function PatternDesigner() {
             stitchColors={stitchColors}
             tempStitchColor={tempStitchColor}
             tempGapSize={tempGapSize}
+            tempCurvature={tempCurvature}
             selectedStitchIds={selectedStitchIds}
             onSelectStitchIds={setSelectedStitchIds}
             onAddStitch={handleAddStitch}

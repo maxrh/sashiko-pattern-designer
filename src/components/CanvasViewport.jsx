@@ -14,6 +14,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
   stitchColors,
   tempStitchColor,
   tempGapSize,
+  tempCurvature,
   selectedStitchIds,
   onSelectStitchIds,
   onAddStitch,
@@ -231,6 +232,7 @@ export const CanvasViewport = forwardRef(function CanvasViewport({
           stitchColors={stitchColors}
           tempStitchColor={tempStitchColor}
           tempGapSize={tempGapSize}
+          tempCurvature={tempCurvature}
           selectedStitchIds={selectedStitchIds}
           onSelectStitchIds={onSelectStitchIds}
           onAddStitch={onAddStitch}
