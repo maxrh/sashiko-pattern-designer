@@ -129,6 +129,7 @@ export async function saveToPatternLibrary(pattern, stitchColors, uiState) {
         stitchSize: stitch.stitchSize || 'small',
         stitchWidth: stitch.stitchWidth || 'normal',
         gapSize: stitch.gapSize ?? 9,
+        curvature: stitch.curvature || 0,
         repeat: stitch.repeat !== false,
       })),
       uiState: uiState ? {
@@ -208,6 +209,7 @@ export function exportPatternAsJSON(pattern, stitchColors) {
       stitchSize: stitch.stitchSize || 'small',
       stitchWidth: stitch.stitchWidth || 'normal',
       gapSize: stitch.gapSize ?? 9,
+      curvature: stitch.curvature || 0,
       repeat: stitch.repeat !== false,
     })),
     exportedAt: new Date().toISOString(),

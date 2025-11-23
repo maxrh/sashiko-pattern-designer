@@ -132,6 +132,8 @@ export function useHistory(maxHistorySize = 10) {
               currentStitch.stitchSize !== newStitch.stitchSize ||
               currentStitch.stitchWidth !== newStitch.stitchWidth ||
               currentStitch.gapSize !== newStitch.gapSize ||
+              currentStitch.curvature !== newStitch.curvature ||
+              currentStitch.repeat !== newStitch.repeat ||
               currentStitch.color !== newStitch.color
             );
           });

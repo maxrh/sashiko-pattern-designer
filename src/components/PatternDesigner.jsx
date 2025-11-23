@@ -191,9 +191,8 @@ export default function PatternDesigner() {
   }, []);
 
   const handleGapSliderCommit = useCallback(() => {
-    // Mark slider as inactive and allow history to be saved
+    // Mark slider as inactive but keep editing mode true until popover closes
     isGapSliderActiveRef.current = false;
-    setIsEditingProperties(false);
     
     // Commit the temporary gap size to global state
     if (tempGapSize !== null) {
@@ -223,13 +222,24 @@ export default function PatternDesigner() {
   }, []);
 
   const handleCurvatureSliderCommit = useCallback(() => {
-    // Mark slider as inactive and allow history to be saved
+    // Mark slider as inactive but keep editing mode true until popover closes
     isCurvatureSliderActiveRef.current = false;
-    setIsEditingProperties(false);
     
     // We don't have a global "curvature" state to commit to, 
     // the effect [tempCurvature, selectedStitchIds] already updated the pattern stitches.
     // We just need to clear the temp state which happens in the history effect.
+  }, []);
+
+  // Handle stitch settings popover open/close
+  const handleStitchSettingsOpenChange = useCallback((isOpen) => {
+    if (!isOpen) {
+      // Popover closed - commit any pending property edits to history
+      setIsEditingProperties(false);
+      
+      // Reset slider active refs
+      isGapSliderActiveRef.current = false;
+      isCurvatureSliderActiveRef.current = false;
+    }
   }, []);
 
   // Update sidebar options when selection changes
@@ -869,6 +879,7 @@ export default function PatternDesigner() {
               onGapSizeChange={handleChangeSelectedGapSize}
               onGapSliderStart={handleGapSliderStart}
               onGapSliderCommit={handleGapSliderCommit}
+              onStitchSettingsOpenChange={handleStitchSettingsOpenChange}
               showGrid={uiState.showGrid}
               onShowGridChange={uiState.setShowGrid}
               displayUnit={uiState.displayUnit}
