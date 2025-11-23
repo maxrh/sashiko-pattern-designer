@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, memo } from 'react';
-import { renderStitch, calculateStitchOffset } from './Stitches';
+import { renderStitch, calculateStitchOffset, getArcParams } from './Stitches';
 import { DEFAULT_GRID_COLOR, DEFAULT_TILE_OUTLINE_COLOR, DEFAULT_ARTBOARD_OUTLINE_COLOR, DEFAULT_GAP_SIZE } from '../hooks/useUiState';
 
 const SNAP_THRESHOLD = 15;
@@ -11,6 +11,65 @@ function wrapCoordinate(value, gridSize) {
   if (value === 0) return 0;
   const remainder = value % gridSize;
   return remainder === 0 ? gridSize : remainder;
+}
+
+function distancePointToArc(px, py, cx, cy, radius, startAngle, endAngle, counterClockwise) {
+  // Distance from point to circle center
+  const distToCenter = Math.hypot(px - cx, py - cy);
+  
+  // Angle of point relative to center
+  let angle = Math.atan2(py - cy, px - cx);
+  
+  // Normalize angles for comparison
+  // We need to check if the point's angle is within the arc's angular range
+  
+  // Helper to normalize angle to [0, 2PI)
+  const normalize = (a) => {
+    a = a % (2 * Math.PI);
+    return a < 0 ? a + 2 * Math.PI : a;
+  };
+  
+  const nAngle = normalize(angle);
+  const nStart = normalize(startAngle);
+  const nEnd = normalize(endAngle);
+  
+  let inRange = false;
+  
+  if (counterClockwise) {
+    // Arc goes from start to end in counter-clockwise direction (decreasing angle in Canvas coords)
+    if (nStart > nEnd) {
+      // Simple interval [nEnd, nStart]
+      inRange = nAngle <= nStart && nAngle >= nEnd;
+    } else {
+      // Wraps around 0: [0, nStart] U [nEnd, 2PI]
+      inRange = nAngle <= nStart || nAngle >= nEnd;
+    }
+  } else {
+    // Arc goes from start to end in clockwise direction (increasing angle in Canvas coords)
+    if (nStart < nEnd) {
+      // Simple interval [nStart, nEnd]
+      inRange = nAngle >= nStart && nAngle <= nEnd;
+    } else {
+      // Wraps around 0: [nStart, 2PI] U [0, nEnd]
+      inRange = nAngle >= nStart || nAngle <= nEnd;
+    }
+  }
+  
+  if (inRange) {
+    // If angle is within range, distance is simply abs(distToCenter - radius)
+    return Math.abs(distToCenter - radius);
+  }
+  
+  // If not in angular range, distance is to the nearest endpoint
+  const startX = cx + radius * Math.cos(startAngle);
+  const startY = cy + radius * Math.sin(startAngle);
+  const endX = cx + radius * Math.cos(endAngle);
+  const endY = cy + radius * Math.sin(endAngle);
+  
+  const distToStart = Math.hypot(px - startX, py - startY);
+  const distToEnd = Math.hypot(px - endX, py - endY);
+  
+  return Math.min(distToStart, distToEnd);
 }
 
 function distancePointToSegment(px, py, x1, y1, x2, y2) {
@@ -97,6 +156,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
   stitchColors,
   tempStitchColor,
   tempGapSize,
+  tempCurvature,
   selectedStitchIds,
   onSelectStitchIds,
   onAddStitch,
@@ -118,7 +178,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
   const justFinishedDragRef = useRef(false);
   
   // Store visible stitch instances (computed during rendering)
-  // Map: stitchId -> Array of {startX, startY, endX, endY} in canvas pixel coordinates
+  // Map: stitchId -> Array of {startX, startY, endX, endY, curvature} in canvas pixel coordinates
   const visibleStitchInstancesRef = useRef(new Map());
   
   // Normalize tileSize to {x, y} format (supports legacy number format)
@@ -451,6 +511,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
             const stitchWidthValue = stitch.stitchWidth || 'normal';
             const currentGapSize = (tempGapSize !== null && isSelected) ? tempGapSize : stitch.gapSize;
             const stitchGapOffset = calculateStitchOffset(currentGapSize);
+            const currentCurvature = (tempCurvature !== null && isSelected) ? tempCurvature : (stitch.curvature || 0);
 
             // Render the stitch using shared rendering function
             const rendered = renderStitch(
@@ -465,7 +526,8 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
               stitchWidthValue,
               colorOverride ?? defaultStitchColor,
               isSelected,
-              patternGridSize
+              patternGridSize,
+              currentCurvature
             );
 
             // Track this visible instance for selection (if rendered successfully)
@@ -474,7 +536,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
                 visibleStitchInstancesRef.current.set(stitch.id, []);
               }
               // Use array instead of object to reduce memory overhead
-              visibleStitchInstancesRef.current.get(stitch.id).push([startX, startY, endX, endY]);
+              visibleStitchInstancesRef.current.get(stitch.id).push([startX, startY, endX, endY, currentCurvature]);
             }
           }
         }
@@ -494,6 +556,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
         const stitchWidthValue = stitch.stitchWidth || 'normal';
         const currentGapSize = (tempGapSize !== null && isSelected) ? tempGapSize : stitch.gapSize;
         const stitchGapOffset = calculateStitchOffset(currentGapSize);
+        const currentCurvature = (tempCurvature !== null && isSelected) ? tempCurvature : (stitch.curvature || 0);
 
         // Render the stitch using shared rendering function
         const rendered = renderStitch(
@@ -508,7 +571,8 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
           stitchWidthValue,
           colorOverride ?? defaultStitchColor,
           isSelected,
-          patternGridSize
+          patternGridSize,
+          currentCurvature
         );
 
         // Track this visible instance for selection (if rendered successfully)
@@ -517,7 +581,7 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
             visibleStitchInstancesRef.current.set(stitch.id, []);
           }
           // Use array instead of object to reduce memory overhead
-          visibleStitchInstancesRef.current.get(stitch.id).push([startX, startY, endX, endY]);
+          visibleStitchInstancesRef.current.get(stitch.id).push([startX, startY, endX, endY, currentCurvature]);
         }
         }
     });
@@ -845,12 +909,41 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
     visibleStitchInstancesRef.current.forEach((instances, stitchId) => {
       // Check each visible instance of this stitch for proximity to click
       for (const instance of instances) {
-        // instance is [startX, startY, endX, endY]
-        const distance = distancePointToSegment(
-          clickX, clickY, 
-          instance[0], instance[1], 
-          instance[2], instance[3]
-        );
+        // instance is [startX, startY, endX, endY, curvature]
+        const curvature = instance[4] || 0;
+        let distance;
+        
+        if (Math.abs(curvature) > 0.1) {
+          // Calculate bulge from curvature percentage
+          const dx = instance[2] - instance[0];
+          const dy = instance[3] - instance[1];
+          const chordLength = Math.hypot(dx, dy);
+          const bulge = chordLength * (curvature / 100);
+
+          // Calculate arc parameters for hit detection
+          const arcParams = getArcParams(instance[0], instance[1], instance[2], instance[3], bulge);
+          if (arcParams) {
+            distance = distancePointToArc(
+              clickX, clickY,
+              arcParams.cx, arcParams.cy, arcParams.radius,
+              arcParams.startAngle, arcParams.endAngle, arcParams.counterClockwise
+            );
+          } else {
+            // Fallback to segment if arc calc fails
+            distance = distancePointToSegment(
+              clickX, clickY, 
+              instance[0], instance[1], 
+              instance[2], instance[3]
+            );
+          }
+        } else {
+          distance = distancePointToSegment(
+            clickX, clickY, 
+            instance[0], instance[1], 
+            instance[2], instance[3]
+          );
+        }
+        
         if (distance < closestDistance) {
           closestDistance = distance;
           closest = stitchId;
@@ -961,6 +1054,11 @@ function arePropsEqual(prevProps, nextProps) {
     }
     // If no selected stitches, the stitchSize only affects NEW stitches, so we can skip re-render
     return true;
+  }
+
+  // Check if tempCurvature changed
+  if (prevProps.tempCurvature !== nextProps.tempCurvature) {
+    return false;
   }
   
   // All relevant props are equal, skip re-render

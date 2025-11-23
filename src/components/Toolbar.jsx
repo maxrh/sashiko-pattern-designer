@@ -29,6 +29,10 @@ export function Toolbar({
   stitchWidth,
   tempStitchWidth,
   onStitchWidthChange,
+  tempCurvature,
+  onCurvatureChange,
+  onCurvatureSliderStart,
+  onCurvatureSliderCommit,
   gapSize,
   tempGapSize,
   onGapSizeChange,
@@ -74,6 +78,8 @@ export function Toolbar({
     return { baseDashLength, baseGapLength, strokeWidth };
   }, [stitchSize, tempStitchSize, gapSize, tempGapSize, stitchWidth, tempStitchWidth]);
 
+  const currentCurvature = tempCurvature ?? (selectedStitch?.curvature || 0);
+
   return (
     <TooltipProvider>
       <div className="flex items-center gap-4">
@@ -110,7 +116,7 @@ export function Toolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Pen Tool (P)</p>
+              <p>Stitch Tool (P)</p>
             </TooltipContent>
           </Tooltip>
           
@@ -177,6 +183,7 @@ export function Toolbar({
                   <ButtonGroup className="w-full">
                     <Button
                       variant={stitchSize === 'small' ? 'default' : 'outline'}
+                      size="sm"
                       className="flex-1"
                       onClick={() => {
                         onStitchSizeChange('small');
@@ -186,6 +193,7 @@ export function Toolbar({
                     </Button>
                     <Button
                       variant={stitchSize === 'medium' ? 'default' : 'outline'}
+                      size="sm"
                       className="flex-1"
                       onClick={() => {
                         onStitchSizeChange('medium');
@@ -195,12 +203,58 @@ export function Toolbar({
                     </Button>
                     <Button
                       variant={stitchSize === 'large' ? 'default' : 'outline'}
+                      size="sm"
                       className="flex-1"
                       onClick={() => {
                         onStitchSizeChange('large');
                       }}
                     >
                       Large
+                    </Button>
+                  </ButtonGroup>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="">Stitch Width</Label>
+                  <ButtonGroup className="w-full">
+                    <Button
+                      variant={stitchWidth === 'thin' ? 'default' : 'outline'}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        onStitchWidthChange('thin');
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
+                        <span>Thin</span>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={stitchWidth === 'normal' ? 'default' : 'outline'}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        onStitchWidthChange('normal');
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
+                        <span>Medium</span>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={stitchWidth === 'thick' ? 'default' : 'outline'}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        onStitchWidthChange('thick');
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thick}px` }} />
+                        <span>Thick</span>
+                      </div>
                     </Button>
                   </ButtonGroup>
                 </div>
@@ -220,45 +274,17 @@ export function Toolbar({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="">Stitch Width</Label>
-                  <ButtonGroup className="w-full">
-                    <Button
-                      variant={stitchWidth === 'thin' ? 'default' : 'outline'}
-                      className="flex-1"
-                      onClick={() => {
-                        onStitchWidthChange('thin');
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thin}px` }} />
-                        <span>Thin</span>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={stitchWidth === 'normal' ? 'default' : 'outline'}
-                      className="flex-1"
-                      onClick={() => {
-                        onStitchWidthChange('normal');
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.normal}px` }} />
-                        <span>Medium</span>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={stitchWidth === 'thick' ? 'default' : 'outline'}
-                      className="flex-1"
-                      onClick={() => {
-                        onStitchWidthChange('thick');
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="block w-4 bg-current rounded-full" style={{ height: `${STITCH_WIDTHS.thick}px` }} />
-                        <span>Thick</span>
-                      </div>
-                    </Button>
-                  </ButtonGroup>
+                  <Label className="">Bend: {currentCurvature}%</Label>
+                  <Slider
+                    id="curvature-slider"
+                    min={-50}
+                    max={50}
+                    step={1}
+                    value={[currentCurvature]}
+                    onValueChange={(vals) => onCurvatureChange(vals[0])}
+                    onPointerDown={onCurvatureSliderStart}
+                    onValueCommit={onCurvatureSliderCommit}
+                  />
                 </div>
               </div>
             </PopoverContent>

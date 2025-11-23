@@ -54,6 +54,12 @@ Three distinct coordinate systems exist:
 - Example: Line (9,5)→(11,5) stored as-is, renders in ALL tiles at (9,5)→(11,5), (19,5)→(21,5), etc.
 - Corner lines with negative coordinates (e.g., (0,0)→(0,-5)) are filtered from first row/col to prevent duplication
 
+**Curved Lines**:
+- Stored as standard start/end points plus a `curvature` property (percentage).
+- Rendering calculates "bulge" (height of arc) based on line length and curvature %.
+- Uses `getArcParams` in `Stitches.jsx` to derive circle center, radius, and angles.
+- Hit detection uses `distancePointToArc` in `PatternCanvas.jsx`.
+
 **Absolute Lines** (`repeat: false` or coordinates outside 0-tileSize):
 - Stored with absolute artboard-relative coordinates
 - Render once at specified position
@@ -266,6 +272,7 @@ npm run preview          # Preview production build locally
   stitchSize: string,      // 'small' | 'medium' | 'large'
   stitchWidth: string,     // 'thin' | 'normal' | 'thick'
   gapSize: number,         // Pixels between stitches (default 9)
+  curvature: number,       // Percentage of chord length (-50 to 50)
   repeat: boolean          // Whether to repeat across tiles
 }
 ```

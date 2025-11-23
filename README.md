@@ -19,9 +19,9 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Interactive Drawing**: Click and drag to create stitch lines on a grid with intelligent anchor point orientation
 - **Multiple Tools**:
   - Select Tool: Select and manipulate existing stitches
-  - Line Draw Tool: Create straight stitch lines
+  - Stitch Tool: Create stitch lines between grid points
   - Pan Tool: Navigate the canvas (spacebar shortcut)
-  - (Curve/Circle Tool coming)
+  - **Curve/Bend setting**: Turn straight lines into arcs with adjustable curvature
 - **Grid Snapping**: Automatic snapping to grid points for precise alignment
 - **Real-time Preview**: See your pattern repeat instantly as you draw
 - **Cross-Tile Lines**: Draw lines that span across tile boundaries for complex patterns
@@ -32,6 +32,7 @@ A web-based interactive tool for designing Sashiko embroidery patterns using **A
 - **Multiple Stitch Sizes**: Small, Medium, Large stitch lengths
 - **Multiple Stitch Widths**: Thin, Normal, Thick line weights
 - **Adjustable Gap Size**: Control spacing between individual stitch marks
+- **Adjustable Curvature**: Bend stitches to create circles and arcs (percentage-based)
 - **Color Customization**: Custom colors per stitch with preset color palette
 - **Batch Editing**: Edit properties of multiple selected stitches at once
 - **Pattern Repeat Toggle**: Choose between repeating patterns and single-instance stitches
