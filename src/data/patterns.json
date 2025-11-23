@@ -33,6 +33,31 @@
     }
   },
   {
+    "id": "shippo-flower",
+    "name": "Shippo Flower",
+    "description": "Classic interlocking-circle motif",
+    "isStarterPattern": true,
+    "tileSize": {"x":10,"y":10},
+    "gridSize": 20,
+    "patternTiles": {"x":3,"y":3},
+    "stitches": [
+      { "id": "stitch-1763877712021-7c5e93", "start": {"x":5,"y":0}, "end": {"x":10,"y":5}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": -25, "repeat": true },
+      { "id": "stitch-1763877722695-e31c97", "start": {"x":0,"y":5}, "end": {"x":-5,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": -25, "repeat": true },
+      { "id": "stitch-1763877745097-e30231", "start": {"x":0,"y":5}, "end": {"x":5,"y":0}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": -25, "repeat": true },
+      { "id": "stitch-1763877759575-b203dd", "start": {"x":5,"y":0}, "end": {"x":10,"y":5}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": 25, "repeat": true },
+      { "id": "stitch-1763877777037-6520b6", "start": {"x":0,"y":5}, "end": {"x":-5,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": 25, "repeat": true },
+      { "id": "stitch-1763877825957-5b99e0", "start": {"x":0,"y":5}, "end": {"x":5,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": 25, "repeat": true },
+      { "id": "stitch-1763877838915-281034", "start": {"x":0,"y":5}, "end": {"x":5,"y":10}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": -25, "repeat": true },
+      { "id": "stitch-1763877850825-01d934", "start": {"x":0,"y":5}, "end": {"x":5,"y":0}, "color": "#f5f5f5", "stitchSize": "small", "stitchWidth": "thick", "gapSize": 9, "curvature": 25, "repeat": true }
+    ],
+    "uiState": {
+      "backgroundColor": "#0f172a",
+      "gridColor": "#94a3b840",
+      "tileOutlineColor": "#94a3b826",
+      "artboardOutlineColor": "#3b82f680"
+    }
+  },
+  {
     "id": "ajiro-wickerwork",
     "name": "Ajiro Wickerwork",
     "description": "Simple grass wickerwork pattern",

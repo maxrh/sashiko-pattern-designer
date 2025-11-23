@@ -218,12 +218,20 @@ export function renderStitch(
   gridSize,
   curvature = 0
 ) {
-  // Calculate bulge from curvature percentage
-  // curvature is percentage of chord length (e.g. 25 for 25%)
+  // Calculate bulge from curvature percentage (0-100% of full circle)
+  // 25% = 90deg (quarter), 50% = 180deg (semi), 100% = 360deg (full)
   const dx = endX - startX;
   const dy = endY - startY;
   const chordLength = Math.hypot(dx, dy);
-  const bulge = chordLength * (curvature / 100);
+  
+  // Convert percentage to angle in degrees (100% = 360deg)
+  // Clamp to 99% to avoid infinite bulge at 360deg
+  const clampedCurvature = Math.max(-99, Math.min(99, curvature));
+  const angleDeg = clampedCurvature * 3.6;
+  const angleRad = (angleDeg * Math.PI) / 180;
+  
+  // Calculate bulge using: b = (chord/2) * tan(angle/4)
+  const bulge = (chordLength / 2) * Math.tan(angleRad / 4);
 
   // Check if we should draw an arc
   const arcParams = getArcParams(startX, startY, endX, endY, bulge);

@@ -38,6 +38,7 @@ export function Toolbar({
   onGapSizeChange,
   onGapSliderStart,
   onGapSliderCommit,
+  onStitchSettingsOpenChange,
   showGrid,
   onShowGridChange,
   displayUnit,
@@ -152,7 +153,7 @@ export function Toolbar({
             tooltip="Stitch Color"
           />
 
-          <Popover>
+          <Popover onOpenChange={onStitchSettingsOpenChange}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>

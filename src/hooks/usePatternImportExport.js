@@ -186,6 +186,7 @@ export function usePatternImportExport({
         stitchSize: stitch.stitchSize || 'small',
         stitchWidth: stitch.stitchWidth || 'normal',
         gapSize: stitch.gapSize,
+        curvature: stitch.curvature || 0,
         repeat: stitch.repeat !== false,
       })),
       uiState: {
@@ -207,6 +208,9 @@ export function usePatternImportExport({
       parts.push(`"stitchWidth": "${stitch.stitchWidth}"`);
       if (stitch.gapSize !== undefined) {
         parts.push(`"gapSize": ${stitch.gapSize}`);
+      }
+      if (stitch.curvature) {
+        parts.push(`"curvature": ${stitch.curvature}`);
       }
       parts.push(`"repeat": ${stitch.repeat}`);
       return `{ ${parts.join(', ')} }`;

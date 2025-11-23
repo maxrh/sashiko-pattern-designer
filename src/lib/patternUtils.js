@@ -52,6 +52,7 @@ export function clonePattern(pattern) {
       start: { ...stitch.start },
       end: { ...stitch.end },
       gapSize: stitch.gapSize ?? DEFAULT_GAP_SIZE, // Ensure all stitches have gapSize
+      curvature: stitch.curvature ?? 0, // Ensure all stitches have curvature
     })),
   };
 }

@@ -914,11 +914,18 @@ const PatternCanvasComponent = forwardRef(function PatternCanvas({
         let distance;
         
         if (Math.abs(curvature) > 0.1) {
-          // Calculate bulge from curvature percentage
+          // Calculate bulge from curvature percentage (0-100% of full circle)
           const dx = instance[2] - instance[0];
           const dy = instance[3] - instance[1];
           const chordLength = Math.hypot(dx, dy);
-          const bulge = chordLength * (curvature / 100);
+          
+          // Convert percentage to angle (100% = 360deg)
+          const clampedCurvature = Math.max(-99, Math.min(99, curvature));
+          const angleDeg = clampedCurvature * 3.6;
+          const angleRad = (angleDeg * Math.PI) / 180;
+          
+          // Calculate bulge: b = (chord/2) * tan(angle/4)
+          const bulge = (chordLength / 2) * Math.tan(angleRad / 4);
 
           // Calculate arc parameters for hit detection
           const arcParams = getArcParams(instance[0], instance[1], instance[2], instance[3], bulge);
