@@ -235,7 +235,7 @@ npm run preview          # Preview production build locally
 
 **Deployment**: 
 - **Platform**: Cloudflare Pages
-- **Production URL**: https://sashiko-pattern-designer.pages.dev/
+- **Production URL**: https://sashiko.design/
 - **Build Command**: `npm run build`
 - **Output Directory**: `./dist/`
 - **Configuration**: See `wrangler.jsonc` and `astro.config.mjs`
