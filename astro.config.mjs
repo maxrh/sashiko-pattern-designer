@@ -9,7 +9,7 @@ import AstroPWA from '@vite-pwa/astro';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://sashiko-pattern-designer.pages.dev',
+  site: 'https://sashiko.design',
   integrations: [
     react(),
     AstroPWA({
